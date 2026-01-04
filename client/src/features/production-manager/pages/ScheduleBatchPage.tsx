@@ -10,7 +10,6 @@ import { PageHeader } from '@/components/common';
 import {
   User,
   Eye,
-  Trash2,
   Weight,
   Users,
   Check,
@@ -188,6 +187,29 @@ export default function ScheduleBatchPage() {
   const [extraMaterials, setExtraMaterials] = useState<any[]>([]);
   const [selectedExtraMaterialId, setSelectedExtraMaterialId] = useState<number | null>(null);
   const [extraMaterialQty, setExtraMaterialQty] = useState<number>(0);
+
+  // Calculate Total Output Weight
+  const totalOutputWeight = useMemo(() => {
+    return availableSkus.reduce((sum, sku) => {
+      const qty = skuOutput[sku.productId] || 0;
+
+      const capacityLtr = parseFloat(sku.packagingCapacityLtr || '0');
+      if (capacityLtr > 0) {
+        const density = (actualDensity && actualDensity > 0) ? actualDensity : parseFloat(sku.fillingDensity || '1');
+        return sum + qty * capacityLtr * density;
+      }
+
+      const pkgWeight = parseFloat(sku.packageCapacityKg || '0');
+      return sum + qty * pkgWeight;
+    }, 0);
+  }, [availableSkus, skuOutput, actualDensity]);
+
+  // Auto-set actual quantity to total output weight when completing batch
+  useEffect(() => {
+    if (isCompletingBatch && totalOutputWeight > 0) {
+      setActualQuantity(totalOutputWeight.toFixed(2));
+    }
+  }, [totalOutputWeight, isCompletingBatch]);
 
   // Fetch Product Development Density and Water % when Master Product changes
   useEffect(() => {
@@ -1418,11 +1440,11 @@ export default function ScheduleBatchPage() {
     const totalOutputWeight = availableSkus.reduce((sum, sku) => {
       const qty = skuOutput[sku.productId] || 0;
 
-      const capacityLtr = parseFloat(sku.packagingCapacityLtr || '0');
-      if (capacityLtr > 0) {
-        const density = parseFloat(sku.fillingDensity || '1');
-        return sum + qty * capacityLtr * density;
-      }
+          const capacityLtr = parseFloat(sku.packagingCapacityLtr || '0');
+          if (capacityLtr > 0) {
+            const density = (actualDensity && actualDensity > 0) ? actualDensity : parseFloat(sku.fillingDensity || '1');
+            return sum + qty * capacityLtr * density;
+          }
 
       const pkgWeight = parseFloat(sku.packageCapacityKg || '0');
       return sum + qty * pkgWeight;
@@ -1749,7 +1771,8 @@ export default function ScheduleBatchPage() {
                       <div>
                         <div className="flex justify-between items-center mb-1">
                           <label className="text-xs text-[var(--text-secondary)]">
-                            Actual Quantity (kg) <span className="text-red-500">*</span>
+                            Actual Quantity (kg) 
+                            {/* <span className="text-red-500">*</span> */}
                           </label>
                           <span className="text-[10px] text-[var(--text-tertiary)] bg-[var(--surface-muted)] px-1 rounded">
                             Planned: {plannedQuantityRef}
@@ -1764,7 +1787,6 @@ export default function ScheduleBatchPage() {
                             setActualQuantity(val === '' ? '' : parseFloat(val));
                           }}
                           className="w-full px-3 py-2 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]"
-                          required
                         />
                       </div>
                       <div>
@@ -1791,7 +1813,8 @@ export default function ScheduleBatchPage() {
                       <div>
                         <div className="flex justify-between items-center mb-1">
                           <label className="text-xs text-[var(--text-secondary)]">
-                            Actual Water % <span className="text-red-500">*</span>
+                            Actual Water % 
+                            {/* <span className="text-red-500">*</span> */}
                           </label>
                           <span className="text-[10px] text-[var(--text-tertiary)] bg-[var(--surface-muted)] px-1 rounded">
                             Calculated: {plannedWaterPercentageRef}
@@ -1806,7 +1829,7 @@ export default function ScheduleBatchPage() {
                             setActualWaterPercentage(val === '' ? '' : parseFloat(val));
                           }}
                           className="w-full px-3 py-2 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]"
-                          required
+                          // required
                         />
                       </div>
                       <div>
@@ -2092,7 +2115,7 @@ export default function ScheduleBatchPage() {
 
                                 const capacityLtr = parseFloat(sku.packagingCapacityLtr || '0');
                                 if (capacityLtr > 0) {
-                                  const density = parseFloat(sku.fillingDensity || '1');
+                                  const density = (actualDensity && actualDensity > 0) ? actualDensity : parseFloat(sku.fillingDensity || '1');
                                   return sum + qty * capacityLtr * density;
                                 }
 
@@ -2118,15 +2141,11 @@ export default function ScheduleBatchPage() {
 
                               return (
                                 <>
-                                  <span className="font-semibold text-[var(--text-secondary)]">
-                                    Available :{' '}
-                                  </span>
-                                  <span
-                                    className={`font-bold ${
-                                      isOverMax ? 'text-red-600' : 'text-[var(--text-primary)]'
-                                    }`}
-                                  >
-                                    {availableWeight.toFixed(2)} kg
+            <span className="font-semibold text-[var(--text-secondary)]">
+              Total Produced Quantity :{' '}
+            </span>
+                                  <span className="font-bold text-[var(--text-primary)]">
+                                    {totalOutputWeight.toFixed(2)} kg
                                   </span>
                                 </>
                               );
