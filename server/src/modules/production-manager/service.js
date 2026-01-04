@@ -105,12 +105,15 @@ export class ProductionManagerService {
   /**
    * Schedule a production batch
    * Note: Neon-HTTP driver doesn't support transactions, so operations are performed sequentially.
+   * Batch creation is critical, but post-creation steps are non-critical to ensure batch is created even if some operations fail.
    */
   async scheduleBatch(batchData, orderIds, performedBy) {
     logger.info('Scheduling production batch', { orderIds, performedBy });
 
+    let batch = null;
+
     try {
-      // Validate that all products are finished goods (not raw materials)
+      // CRITICAL VALIDATIONS (will throw if fail)
       // Validate that all products are finished goods (not raw materials)
       const productIds = batchData.orders.map(o => o.productId);
 
@@ -159,21 +162,16 @@ export class ProductionManagerService {
         logger.info('Stock validation passed for all materials');
       }
 
-      // Generate batch number
+      // CRITICAL: Generate batch number and create batch
       let batchNo = await this.repo.generateBatchNumber();
       logger.info('Generated batch number', { batchNo });
 
-      // Create batch
       // scheduledDate should be YYYY-MM-DD string from frontend date input
       const formattedScheduledDate = batchData.scheduledDate.toString().split('T')[0];
       logger.info('Batch scheduled date', {
         raw: batchData.scheduledDate,
         formatted: formattedScheduledDate,
       });
-
-      // Create batch with retry in case of duplicate batchNo
-      let batch;
-      let attempts = 0;
 
       // SNAPSHOT: Fetch Product Development data to store formulation values at batch creation time
       // This ensures reports show the formulation that was actually used, not current values
@@ -185,6 +183,8 @@ export class ProductionManagerService {
         waterPercentage: devData?.waterPercentage,
       });
 
+      // Create batch with retry in case of duplicate batchNo
+      let attempts = 0;
       while (!batch && attempts < 5) {
         try {
           batch = await this.repo.createBatch({
@@ -202,10 +202,10 @@ export class ProductionManagerService {
             createdBy: performedBy,
           });
 
-          logger.info('Batch created', { batchId: batch.batchId, batchNo });
+          logger.info('Batch created successfully', { batchId: batch.batchId, batchNo });
         } catch (err) {
           const msg = (err.message || '').toLowerCase();
-          // Unique constraint violation
+          // Unique constraint violation - retry with new batchNo
           if (
             msg.includes('duplicate') ||
             msg.includes('unique') ||
@@ -215,11 +215,12 @@ export class ProductionManagerService {
             batchNo = await this.repo.generateBatchNumber();
             continue;
           }
-          throw err;
+          throw err; // Re-throw non-duplicate errors
         }
       }
       if (!batch) throw new Error('Failed to create batch after retries');
 
+      // NON-CRITICAL POST-CREATION STEPS (wrapped in try-catch, don't fail batch creation)
       // Link all orders to batch (map orderId 0 to null for MTS)
       // We want to track ALL products being produced, even if not linked to a specific customer order
       const orderData = batchData.orders.map(o => ({
@@ -231,108 +232,158 @@ export class ProductionManagerService {
       }));
 
       if (orderData.length > 0) {
-        await this.repo.linkOrdersToBatch(batch.batchId, orderData);
-        logger.info('Orders linked to batch', { count: orderData.length });
-
-        // Update orders status to "Scheduled for Production"
-        const updateData = {
-          productionBatchId: batch.batchId,
-        };
-
-        if (batchData.expectedDeliveryDate) {
-          // Convert to YYYY-MM-DD format for date column
-          const date = new Date(batchData.expectedDeliveryDate);
-          updateData.expectedDeliveryDate = date.toISOString().split('T')[0];
+        // Link orders to batch (non-critical)
+        try {
+          await this.repo.linkOrdersToBatch(batch.batchId, orderData);
+          logger.info('Orders linked to batch', { count: orderData.length });
+        } catch (linkError) {
+          logger.warn('Failed to link orders to batch, batch created but orders not linked', {
+            batchId: batch.batchId,
+            error: linkError.message,
+          });
         }
 
-        if (batchData.pmRemarks) {
-          updateData.pmRemarks = batchData.pmRemarks;
-        }
+        // Update orders status to "Scheduled for Production" (non-critical)
+        try {
+          const updateData = {
+            productionBatchId: batch.batchId,
+          };
 
-        // orderIds comes from argument (which was mapped from validatedData.orders.map(o => o.orderId))
-        // We should filter it too or use validOrders ids
-        const validOrderIds = batchData.orders.filter(o => o.orderId > 0).map(o => o.orderId);
+          if (batchData.expectedDeliveryDate) {
+            // Convert to YYYY-MM-DD format for date column
+            const date = new Date(batchData.expectedDeliveryDate);
+            updateData.expectedDeliveryDate = date.toISOString().split('T')[0];
+          }
 
-        // Dedup ids
-        const uniqueValidOrderIds = [...new Set(validOrderIds)];
+          if (batchData.pmRemarks) {
+            updateData.pmRemarks = batchData.pmRemarks;
+          }
 
-        if (uniqueValidOrderIds.length > 0) {
-          await this.repo.updateMultipleOrdersStatus(
-            uniqueValidOrderIds,
-            'Scheduled for Production',
-            updateData
-          );
-          logger.info('Orders status updated');
+          const validOrderIds = batchData.orders.filter(o => o.orderId > 0).map(o => o.orderId);
+          const uniqueValidOrderIds = [...new Set(validOrderIds)];
+
+          if (uniqueValidOrderIds.length > 0) {
+            await this.repo.updateMultipleOrdersStatus(
+              uniqueValidOrderIds,
+              'Scheduled for Production',
+              updateData
+            );
+            logger.info('Orders status updated');
+          }
+        } catch (statusError) {
+          logger.warn('Failed to update order statuses, batch created but statuses not updated', {
+            batchId: batch.batchId,
+            error: statusError.message,
+          });
         }
       } else {
         // Make-to-Stock batch: Create batchProducts entries for ALL SKUs of this master product
-        // This ensures subProducts data is available in reports even for MTS batches
         logger.info('No valid customer orders to link (Make-to-Stock batch)');
 
-        // Fetch all SKUs for this master product
-        const allSkus = await db
-          .select({
-            productId: products.productId,
-            productName: products.productName,
-            packageCapacityKg: products.packageCapacityKg,
-          })
-          .from(products)
-          .where(eq(products.masterProductId, batch.masterProductId));
+        try {
+          const allSkus = await db
+            .select({
+              productId: products.productId,
+              productName: products.productName,
+              packageCapacityKg: products.packageCapacityKg,
+            })
+            .from(products)
+            .where(eq(products.masterProductId, batch.masterProductId));
 
-        if (allSkus.length > 0) {
-          // Create placeholder batchProducts entries for all SKUs (with no order or plannedUnits)
-          const mtsOrderData = allSkus.map(sku => ({
+          if (allSkus.length > 0) {
+            const mtsOrderData = allSkus.map(sku => ({
+              batchId: batch.batchId,
+              orderId: null,
+              productId: sku.productId,
+              quantity: 0,
+              packageCapacityKg: sku.packageCapacityKg,
+            }));
+
+            await this.repo.linkOrdersToBatch(batch.batchId, mtsOrderData);
+            logger.info('Created batchProducts entries for MTS SKUs', { count: allSkus.length });
+          }
+        } catch (mtsError) {
+          logger.warn('Failed to create MTS batch products, batch created but MTS entries not created', {
             batchId: batch.batchId,
-            orderId: null, // MTS - no order
-            productId: sku.productId,
-            quantity: 0, // No planned quantity yet - will be filled at completion
-            packageCapacityKg: sku.packageCapacityKg,
-          }));
-
-          await this.repo.linkOrdersToBatch(batch.batchId, mtsOrderData);
-          logger.info('Created batchProducts entries for MTS SKUs', { count: allSkus.length });
-        }
-      }
-
-      // Add materials to batch and reserve stock
-      // Note: Stock validation already done before batch creation
-      if (batchData.materials && batchData.materials.length > 0) {
-        await this.repo.addMaterialsToBatch(batch.batchId, batchData.materials);
-        logger.info('Materials added to batch', { count: batchData.materials.length });
-
-        // Reserve raw materials by deducting from masterProductRM.availableQty
-        // This prevents the same RM from being used for other orders in PM dashboard
-        for (const material of batchData.materials) {
-          await this.repo.reserveRawMaterial(
-            material.materialId,
-            material.requiredQuantity,
-            batch.batchId,
-            performedBy
-          );
-          logger.info('Raw material reserved', {
-            materialId: material.materialId,
-            quantity: material.requiredQuantity,
+            error: mtsError.message,
           });
         }
-        logger.info('All materials reserved successfully');
       }
 
-      // Create distributions during batch scheduling
-      await this.createBatchDistributions(batch.batchId, batchData.orders);
-      logger.info('Production batch distributions created');
+      // Add materials to batch and reserve stock (non-critical)
+      if (batchData.materials && batchData.materials.length > 0) {
+        try {
+          await this.repo.addMaterialsToBatch(batch.batchId, batchData.materials);
+          logger.info('Materials added to batch', { count: batchData.materials.length });
+        } catch (materialsError) {
+          logger.warn('Failed to add materials to batch, batch created but materials not added', {
+            batchId: batch.batchId,
+            error: materialsError.message,
+          });
+        }
 
-      // Log activity
-      await this.repo.logBatchActivity(batch.batchId, 'Batch Scheduled', performedBy, {
-        newStatus: 'Scheduled',
-        notes: `Batch scheduled for ${orderIds.length} orders`,
-        metadata: { orderIds },
-      });
+        try {
+          for (const material of batchData.materials) {
+            await this.repo.reserveRawMaterial(
+              material.materialId,
+              material.requiredQuantity,
+              batch.batchId,
+              performedBy
+            );
+            logger.info('Raw material reserved', {
+              materialId: material.materialId,
+              quantity: material.requiredQuantity,
+            });
+          }
+          logger.info('All materials reserved successfully');
+        } catch (reserveError) {
+          logger.warn('Failed to reserve raw materials, batch created but materials not reserved', {
+            batchId: batch.batchId,
+            error: reserveError.message,
+          });
+        }
+      }
 
-      logger.info('Batch scheduled successfully', { batchId: batch.batchId });
+      // Create distributions (non-critical)
+      try {
+        await this.createBatchDistributions(batch.batchId, batchData.orders);
+        logger.info('Production batch distributions created');
+      } catch (distError) {
+        logger.warn('Failed to create batch distributions, batch created but distributions not created', {
+          batchId: batch.batchId,
+          error: distError.message,
+        });
+      }
 
+      // Log activity (non-critical)
+      try {
+        await this.repo.logBatchActivity(batch.batchId, 'Batch Scheduled', performedBy, {
+          newStatus: 'Scheduled',
+          notes: `Batch scheduled for ${orderIds.length} orders`,
+          metadata: { orderIds },
+        });
+      } catch (logError) {
+        logger.warn('Failed to log batch activity, batch created but activity not logged', {
+          batchId: batch.batchId,
+          error: logError.message,
+        });
+      }
+
+      logger.info('Batch scheduling completed (with possible warnings)', { batchId: batch.batchId });
       return await this.repo.getBatchById(batch.batchId);
+
     } catch (error) {
-      logger.error('Error scheduling batch', { error: error.message, stack: error.stack });
+      // If batch was created but some post-creation step failed, still return success
+      if (batch) {
+        logger.warn('Batch created but some post-creation steps failed', {
+          batchId: batch.batchId,
+          error: error.message
+        });
+        return await this.repo.getBatchById(batch.batchId);
+      }
+
+      // If batch creation itself failed, throw the error
+      logger.error('Error scheduling batch - batch creation failed', { error: error.message, stack: error.stack });
       throw error;
     }
   }
