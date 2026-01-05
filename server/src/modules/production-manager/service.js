@@ -1168,7 +1168,13 @@ export class ProductionManagerService {
         }
 
         // Validate total output weight is within ±5% of actual batch weight
-        const actualBatchWeight = parseFloat(completionData.actualQuantity) || 0;
+        // If actualDensity is provided, actualQuantity is interpreted as volume (L)
+        // and we compute weight = volume * density. Otherwise treat actualQuantity as weight (kg).
+        const actualBatchWeight =
+          completionData.actualQuantity && completionData.actualDensity
+            ? parseFloat(completionData.actualQuantity) * parseFloat(completionData.actualDensity)
+            : parseFloat(completionData.actualQuantity) || 0;
+
         let totalOutputWeight = 0;
 
         for (const sku of completionData.outputSkus) {

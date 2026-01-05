@@ -348,23 +348,23 @@ export default function ScheduleBatchPage() {
   // Recalculate BOM quantities when planned quantity changes
   useEffect(() => {
     if (consolidatedBOM.length > 0 && plannedQuantity > 0) {
-      // Calculate water quantity and net quantity for recipe
-      const waterQty = (plannedQuantity * pdWaterPercentage) / 100;
-      const netQuantityForRecipe = plannedQuantity - waterQty;
+      // Calculate water and net quantities, treating water% as relative to solids:
+      const netQuantityForRecipe = plannedQuantity / (1 + pdWaterPercentage / 100);
+      const waterQty = plannedQuantity - netQuantityForRecipe;
 
       setConsolidatedBOM(prev =>
         prev.map(m => {
           if (m.isWater) {
-            // Water: recalculate quantity based on planned * water%
+            // Water: recalculate as the difference between total planned and net solids
             // Keep percentage as 0 so it doesn't affect total sum
             return {
               ...m,
-              requiredQuantity: (plannedQuantity * pdWaterPercentage) / 100,
+              requiredQuantity: waterQty,
               percentage: 0, // Keep at 0 - water is extra, not part of recipe %
               waterPercent: pdWaterPercentage, // Store actual % for display
             };
           } else {
-            // Other materials: use (planned - water) * percentage
+            // Other materials: distribute net solids according to their percentages
             return {
               ...m,
               requiredQuantity: (netQuantityForRecipe * Number(m.percentage)) / 100,
@@ -872,10 +872,9 @@ export default function ScheduleBatchPage() {
             setPdWaterPercentage(waterPctFromApi);
           }
 
-          // Calculate net quantity (planned - water)
-          // Water is added separately based on water%, so recipe materials are based on remaining qty
-          const waterQty = (plannedQuantity * waterPercentageFromDev) / 100;
-          const netQuantityForRecipe = plannedQuantity - waterQty;
+          // Calculate net quantity considering water % is relative to solids (water = solids * water%)
+          const netQuantityForRecipe = plannedQuantity / (1 + waterPercentageFromDev / 100);
+          const waterQty = plannedQuantity - netQuantityForRecipe;
 
           const mappedBOM = devRes.data.materials
             .map((item: any) => {
@@ -1239,7 +1238,7 @@ export default function ScheduleBatchPage() {
       // Auto-fill actual values with calculated/planned values by default - CHANGED: Set to '' as per user request to force manual entry
       setActualQuantity('');
       setActualDensity('');
-      setActualWaterPercentage(0);
+      setActualWaterPercentage('');
       setActualViscosity('');
 
       // Set planned/reference values from the recipe (fetched from master_product_fg via DB join)
@@ -1416,16 +1415,6 @@ export default function ScheduleBatchPage() {
     }
 
     if (
-      actualWaterPercentage === '' ||
-      actualWaterPercentage === undefined ||
-      actualWaterPercentage === null ||
-      Number(actualWaterPercentage) < 0
-    ) {
-      showToast.error('Please enter actual water percentage');
-      return;
-    }
-
-    if (
       actualViscosity === '' ||
       actualViscosity === undefined ||
       actualViscosity === null ||
@@ -1486,10 +1475,51 @@ export default function ScheduleBatchPage() {
 
     setIsSubmitting(true);
     try {
+      // Build outputSkus and compute total output weight client-side for validation
+      const outputSkus = Object.entries(skuOutput).map(([pId, qty]) => {
+        const productId = parseInt(pId);
+        const sku = availableSkus.find(s => s.productId === productId);
+
+        let weight = 0;
+        const capacityLtr = parseFloat(sku?.packagingCapacityLtr || '0');
+        if (capacityLtr > 0) {
+          const density = parseFloat(sku?.fillingDensity || '1');
+          weight = qty * capacityLtr * density;
+        } else {
+          weight = qty * (parseFloat(sku?.packageCapacityKg) || 0);
+        }
+
+        return {
+          productId,
+          producedUnits: qty,
+          weightKg: Number(weight.toFixed(4)),
+        };
+      });
+
+      // Compute actual batch weight (if density provided, treat actualQuantity as volume)
+      const actualBatchWeight =
+        actualQuantity && actualDensity ? Number(actualQuantity) * Number(actualDensity) : Number(actualQuantity) || 0;
+
+      const totalOutputWeight = outputSkus.reduce((sum, s) => sum + (Number(s.weightKg) || 0), 0);
+
+      const tolerance = actualBatchWeight * 0.05; // 5% tolerance
+      const maxWeight = actualBatchWeight + tolerance;
+
+      if (totalOutputWeight > maxWeight) {
+        showToast.error(
+          `Total output weight (${totalOutputWeight.toFixed(2)} kg) exceeds +5% of actual batch weight (${actualBatchWeight.toFixed(2)} kg). Maximum allowed: ${maxWeight.toFixed(2)} kg`
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
       const completionData = {
         actualQuantity: Number(actualQuantity),
         actualDensity: Number(actualDensity),
-        actualWaterPercentage: Number(actualWaterPercentage),
+        actualWaterPercentage:
+          actualWaterPercentage === '' || actualWaterPercentage === undefined || actualWaterPercentage === null
+            ? undefined
+            : Number(actualWaterPercentage),
         actualViscosity: Number(actualViscosity),
         startedAt: `${startDate}T${startTime}:00.000Z`,
         completedAt: `${endDate}T${endTime}:00.000Z`,
@@ -1512,25 +1542,11 @@ export default function ScheduleBatchPage() {
             isAdditional: true,
           })),
         ],
-        outputSkus: Object.entries(skuOutput).map(([pId, qty]) => {
-          const productId = parseInt(pId);
-          const sku = availableSkus.find(s => s.productId === productId);
-
-          let weight = 0;
-          const capacityLtr = parseFloat(sku?.packagingCapacityLtr || '0');
-          if (capacityLtr > 0) {
-            const density = parseFloat(sku?.fillingDensity || '1');
-            weight = qty * capacityLtr * density;
-          } else {
-            weight = qty * (parseFloat(sku?.packageCapacityKg) || 0);
-          }
-
-          return {
-            productId,
-            producedUnits: qty,
-            weightKg: weight.toFixed(4),
-          };
-        }),
+        outputSkus: outputSkus.map(s => ({
+          productId: s.productId,
+          producedUnits: s.producedUnits,
+          weightKg: s.weightKg.toFixed(4),
+        })),
       };
 
       await productionManagerApi.completeBatch(completingBatchId, completionData);
@@ -1543,7 +1559,12 @@ export default function ScheduleBatchPage() {
       // Optional: Open report modal or redirect
     } catch (error: any) {
       console.error('Failed to complete batch:', error);
-      showToast.error(error?.message || 'Failed to complete batch');
+      // Extract helpful error message from server response when available
+      const serverMessage =
+        (error?.response && error.response.data && error.response.data.message) ||
+        error?.message ||
+        'Failed to complete batch';
+      showToast.error(serverMessage);
     } finally {
       setIsSubmitting(false);
     }
