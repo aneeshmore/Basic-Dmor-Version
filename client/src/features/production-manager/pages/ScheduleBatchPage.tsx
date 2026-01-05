@@ -206,7 +206,8 @@ export default function ScheduleBatchPage() {
 
       const capacityLtr = parseFloat(sku.packagingCapacityLtr || '0');
       if (capacityLtr > 0) {
-        const density = (actualDensity && actualDensity > 0) ? actualDensity : parseFloat(sku.fillingDensity || '1');
+        const fillingDensity = parseFloat(sku.fillingDensity || '0');
+        const density = fillingDensity > 0 ? fillingDensity : (actualDensity && actualDensity > 0 ? actualDensity : 1);
         return sum + qty * capacityLtr * density;
       }
 
