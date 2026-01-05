@@ -175,7 +175,6 @@ export default function ScheduleBatchPage() {
   // Complete Batch Form State (Moved from Modal)
   const [actualQuantity, setActualQuantity] = useState<number | ''>('');
   const [actualDensity, setActualDensity] = useState<number | ''>('');
-  const [actualWaterPercentage, setActualWaterPercentage] = useState<number | ''>('');
   const [actualViscosity, setActualViscosity] = useState<number | ''>('');
 
   // Planned Values (Reference for UI)
@@ -1239,7 +1238,6 @@ export default function ScheduleBatchPage() {
       // Auto-fill actual values with calculated/planned values by default - CHANGED: Set to '' as per user request to force manual entry
       setActualQuantity('');
       setActualDensity('');
-      setActualWaterPercentage('');
       setActualViscosity('');
 
       // Set planned/reference values from the recipe (fetched from master_product_fg via DB join)
@@ -1517,10 +1515,6 @@ export default function ScheduleBatchPage() {
       const completionData = {
         actualQuantity: Number(actualQuantity),
         actualDensity: Number(actualDensity),
-        actualWaterPercentage:
-          actualWaterPercentage === '' || actualWaterPercentage === undefined || actualWaterPercentage === null
-            ? undefined
-            : Number(actualWaterPercentage),
         actualViscosity: Number(actualViscosity),
         startedAt: `${startDate}T${startTime}:00.000Z`,
         completedAt: `${endDate}T${endTime}:00.000Z`,
@@ -1814,11 +1808,8 @@ export default function ScheduleBatchPage() {
                           type="number"
                           step="0.01"
                           value={actualQuantity}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setActualQuantity(val === '' ? '' : parseFloat(val));
-                          }}
-                          className="w-full px-3 py-2 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]"
+                          readOnly
+                          className="w-full px-3 py-2 rounded border border-[var(--border)] bg-[var(--surface-muted)] text-[var(--text-secondary)] cursor-not-allowed"
                         />
                       </div>
                       <div>
@@ -1858,27 +1849,6 @@ export default function ScheduleBatchPage() {
                           onChange={e => {
                             const val = e.target.value;
                             setActualViscosity(val === '' ? '' : parseFloat(val));
-                          }}
-                          className="w-full px-3 py-2 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <div className="flex justify-between items-center mb-1">
-                          <label className="text-xs text-[var(--text-secondary)]">
-                            Actual Water Percentage
-                          </label>
-                          <span className="text-[10px] text-[var(--text-tertiary)] bg-[var(--surface-muted)] px-1 rounded">
-                            Calculated: {plannedWaterPercentageRef}%
-                          </span>
-                        </div>
-                        <input
-                          type="number"
-                          step="0.001"
-                          value={actualWaterPercentage}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setActualWaterPercentage(val === '' ? '' : parseFloat(val));
                           }}
                           className="w-full px-3 py-2 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]"
                           required
@@ -1954,6 +1924,7 @@ export default function ScheduleBatchPage() {
                         <tbody className="divide-y divide-[var(--border)]/50">
                           {/* Planned Materials */}
                           {actualMaterials
+                            .filter(mat => mat.plannedQuantity > 0)
                             .sort((a, b) => {
                               const aIsWater = a.materialName.toLowerCase().includes('water');
                               const bIsWater = b.materialName.toLowerCase().includes('water');
@@ -2154,7 +2125,8 @@ export default function ScheduleBatchPage() {
 
                                 const capacityLtr = parseFloat(sku.packagingCapacityLtr || '0');
                                 if (capacityLtr > 0) {
-                                  const density = (actualDensity && actualDensity > 0) ? actualDensity : parseFloat(sku.fillingDensity || '1');
+                                  const fillingDensity = parseFloat(sku.fillingDensity || '0');
+                                  const density = fillingDensity > 0 ? fillingDensity : (actualDensity && actualDensity > 0 ? actualDensity : 1);
                                   return sum + qty * capacityLtr * density;
                                 }
 
@@ -2412,10 +2384,10 @@ export default function ScheduleBatchPage() {
                                   <td
                                     className={`px-4 py-3 text-sm font-semibold ${insufficientMaterials.has(material.materialId) ? 'text-red-600 dark:text-red-400' : 'text-[var(--text-primary)]'}`}
                                   >
-                                    {material.requiredQuantity.toFixed(2)} kg
+                                    {material.requiredQuantity.toFixed(3)} kg
                                     {insufficientMaterials.has(material.materialId) && (
                                       <div className="text-xs text-red-500 font-normal">
-                                        Avail: {material.availableQuantity.toFixed(2)}
+                                        Avail: {material.availableQuantity.toFixed(3)}
                                       </div>
                                     )}
                                   </td>

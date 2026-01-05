@@ -483,11 +483,10 @@ const BatchProductionReport = () => {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
-      doc.text('Packaging Materials (Based on Actual Output)', margin, nextY - 2);
+      doc.text('Packaging Materials Used (Based on Actual Output)', margin, nextY - 2);
 
       const packagingBody = filteredPackagingMaterials.map(pm => [
         pm.packagingName,
-        formatNumber(pm.plannedQty),
         formatNumber(pm.actualQty),
       ]);
 
@@ -497,7 +496,7 @@ const BatchProductionReport = () => {
       autoTable(doc, {
         startY: nextY,
         margin: { left: margin },
-        head: [['Packaging Name', 'Planned Qty', 'Actual Qty']],
+        head: [['Packaging Name', 'Actual Qty']],
         body: packagingBody,
         theme: 'grid',
         styles: {
@@ -517,11 +516,10 @@ const BatchProductionReport = () => {
         columnStyles: {
           0: { cellWidth: 'auto' },
           1: { cellWidth: 30, halign: 'right' },
-          2: { cellWidth: 30, halign: 'right' },
         },
         // We can make this table same width as page or smaller. Let's make it full width relative to margins
         tableWidth: pageWidth - margin * 2,
-        foot: [['Total', formatNumber(totalPlannedPM), formatNumber(totalActualPM)]],
+        foot: [['Total', formatNumber(totalActualPM)]],
         footStyles: {
           fillColor: colorSuccess, // Green
           textColor: [255, 255, 255], // White
@@ -1591,23 +1589,26 @@ const BatchProductionReport = () => {
                               </td>
                             </tr>
                           ))}
-                          {/* Additional Materials - Bold */}
-                          {additional.map((rm, idx) => (
-                            <tr key={`add-${idx}`}>
-                              <td className="border border-gray-300 px-2 py-1 text-center font-bold">
-                                {regular.length + idx + 1}
-                              </td>
-                              <td className="border border-gray-300 px-2 py-1 font-bold">
-                                {rm.rawMaterialName}
-                              </td>
-                              <td className="border border-gray-300 px-2 py-1 text-right font-bold">
-                                {formatNumberForPreview(rm.percentage)}
-                              </td>
-                              <td className="border border-gray-300 px-2 py-1 text-right font-bold">
-                                {formatNumberForPreview(rm.actualQty || rm.percentage)}
-                              </td>
-                            </tr>
-                          ))}
+                          {/* Additional Materials - Bold only for water */}
+                          {additional.map((rm, idx) => {
+                            const isWater = rm.rawMaterialName.toLowerCase().includes('water');
+                            return (
+                              <tr key={`add-${idx}`}>
+                                <td className={`border border-gray-300 px-2 py-1 text-center ${isWater ? 'font-bold' : ''}`}>
+                                  {regular.length + idx + 1}
+                                </td>
+                                <td className={`border border-gray-300 px-2 py-1 ${isWater ? 'font-bold' : ''}`}>
+                                  {rm.rawMaterialName}
+                                </td>
+                                <td className={`border border-gray-300 px-2 py-1 text-right ${isWater ? 'font-bold' : ''}`}>
+                                  {formatNumberForPreview(rm.percentage)}
+                                </td>
+                                <td className={`border border-gray-300 px-2 py-1 text-right ${isWater ? 'font-bold' : ''}`}>
+                                  {formatNumberForPreview(rm.actualQty || rm.percentage)}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </>
                       );
                     })()}
@@ -1735,7 +1736,7 @@ const BatchProductionReport = () => {
               }).length > 0 && (
                 <div className="mb-8">
                   <h3 className="font-bold text-sm mb-2">
-                    Packaging Materials (Based on Actual Output)
+                    Packaging Materials Used (Based on Actual Output)
                   </h3>
                   <table className="w-full text-xs border-collapse border border-gray-300">
                     <thead className="bg-gray-100">
@@ -1743,7 +1744,6 @@ const BatchProductionReport = () => {
                         <th className="border border-gray-300 px-2 py-1 text-left">
                           Packaging Name
                         </th>
-                        <th className="border border-gray-300 px-2 py-1 text-right">Planned Qty</th>
                         <th className="border border-gray-300 px-2 py-1 text-right">Actual Qty</th>
                       </tr>
                     </thead>
