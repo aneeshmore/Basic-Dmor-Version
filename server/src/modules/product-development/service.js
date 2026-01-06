@@ -4,6 +4,7 @@ import {
 } from '../../db/schema/products/product-development.js';
 import { masterProducts } from '../../db/schema/products/master-products.js';
 import { masterProductFG } from '../../db/schema/products/master-product-fg.js';
+import { masterProductRM } from '../../db/schema/products/master-product-rm.js';
 import { eq, desc } from 'drizzle-orm';
 import { db } from '../../db/index.js';
 
@@ -12,7 +13,7 @@ export class ProductDevelopmentService {
     // Explicit extraction and casting
     const title = data.productName || 'New Product Development';
     const masterProductId = parseInt(data.masterProductId);
-    const density = data.density ? String(data.density) : null;
+    let density = data.density ? String(data.density) : null;
     const viscosity = data.viscosity ? String(data.viscosity) : null;
     const hours = data.hours ? String(data.hours) : null;
     const perPercent = data.perPercent ? String(data.perPercent) : null;
@@ -22,6 +23,42 @@ export class ProductDevelopmentService {
     // Use provided status or default to 'Draft'/'Incomplete'
     const status = data.status || 'Draft';
     const mixingRatioPart = data.mixingRatioPart ? String(data.mixingRatioPart) : null;
+
+    // Calculate density from materials if materials are provided (always override)
+    if (materials.length > 0) {
+      let totalWeight = 0;
+      let totalVolume = 0;
+
+      for (const material of materials) {
+        const materialId = parseInt(material.productId);
+        const percentage = parseFloat(material.percentage) || 0;
+        const wtPerLtr = parseFloat(material.wtInLtr) || 0;
+
+        // Assume percentage is weight percentage, so weight for 100kg batch = percentage
+        const weight = percentage; // e.g., 10% = 10kg for 100kg batch
+        totalWeight += weight;
+
+        // Get density from masterProductRM
+        const rmData = await db
+          .select({ rmDensity: masterProductRM.rmDensity })
+          .from(masterProductRM)
+          .where(eq(masterProductRM.masterProductId, materialId))
+          .limit(1);
+
+        if (rmData.length > 0 && rmData[0].rmDensity) {
+          const materialDensity = parseFloat(rmData[0].rmDensity);
+          if (materialDensity > 0) {
+            const volume = weight / materialDensity; // Volume in liters
+            totalVolume += volume;
+          }
+        }
+      }
+
+      if (totalVolume > 0) {
+        const calculatedDensity = totalWeight / totalVolume;
+        density = String(calculatedDensity.toFixed(3));
+      }
+    }
 
     console.log('Creating Product Development:', {
       masterProductId,

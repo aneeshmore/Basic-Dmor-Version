@@ -21,6 +21,7 @@ import {
   Clock,
   ShoppingCart,
   Loader2,
+  Search,
 } from 'lucide-react';
 import { PageHeader } from '@/components/common';
 import { Button } from '@/components/ui/Button';
@@ -83,6 +84,7 @@ export default function DispatchPlanning() {
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
   const [dispatchingOrder, setDispatchingOrder] = useState<number | null>(null);
   const [orderFilter, setOrderFilter] = useState<'all' | 'ready' | 'partial' | 'pending'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [loadingViewOrders, setLoadingViewOrders] = useState(true);
   // Selected orders for dispatch (checkbox selection in Orders View)
   const [selectedViewOrderIds, setSelectedViewOrderIds] = useState<Set<number>>(new Set());
@@ -352,6 +354,7 @@ export default function DispatchPlanning() {
   const filteredViewOrders = useMemo(() => {
     let result = ordersWithDynamicStock;
 
+    // Apply status filter
     if (orderFilter === 'ready') {
       result = result.filter(o => o.isFullyReady);
     } else if (orderFilter === 'partial') {
@@ -360,8 +363,20 @@ export default function DispatchPlanning() {
       result = result.filter(o => o.readinessPercentage === 0);
     }
 
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase().trim();
+      result = result.filter(order =>
+        order.orderNumber.toLowerCase().includes(searchLower) ||
+        order.customerName.toLowerCase().includes(searchLower) ||
+        (order.location && order.location.toLowerCase().includes(searchLower)) ||
+        (order.billNo && order.billNo.toLowerCase().includes(searchLower)) ||
+        order.products.some(p => p.productName.toLowerCase().includes(searchLower))
+      );
+    }
+
     return result;
-  }, [ordersWithDynamicStock, orderFilter]);
+  }, [ordersWithDynamicStock, orderFilter, searchTerm]);
 
   // Orders View - Stats (uses dynamic stock orders)
   const orderStats = useMemo(() => {
@@ -699,6 +714,18 @@ export default function DispatchPlanning() {
             <span className="bg-[var(--primary)]/10 text-[var(--primary)] text-xs font-bold px-2 py-1 rounded-md border border-[var(--primary)]/20">
               {orderStats.totalOrders} Orders
             </span>
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[var(--text-secondary)]" />
+            <input
+              type="text"
+              placeholder="Search orders..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] outline-none text-sm w-64"
+            />
           </div>
 
           {/* Filter Tabs */}

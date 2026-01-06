@@ -7,6 +7,7 @@ import { productApi } from '../../master-products/api/productApi';
 import { productDevelopmentApi } from '../../masters/api/productDevelopment';
 import { employeeApi } from '../../employees/api/employeeApi';
 import { PageHeader } from '@/components/common';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   User,
   Eye,
@@ -134,6 +135,27 @@ function SortableRow({ id, children, isDisabled = false }: { id: string; childre
 export default function ScheduleBatchPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, hasPermission, isAuthenticated } = useAuth();
+
+  // Check if user has permission to create batches
+  const canCreateBatch = hasPermission('production-manager', 'create');
+
+  // If not authenticated or no permission, show access denied
+  if (!isAuthenticated || !canCreateBatch) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="text-red-500 text-lg font-semibold mb-2">Access Denied</div>
+          <div className="text-gray-600">
+            {!isAuthenticated
+              ? 'Please log in to access this page.'
+              : 'You do not have permission to create production batches.'
+            }
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [distributions, setDistributions] = useState<DistributionInfo[]>([]);
@@ -320,6 +342,37 @@ export default function ScheduleBatchPage() {
 
   // State for Batches Table
   const [scheduledBatches, setScheduledBatches] = useState<any[]>([]);
+
+  const fetchSupervisors = async () => {
+    try {
+      // Fetch employees from Production department (departmentId: 1)
+      const response = await employeeApi.getAll({ departmentId: 1, status: 'Active' });
+      const productionEmployees = response.data || [];
+
+      // Map to supervisor format with full name
+      const supervisorList = productionEmployees.map((emp: any) => ({
+        employeeId: emp.EmployeeID,
+        name: `${emp.FirstName} ${emp.LastName}`,
+      }));
+
+      // Add the logged-in production manager if not already in the list
+      if (user && user.EmployeeID) {
+        const userInList = supervisorList.some(sup => sup.employeeId === user.EmployeeID);
+        if (!userInList) {
+          supervisorList.push({
+            employeeId: user.EmployeeID,
+            name: `${user.FirstName} ${user.LastName}`,
+          });
+        }
+      }
+
+      setSupervisors(supervisorList);
+    } catch (error) {
+      console.error('Failed to fetch supervisors:', error);
+      showToast.error('Failed to load supervisors');
+      setSupervisors([]);
+    }
+  };
 
   // Complete Batch Modal State
   const [completeBatchModalOpen, setCompleteBatchModalOpen] = useState(false);
@@ -658,26 +711,6 @@ export default function ScheduleBatchPage() {
       showToast.error('Failed to load batch details');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const fetchSupervisors = async () => {
-    try {
-      // Fetch employees from Production department (departmentId: 1)
-      const response = await employeeApi.getAll({ departmentId: 1, status: 'Active' });
-      const productionEmployees = response.data || [];
-
-      // Map to supervisor format with full name
-      const supervisorList = productionEmployees.map((emp: any) => ({
-        employeeId: emp.EmployeeID,
-        name: `${emp.FirstName} ${emp.LastName}`,
-      }));
-
-      setSupervisors(supervisorList);
-    } catch (error) {
-      console.error('Failed to fetch supervisors:', error);
-      showToast.error('Failed to load supervisors');
-      setSupervisors([]);
     }
   };
 

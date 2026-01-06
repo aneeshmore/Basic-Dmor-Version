@@ -68,3 +68,53 @@ export const numberToWords = (num: number): string => {
 
   return words.charAt(0).toUpperCase() + words.slice(1);
 };
+
+// Date and Time formatting functions for IST (Indian Standard Time) and DD/MM/YY format
+export const formatDateIST = (dateString: string | null | undefined): string => {
+  if (!dateString) return '-';
+  try {
+    const date = new Date(dateString);
+    // Convert to IST (Asia/Kolkata timezone)
+    const istDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    const day = istDate.getDate().toString().padStart(2, '0');
+    const month = (istDate.getMonth() + 1).toString().padStart(2, '0');
+    const year = istDate.getFullYear().toString().slice(-2); // Last 2 digits of year
+    return `${day}/${month}/${year}`;
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return '-';
+  }
+};
+
+export const formatDateTimeIST = (dateString: string | null | undefined): string => {
+  if (!dateString) return '-';
+  try {
+    const date = new Date(dateString);
+    // Convert to IST (Asia/Kolkata timezone)
+    const istDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    const day = istDate.getDate().toString().padStart(2, '0');
+    const month = (istDate.getMonth() + 1).toString().padStart(2, '0');
+    const year = istDate.getFullYear().toString().slice(-2); // Last 2 digits of year
+    const hours = istDate.getHours().toString().padStart(2, '0');
+    const minutes = istDate.getMinutes().toString().padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  } catch (error) {
+    console.error('Error formatting date time:', error);
+    return '-';
+  }
+};
+
+export const formatTimeIST = (dateString: string | null | undefined): string => {
+  if (!dateString) return '-';
+  try {
+    const date = new Date(dateString);
+    // Convert to IST (Asia/Kolkata timezone)
+    const istDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    const hours = istDate.getHours().toString().padStart(2, '0');
+    const minutes = istDate.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return '-';
+  }
+};

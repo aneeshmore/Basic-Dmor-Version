@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { PageHeader } from '@/components/common';
 import { reportsApi } from '../api/reportsApi';
 import { BatchProductionReportItem } from '../types';
+import { formatDateIST, formatDateTimeIST } from '@/utils/formatters';
 import {
   FileDown,
   Warehouse,
@@ -152,32 +153,14 @@ const BatchProductionReport = () => {
       [`Batch No:`, `${batch.batchNo}${batch.productName ? ' / ' + batch.productName : ''}`],
       [`Supervisor:`, batch.supervisor || '-'],
       [`Labours:`, batch.labourNames || '-'],
-      [`Date:`, new Date().toLocaleDateString()],
+      [`Date:`, formatDateIST(new Date().toISOString())],
       [
         `Start Date-Time:`,
-        batch.startedAt
-          ? new Date(batch.startedAt).toLocaleString([], {
-              year: 'numeric',
-              month: 'numeric',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true,
-            })
-          : '-',
+        formatDateTimeIST(batch.startedAt),
       ],
       [
         `End Date-Time:`,
-        batch.completedAt
-          ? new Date(batch.completedAt).toLocaleString([], {
-              year: 'numeric',
-              month: 'numeric',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true,
-            })
-          : '-',
+        formatDateTimeIST(batch.completedAt),
       ],
       [
         `Total Time:`,
@@ -970,7 +953,7 @@ const BatchProductionReport = () => {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
         cell: ({ row }) => (
           <div className="text-[var(--text-secondary)] whitespace-nowrap">
-            {row.original.startedAt ? new Date(row.original.startedAt).toLocaleDateString() : '-'}
+            {formatDateIST(row.original.startedAt)}
           </div>
         ),
       },
@@ -1430,22 +1413,18 @@ const BatchProductionReport = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-gray-600">Date:</span>
-                  <span className="text-gray-900">{new Date().toLocaleDateString()}</span>
+                  <span className="text-gray-900">{formatDateIST(new Date().toISOString())}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-gray-600">Start Date-Time:</span>
                   <span className="text-gray-900">
-                    {previewBatch.startedAt
-                      ? new Date(previewBatch.startedAt).toLocaleString()
-                      : '-'}
+                    {formatDateTimeIST(previewBatch.startedAt)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-gray-600">End Date-Time:</span>
                   <span className="text-gray-900">
-                    {previewBatch.completedAt
-                      ? new Date(previewBatch.completedAt).toLocaleString()
-                      : '-'}
+                    {formatDateTimeIST(previewBatch.completedAt)}
                   </span>
                 </div>
                 <div className="flex justify-between">
