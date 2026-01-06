@@ -814,6 +814,7 @@ const CustomerForm = ({
                 placeholder="Enter company name"
                 required
                 autoFocus
+                className="h-10"
               />
               {errors.CompanyName && (
                 <p className="text-xs text-red-500 font-medium">{errors.CompanyName}</p>
@@ -830,6 +831,7 @@ const CustomerForm = ({
                 }}
                 placeholder="Enter contact person"
                 required
+                className="h-10"
               />
               {errors.ContactPerson && (
                 <p className="text-xs text-red-500 font-medium">{errors.ContactPerson}</p>
@@ -842,7 +844,7 @@ const CustomerForm = ({
                   Mobile Number <span className="text-red-500">*</span>
                 </label>
                 <div className="flex gap-2">
-                  <div className="flex-shrink-0" style={{ width: '100px' }}>
+                  <div className="flex-shrink-0 h-10" style={{ width: '100px' }}>
                     <Select
                       options={countryCodes.map(code => ({ value: code, label: code }))}
                       value={formData.CountryCode || '+91'}
@@ -851,19 +853,20 @@ const CustomerForm = ({
                       }}
                     />
                   </div>
-                  <div className="flex-1">
-                    <Input
-                      ref={mobileRef}
-                      type="tel"
-                      value={formData.MobileNo || ''}
-                      onChange={e => {
-                        setFormData({ ...formData, MobileNo: e.target.value });
-                        validateField('MobileNo', e.target.value);
-                      }}
-                      placeholder="Enter 10-digit mobile number"
-                      required
-                      maxLength={10}
-                    />
+                  <div className="flex-1 h-10">
+                      <Input
+                        ref={mobileRef}
+                        type="tel"
+                        value={formData.MobileNo || ''}
+                        onChange={e => {
+                          setFormData({ ...formData, MobileNo: e.target.value });
+                          validateField('MobileNo', e.target.value);
+                        }}
+                        placeholder="Enter 10-digit mobile number"
+                        required
+                        maxLength={10}
+                        className="h-10"
+                      />
                   </div>
                 </div>
                 {errors.MobileNo && (
@@ -877,7 +880,7 @@ const CustomerForm = ({
                     Mobile Number 2 (Optional)
                   </label>
                   <div className="flex gap-2">
-                    <div className="flex-shrink-0" style={{ width: '100px' }}>
+                    <div className="flex-shrink-0 h-10" style={{ width: '100px' }}>
                       <Select
                         options={countryCodes.map(code => ({ value: code, label: code }))}
                         value={formData.CountryCode2 || '+91'}
@@ -886,7 +889,7 @@ const CustomerForm = ({
                         }}
                       />
                     </div>
-                    <div className="flex-1 relative">
+                    <div className="flex-1 relative h-10">
                       <Input
                         type="tel"
                         value={formData.MobileNo2 || ''}
@@ -896,6 +899,7 @@ const CustomerForm = ({
                         }}
                         placeholder="Enter 10-digit mobile number"
                         maxLength={10}
+                        className="h-10"
                       />
                       <button
                         onClick={() => {
@@ -921,7 +925,7 @@ const CustomerForm = ({
                     Mobile Number 3 (Optional)
                   </label>
                   <div className="flex gap-2">
-                    <div className="flex-shrink-0" style={{ width: '100px' }}>
+                    <div className="flex-shrink-0 h-10" style={{ width: '100px' }}>
                       <Select
                         options={countryCodes.map(code => ({ value: code, label: code }))}
                         value={formData.CountryCode3 || '+91'}
@@ -930,7 +934,7 @@ const CustomerForm = ({
                         }}
                       />
                     </div>
-                    <div className="flex-1 relative">
+                    <div className="flex-1 relative h-10">
                       <Input
                         type="tel"
                         value={formData.MobileNo3 || ''}
@@ -940,6 +944,7 @@ const CustomerForm = ({
                         }}
                         placeholder="Enter 10-digit mobile number"
                         maxLength={10}
+                        className="h-10"
                       />
                       <button
                         onClick={() => {
@@ -982,6 +987,7 @@ const CustomerForm = ({
                   validateField('EmailID', e.target.value);
                 }}
                 placeholder="Enter email address"
+                className="h-10"
               />
               {errors.EmailID && (
                 <p className="text-xs text-red-500 font-medium">{errors.EmailID}</p>
@@ -999,6 +1005,7 @@ const CustomerForm = ({
                 }}
                 placeholder="27AAPFU0939F1ZV"
                 maxLength={15}
+                className="h-10"
               />
               {errors.GSTNumber && (
                 <p className="text-xs text-red-500 font-medium flex items-center gap-1">
@@ -1026,6 +1033,7 @@ const CustomerForm = ({
                 placeholder="Enter 6-digit pincode"
                 maxLength={6}
                 required
+                className="h-10"
               />
               {errors.Pincode && (
                 <p className="text-xs text-red-500 font-medium">{errors.Pincode}</p>
@@ -1041,6 +1049,7 @@ const CustomerForm = ({
                   validateField('Location', e.target.value);
                 }}
                 placeholder="City will be fetched from pincode"
+                className="h-10"
               />
               {errors.Location && (
                 <p className="text-xs text-red-500 font-medium">{errors.Location}</p>
@@ -1052,7 +1061,7 @@ const CustomerForm = ({
                 Complete Address (Optional)
               </label>
               <textarea
-                className={`w-full h-24 px-3 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--surface)] border ${
+                className={`w-full h-10 px-3 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--surface)] border ${
                   errors.Address ? 'border-red-500' : 'border-[var(--border)]'
                 } text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] placeholder:opacity-60 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all duration-200 resize-none`}
                 value={formData.Address || ''}
@@ -1079,6 +1088,7 @@ const CustomerForm = ({
                 })
               }
               placeholder="Select customer type"
+              className="h-10"
             />
 
             <Select
@@ -1097,6 +1107,7 @@ const CustomerForm = ({
                   ? ['Admin', 'SuperAdmin', 'Accounts Manager'].includes(user?.Role)
                   : false)
               }
+              className="h-10"
             />
           </div>
         </div>

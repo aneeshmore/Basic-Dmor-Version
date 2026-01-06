@@ -2,6 +2,8 @@ export type NotificationPriority = 'low' | 'normal' | 'high' | 'critical';
 
 export interface MaterialShortageData {
   orderId: number;
+  orderNumber?: string;
+  customerName?: string;
   shortages: Array<{
     materialId: number;
     materialName: string;

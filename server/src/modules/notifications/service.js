@@ -144,7 +144,7 @@ export class NotificationsService {
 
   // --- Refactored Notification Methods ---
 
-  async createMaterialShortageNotifications(orderId, shortages, orderNumber = null) {
+  async createMaterialShortageNotifications(orderId, shortages, orderNumber = null, customerName = null) {
     console.log(
       `[NotificationService] Processing material shortage notifications for order ${orderId}`
     );
@@ -170,13 +170,13 @@ export class NotificationsService {
               ? 'high'
               : 'normal';
 
-      const displayOrder = orderNumber ? `${orderNumber}` : `Order #${orderId}`;
-      const title = `${displayOrder} - Material Shortage`;
+      const displayCustomer = customerName ? `${customerName}` : `Order #${orderId}`;
+      const title = `${displayCustomer} - Material Shortage`;
 
       const message =
         priority === 'critical'
-          ? `${displayOrder} requires ${shortage.materialName}. Required: ${shortage.requiredQty} ${shortage.unit}, Available: ${shortage.availableQty} ${shortage.unit}. Immediate procurement needed.`
-          : `${displayOrder} requires ${shortage.materialName}. Required: ${shortage.requiredQty} ${shortage.unit}, Available: ${shortage.availableQty} ${shortage.unit}. Plan procurement soon.`;
+          ? `${displayCustomer} requires ${shortage.materialName}. Required: ${shortage.requiredQty} ${shortage.unit}, Available: ${shortage.availableQty} ${shortage.unit}. Immediate procurement needed.`
+          : `${displayCustomer} requires ${shortage.materialName}. Required: ${shortage.requiredQty} ${shortage.unit}, Available: ${shortage.availableQty} ${shortage.unit}. Plan procurement soon.`;
 
       for (const recipient of recipients) {
         const notification = await this.createNotification({
@@ -187,6 +187,7 @@ export class NotificationsService {
           data: {
             orderId,
             orderNumber,
+            customerName,
             shortages: [shortage],
             link: '/operations/pm-inward',
           },
@@ -208,7 +209,7 @@ export class NotificationsService {
     orderNumber = null
   ) {
     const displayId = orderNumber ? `${orderNumber}` : `Order #${orderId}`;
-    const title = `${displayId} - ${status}`;
+    const title = `${customerName} - ${status}`;
 
     let message;
     if (status === 'Accepted') {
@@ -267,7 +268,7 @@ export class NotificationsService {
     orderNumber = null
   ) {
     const displayId = orderNumber ? `${orderNumber}` : `Order #${orderId}`;
-    const title = `New ${displayId}`;
+    const title = `Pending Order: ${customerName}`;
     const message = `New order from ${customerName} (₹${totalAmount}) by ${salesPersonName}. Check payment.`;
 
     const recipients = await this.getRecipients('NewOrder');
@@ -278,7 +279,7 @@ export class NotificationsService {
         type: 'NewOrder',
         title,
         message,
-        data: { orderId, orderNumber, status: 'Pending' },
+        data: { orderId, orderNumber, customerName, status: 'Pending' },
         priority: 'normal',
         isRead: false,
       });

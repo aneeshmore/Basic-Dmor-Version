@@ -1520,7 +1520,7 @@ const BatchProductionReport = () => {
                             <td className="border border-gray-300 px-2 py-1 text-right">
                               {viscosityVariance.toFixed(2)}
                             </td>
-                          </tr>
+                          </tr> 
                           <tr>
                             <td className="border border-gray-300 px-2 py-1">Total Weight (Kg)</td>
                             <td className="border border-gray-300 px-2 py-1 text-right">

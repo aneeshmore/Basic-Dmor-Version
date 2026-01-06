@@ -773,6 +773,7 @@ const EmployeeForm = ({
                 ]}
                 value={prefix}
                 onChange={e => setPrefix(e.target.value)}
+                className="h-11"
               />
             </div>
             <div className="md:col-span-3">
@@ -787,6 +788,7 @@ const EmployeeForm = ({
                 placeholder="First Name"
                 required
                 autoFocus
+                className="h-11"
               />
               {errors.FirstName && (
                 <p className="text-red-500 text-[10px] mt-1">{errors.FirstName}</p>
@@ -803,6 +805,7 @@ const EmployeeForm = ({
                 }}
                 placeholder="Last Name"
                 required
+                className="h-11"
               />
               {errors.LastName && (
                 <p className="text-red-500 text-[10px] mt-1">{errors.LastName}</p>
@@ -815,6 +818,7 @@ const EmployeeForm = ({
                 value={formData.DOB}
                 onChange={e => setFormData({ ...formData, DOB: e.target.value })}
                 max={new Date().toISOString().split('T')[0]}
+                className="h-11"
               />
               {errors.DOB && <p className="text-red-500 text-[10px] mt-1">{errors.DOB}</p>}
             </div>
@@ -826,7 +830,7 @@ const EmployeeForm = ({
           <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">
             Contact Information
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
             <div>
               <Input
                 label="Email (Optional)"
@@ -837,6 +841,7 @@ const EmployeeForm = ({
                   validateField('EmailID', e.target.value);
                 }}
                 placeholder="employee@example.com"
+                className="h-11"
               />
               {errors.EmailID && <p className="text-red-500 text-xs mt-1">{errors.EmailID}</p>}
             </div>
@@ -849,9 +854,6 @@ const EmployeeForm = ({
                 <div key={index} className="space-y-2">
                   <div className="flex gap-2">
                     <div className="flex-shrink-0" style={{ width: '110px' }}>
-                      <label className="text-xs text-[var(--text-secondary)] mb-1 block">
-                        Country Code
-                      </label>
                       <Select
                         options={countryCodes.map(code => ({ value: code, label: code }))}
                         value={formData.CountryCode?.[index] || '+91'}
@@ -860,12 +862,10 @@ const EmployeeForm = ({
                           newCodes[index] = e.target.value;
                           setFormData({ ...formData, CountryCode: newCodes });
                         }}
+                        className="h-11"
                       />
                     </div>
                     <div className="flex-1 flex flex-col">
-                      <label className="text-xs text-[var(--text-secondary)] mb-1 block">
-                        Mobile Number
-                      </label>
                       <Input
                         ref={el => {
                           mobileRefs.current[index] = el;
@@ -882,6 +882,7 @@ const EmployeeForm = ({
                         placeholder="10-digit mobile number"
                         maxLength={10}
                         required={index === 0}
+                        className="h-11"
                       />
                       {errors[`MobileNo_${index}`] && (
                         <p className="text-red-500 text-xs mt-1">{errors[`MobileNo_${index}`]}</p>
@@ -960,12 +961,13 @@ const EmployeeForm = ({
                   }}
                   placeholder="Username"
                   required={!isEditMode}
+                  className="h-11"
                 />
                 {errors.Username && <p className="text-red-500 text-xs mt-1">{errors.Username}</p>}
                 <Button
                   variant="secondary"
                   onClick={generateUsername}
-                  className="w-full text-xs font-bold bg-white border-2 border-blue-500 text-blue-600 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all duration-300 rounded-lg h-10 shadow-sm"
+                  className="w-full text-xs font-bold bg-white border-2 border-blue-500 text-blue-600 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all duration-300 rounded-lg h-11 shadow-sm"
                   leftIcon={<RefreshCw size={14} />}
                   type="button"
                 >
@@ -983,6 +985,7 @@ const EmployeeForm = ({
                   }}
                   placeholder={isEditMode ? 'Leave empty to keep current password' : 'Password'}
                   required={!isEditMode}
+                  className="h-11"
                 />
                 {errors.Password && <p className="text-red-500 text-xs mt-1">{errors.Password}</p>}
                 <Button
@@ -1030,6 +1033,7 @@ const EmployeeForm = ({
                 }}
                 placeholder="Select Department"
                 required
+                className="h-11"
               />
               {errors.DepartmentID && <p className="text-red-500 text-xs">{errors.DepartmentID}</p>}
             </div>
@@ -1045,6 +1049,7 @@ const EmployeeForm = ({
                 placeholder={formData.DepartmentID ? 'Select Role' : 'Select Department first'}
                 disabled={!formData.DepartmentID}
                 required
+                className="h-11"
               />
               {errors.RoleID && <p className="text-red-500 text-xs">{errors.RoleID}</p>}
             </div>
@@ -1054,6 +1059,7 @@ const EmployeeForm = ({
               value={formData.JoiningDate}
               onChange={e => setFormData({ ...formData, JoiningDate: e.target.value })}
               max={new Date().toISOString().split('T')[0]}
+              className="h-11"
             />
           </div>
         </div>

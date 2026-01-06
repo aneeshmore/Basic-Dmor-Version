@@ -29,7 +29,9 @@ export const AlertsTicker = () => {
     // Pending Orders
     notifications.forEach((n: any) => {
       if (n.type === 'NewOrder') {
-        items.push(`📦 Pending Order: ${n.data?.orderNumber || 'Unknown'}`);
+        const orderNum = n.data?.orderNumber;
+        const customer = n.data?.customerName;
+        items.push(`📦 Pending Order: ${customer ? `${customer}` : (orderNum ? `#${orderNum}` : 'Unknown')}`);
       }
     });
 

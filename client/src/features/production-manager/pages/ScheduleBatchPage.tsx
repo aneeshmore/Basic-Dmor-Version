@@ -1454,12 +1454,12 @@ export default function ScheduleBatchPage() {
     const minWeight = actualWeight - tolerance;
     const maxWeight = actualWeight + tolerance;
 
-    if (totalOutputWeight < minWeight || totalOutputWeight > maxWeight) {
-      showToast.error(
-        `Total output weight (${totalOutputWeight.toFixed(2)} kg) must be within ±5% of actual batch weight (${actualWeight.toFixed(2)} kg). Allowed range: ${minWeight.toFixed(2)} - ${maxWeight.toFixed(2)} kg`
-      );
-      return;
-    }
+    // if (totalOutputWeight < minWeight || totalOutputWeight > maxWeight) {
+    //   showToast.error(
+    //     `Total output weight (${totalOutputWeight.toFixed(2)} kg) must be within ±5% of actual batch weight (${actualWeight.toFixed(2)} kg). Allowed range: ${minWeight.toFixed(2)} - ${maxWeight.toFixed(2)} kg`
+    //   );
+    //   return;
+    // }
 
     // Validate extra materials stock
     for (const mat of extraMaterials) {
@@ -1504,13 +1504,13 @@ export default function ScheduleBatchPage() {
       const tolerance = actualBatchWeight * 0.05; // 5% tolerance
       const maxWeight = actualBatchWeight + tolerance;
 
-      if (totalOutputWeight > maxWeight) {
-        showToast.error(
-          `Total output weight (${totalOutputWeight.toFixed(2)} kg) exceeds +5% of actual batch weight (${actualBatchWeight.toFixed(2)} kg). Maximum allowed: ${maxWeight.toFixed(2)} kg`
-        );
-        setIsSubmitting(false);
-        return;
-      }
+      // if (totalOutputWeight > maxWeight) {
+      //   showToast.error(
+      //     `Total output weight (${totalOutputWeight.toFixed(2)} kg) exceeds +5% of actual batch weight (${actualBatchWeight.toFixed(2)} kg). Maximum allowed: ${maxWeight.toFixed(2)} kg`
+      //   );
+      //   setIsSubmitting(false);
+      //   return;
+      // }
 
       const completionData = {
         actualQuantity: Number(actualQuantity),
@@ -1829,6 +1829,8 @@ export default function ScheduleBatchPage() {
                             const val = e.target.value;
                             setActualDensity(val === '' ? '' : parseFloat(val));
                           }}
+                          onWheel={(e) => e.preventDefault()}
+                          onKeyDown={(e) => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault(); }}
                           className="w-full px-3 py-2 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]"
                           required
                         />
@@ -1850,6 +1852,8 @@ export default function ScheduleBatchPage() {
                             const val = e.target.value;
                             setActualViscosity(val === '' ? '' : parseFloat(val));
                           }}
+                          onWheel={(e) => e.preventDefault()}
+                          onKeyDown={(e) => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault(); }}
                           className="w-full px-3 py-2 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]"
                           required
                         />
@@ -2039,6 +2043,8 @@ export default function ScheduleBatchPage() {
                             min="0"
                             value={extraMaterialQty || ''}
                             onChange={e => setExtraMaterialQty(parseFloat(e.target.value) || 0)}
+                            onWheel={(e) => e.preventDefault()}
+                            onKeyDown={(e) => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault(); }}
                             placeholder="0.000"
                             className="w-full px-3 py-2 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]"
                           />
@@ -2099,6 +2105,8 @@ export default function ScheduleBatchPage() {
                                     const val = parseInt(e.target.value) || 0;
                                     setSkuOutput(prev => ({ ...prev, [sku.productId]: val }));
                                   }}
+                                  onWheel={(e) => e.preventDefault()}
+                                  onKeyDown={(e) => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault(); }}
                                   className="w-24 px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-right float-right"
                                 />
                               </td>
@@ -2241,6 +2249,8 @@ export default function ScheduleBatchPage() {
                           step="0.01"
                           value={plannedQuantity}
                           onChange={e => setPlannedQuantity(parseFloat(e.target.value))}
+                          onWheel={(e) => e.preventDefault()}
+                          onKeyDown={(e) => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault(); }}
                           className="flex-1 px-4 py-2 border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] outline-none"
                           required
                         />

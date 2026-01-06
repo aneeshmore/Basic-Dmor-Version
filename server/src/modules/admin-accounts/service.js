@@ -396,10 +396,12 @@ export class AdminAccountsService {
       // Create notifications if there are shortages
       if (shortages.length > 0) {
         console.log(`Creating notifications for ${shortages.length} shortages`);
+        const customerName = orderDetails.customers?.companyName || 'Customer';
         await this.notificationsService.createMaterialShortageNotifications(
           orderId,
           shortages,
-          orderDetails.orders?.orderNumber
+          orderDetails.orders?.orderNumber,
+          customerName
         );
       } else {
         console.log(`No critical shortages found for order ${orderId}`);

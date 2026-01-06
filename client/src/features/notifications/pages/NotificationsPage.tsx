@@ -158,6 +158,7 @@ const NotificationsPage = () => {
               existing.orderMap.set(orderId, {
                 orderId,
                 orderNumber: n.data.orderNumber || `#${orderId}`,
+                customerName: n.data.customerName,
                 requiredQty: s.requiredQty,
               });
             }
