@@ -53,10 +53,10 @@ const CustomerTransferPage = () => {
           customerApi.getAll(),
         ]);
 
-        // Filter only active sales persons (DepartmentID = 3)
+        // Filter only active sales persons (IsSalesPerson = true)
         if (employeesResponse.success && employeesResponse.data) {
           const activeSalesPersons = employeesResponse.data.filter(
-            (emp: Employee) => emp.DepartmentID === 3 && emp.Status === 'Active'
+            (emp: Employee) => emp.IsSalesPerson === true && emp.Status === 'Active'
           );
           setSalesPersons(activeSalesPersons);
         }
