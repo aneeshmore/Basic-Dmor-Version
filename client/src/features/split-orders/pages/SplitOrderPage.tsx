@@ -93,7 +93,7 @@ const SplitOrderPage: React.FC = () => {
   // Fetch pending orders
   const fetchPendingOrders = useCallback(async () => {
     try {
-      const recent = await ordersApi.getAll({ limit: 50, offset: 0, status: 'Accepted' });
+      const recent = await ordersApi.getAll({ limit: 50, offset: 0, status: 'Pending' });
       setPendingOrders(recent || []);
     } catch (err) {
       console.error('Failed to load recent orders', err);
