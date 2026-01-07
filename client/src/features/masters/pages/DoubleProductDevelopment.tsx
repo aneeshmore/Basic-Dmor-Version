@@ -690,6 +690,24 @@ const DoubleProductDevelopment = () => {
       return;
     }
 
+    // Check if any base item has Total % = 0
+    if (baseItems.some(item => Number(item.totalPercentage) === 0)) {
+      showToast.error('Some base items have Total % as 0. Please configure properly.');
+      return;
+    }
+
+    // Check if hardener is linked but not configured.
+    // Only enforce when expected hardener total > 0 (i.e., base total < 100).
+    const baseTotalForSave = calculateListTotalPercentage(baseItems);
+    const expectedHardenerTotal = Math.max(0, 100 - baseTotalForSave);
+    if (linkedHardenerId && expectedHardenerTotal > 0) {
+      // If hardener expected non-zero, ensure hardener has items and none have totalPercentage == 0
+      if (hardenerItems.length === 0 || hardenerItems.some(item => Number(item.totalPercentage) === 0)) {
+        showToast.error('Set the hardener first');
+        return;
+      }
+    }
+
     try {
       setSaving(true);
 
@@ -1381,17 +1399,6 @@ const DoubleProductDevelopment = () => {
                 setSelectedRmId('');
               }}
             />
-          </div>
-          <div className="flex flex-col gap-2 items-end">
-            <Button
-              variant="primary"
-              onClick={() => handleAddItem(false)}
-              disabled={!selectedRmId}
-              leftIcon={<Plus size={16} />}
-              className="min-w-[160px]"
-            >
-              Add to Base
-            </Button>
           </div>
         </div>
 
