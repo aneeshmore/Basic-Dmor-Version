@@ -53,6 +53,7 @@ const QuotationMasterPage: React.FC = () => {
   const [rejectingId, setRejectingId] = useState<number | null>(null);
 
   const [actionLoading, setActionLoading] = useState(false);
+  const [currentFilter, setCurrentFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'converted'>('all');
 
   // Stats
   const stats = useMemo(() => {
@@ -62,6 +63,18 @@ const QuotationMasterPage: React.FC = () => {
     const converted = quotations.filter(q => q.status === 'Converted').length;
     return { pending, approved, rejected, converted, total: quotations.length };
   }, [quotations]);
+
+  // Filtered quotations based on current filter
+  const filteredQuotations = useMemo(() => {
+    if (currentFilter === 'all') return quotations;
+    const statusMap = {
+      pending: 'Pending',
+      approved: 'Approved',
+      rejected: 'Rejected',
+      converted: 'Converted',
+    };
+    return quotations.filter(q => q.status === statusMap[currentFilter]);
+  }, [quotations, currentFilter]);
 
   // Helper to get package capacity for a product
   const getPackageCapacity = useCallback(
@@ -373,7 +386,14 @@ const QuotationMasterPage: React.FC = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-[var(--surface)] p-4 rounded-lg border border-[var(--border)] hover:shadow-md transition-shadow">
+        <div
+          className={`p-4 rounded-lg border hover:shadow-md transition-all cursor-pointer ${
+            currentFilter === 'all'
+              ? 'bg-blue-50 border-blue-300 shadow-md'
+              : 'bg-[var(--surface)] border-[var(--border)]'
+          }`}
+          onClick={() => setCurrentFilter('all')}
+        >
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
               <FileText size={20} className="text-blue-600" />
@@ -385,7 +405,14 @@ const QuotationMasterPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-[var(--surface)] p-4 rounded-lg border border-orange-200 hover:shadow-md transition-shadow">
+        <div
+          className={`p-4 rounded-lg border hover:shadow-md transition-all cursor-pointer ${
+            currentFilter === 'pending'
+              ? 'bg-orange-50 border-orange-300 shadow-md'
+              : 'bg-[var(--surface)] border-orange-200'
+          }`}
+          onClick={() => setCurrentFilter('pending')}
+        >
           <div className="flex items-center gap-3">
             <div className="p-2 bg-orange-100 rounded-lg">
               <Clock size={20} className="text-orange-600" />
@@ -397,7 +424,14 @@ const QuotationMasterPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-[var(--surface)] p-4 rounded-lg border border-green-200 hover:shadow-md transition-shadow">
+        <div
+          className={`p-4 rounded-lg border hover:shadow-md transition-all cursor-pointer ${
+            currentFilter === 'approved'
+              ? 'bg-green-50 border-green-300 shadow-md'
+              : 'bg-[var(--surface)] border-green-200'
+          }`}
+          onClick={() => setCurrentFilter('approved')}
+        >
           <div className="flex items-center gap-3">
             <div className="p-2 bg-green-100 rounded-lg">
               <CheckCircle size={20} className="text-green-600" />
@@ -409,7 +443,14 @@ const QuotationMasterPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-[var(--surface)] p-4 rounded-lg border border-red-200 hover:shadow-md transition-shadow">
+        <div
+          className={`p-4 rounded-lg border hover:shadow-md transition-all cursor-pointer ${
+            currentFilter === 'rejected'
+              ? 'bg-red-50 border-red-300 shadow-md'
+              : 'bg-[var(--surface)] border-red-200'
+          }`}
+          onClick={() => setCurrentFilter('rejected')}
+        >
           <div className="flex items-center gap-3">
             <div className="p-2 bg-red-100 rounded-lg">
               <XCircle size={20} className="text-red-600" />
@@ -421,7 +462,14 @@ const QuotationMasterPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-[var(--surface)] p-4 rounded-lg border border-purple-200 hover:shadow-md transition-shadow">
+        <div
+          className={`p-4 rounded-lg border hover:shadow-md transition-all cursor-pointer ${
+            currentFilter === 'converted'
+              ? 'bg-purple-50 border-purple-300 shadow-md'
+              : 'bg-[var(--surface)] border-purple-200'
+          }`}
+          onClick={() => setCurrentFilter('converted')}
+        >
           <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-100 rounded-lg">
               <PackagePlus size={20} className="text-purple-600" />
@@ -438,7 +486,11 @@ const QuotationMasterPage: React.FC = () => {
       <div className="bg-[var(--surface)] rounded-lg border border-[var(--border)] overflow-hidden">
         <div className="p-4 border-b border-[var(--border)] flex justify-between items-center bg-gradient-to-r from-indigo-50 to-purple-50">
           <div>
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">All Quotations</h2>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+              {currentFilter === 'all'
+                ? 'All Quotations'
+                : `${currentFilter.charAt(0).toUpperCase() + currentFilter.slice(1)} Quotations`}
+            </h2>
             <p className="text-sm text-[var(--text-secondary)]">
               {isAdmin ? 'Review and manage quotation approvals' : 'View quotation status'}
             </p>
@@ -460,18 +512,24 @@ const QuotationMasterPage: React.FC = () => {
               <div className="w-12 h-12 border-4 border-[var(--primary)] border-t-transparent rounded-full animate-spin mb-4"></div>
               <p className="text-[var(--text-secondary)]">Loading quotations...</p>
             </div>
-          ) : quotations.length === 0 ? (
+          ) : filteredQuotations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
               <FileText size={48} className="text-[var(--text-secondary)] mb-4 opacity-50" />
-              <p className="text-[var(--text-secondary)] text-lg">No quotations found</p>
+              <p className="text-[var(--text-secondary)] text-lg">
+                {currentFilter === 'all'
+                  ? 'No quotations found'
+                  : `No ${currentFilter} quotations found`}
+              </p>
               <p className="text-sm text-[var(--text-secondary)]">
-                Quotations will appear here when created
+                {currentFilter === 'all'
+                  ? 'Quotations will appear here when created'
+                  : `No quotations with ${currentFilter} status`}
               </p>
             </div>
           ) : (
             <DataTable
               columns={columns}
-              data={quotations}
+              data={filteredQuotations}
               searchPlaceholder="Search quotations..."
             />
           )}
