@@ -151,7 +151,7 @@ export class SplitOrdersService {
       salespersonId: originalOrder.salespersonId,
       address: originalOrder.address,
       priority: originalOrder.priority,
-      status: 'Pending', // New split orders go to admin for review
+      status: 'Accepted', // Split orders inherit accepted status from original order
       paymentCleared: false,
       ...newOrderPartial, // Overwrites billNo and orderDetails
       remarks:

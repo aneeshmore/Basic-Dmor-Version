@@ -342,22 +342,12 @@ const SplitOrderPage: React.FC = () => {
       const originalQty = parseFloat(item.quantity as any);
       const newVal = value === '' ? 0 : parseFloat(value);
 
-      if (newVal > originalQty) {
+      if (splitMode !== 'preference' && newVal > originalQty) {
         showToast.error("Can't exceed original quantity");
         return;
       }
 
-      // In 'preference' mode, skip stock validation - allow any distribution
-      if (targetOrder === 'q1' && splitMode !== 'preference') {
-        const product = products[productId];
-        if (product?.AvailableQuantity !== undefined) {
-          const availableQty = Math.max(0, parseFloat(product.AvailableQuantity));
-          if (newVal > availableQty) {
-            showToast.error(`Cannot exceed available stock (${availableQty})`);
-            return;
-          }
-        }
-      }
+
 
       const otherVal = originalQty - newVal;
 
@@ -798,7 +788,11 @@ const SplitOrderPage: React.FC = () => {
                                               'q1'
                                             )
                                           }
-                                          className="w-12 px-1.5 py-1 text-center text-sm font-semibold bg-[var(--success)]/10 border border-[var(--success)]/30 rounded text-[var(--success)] focus:outline-none focus:ring-1 focus:ring-[var(--success)]/50"
+                                          className={`w-12 px-1.5 py-1 text-center text-sm font-semibold rounded focus:outline-none focus:ring-1 ${
+                                            q1 > product.availableQty
+                                              ? 'bg-[var(--danger)]/10 border border-[var(--danger)]/30 text-[var(--danger)] focus:ring-[var(--danger)]/50'
+                                              : 'bg-[var(--success)]/10 border border-[var(--success)]/30 text-[var(--success)] focus:ring-[var(--success)]/50'
+                                          }`}
                                         />
                                         <button
                                           onClick={() => adjustQty(product.productId, 1)}
