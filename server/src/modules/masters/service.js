@@ -321,6 +321,7 @@ export class MastersService {
         countryCode: countryCodes.length > 0 ? countryCodes : ['+91'], // Ensure at least one element for array
         emailId: customerData.EmailID,
         location: customerData.Location,
+        area: customerData.Area,
         address: customerData.Address,
         gstNumber: customerData.GSTNumber,
         pinCode: customerData.Pincode,
@@ -390,6 +391,7 @@ export class MastersService {
 
     if (updateData.EmailID !== undefined) updateFields.emailId = updateData.EmailID;
     if (updateData.Location !== undefined) updateFields.location = updateData.Location;
+    if (updateData.Area !== undefined) updateFields.area = updateData.Area;
     if (updateData.Address !== undefined) updateFields.address = updateData.Address;
 
     if (updateData.GSTNumber !== undefined) {

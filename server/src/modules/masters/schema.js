@@ -57,6 +57,7 @@ export const createCustomerSchema = z.object({
     z.union([z.string().email('Invalid email address'), z.null()]).optional()
   ),
   Location: z.preprocess(emptyStringToNull, z.string().nullable().optional()),
+  Area: z.preprocess(emptyStringToNull, z.string().nullable().optional()),
   Address: z.preprocess(emptyStringToNull, z.string().nullable().optional()),
   GSTNumber: z.preprocess(emptyStringToNull, z.string().nullable().optional()),
   Pincode: z.string().min(6, 'Pincode is required').max(10),
@@ -95,6 +96,7 @@ export const updateCustomerSchema = z.object({
     z.union([z.string().email(), z.null()]).optional()
   ),
   Location: z.preprocess(emptyStringToNull, z.string().nullable().optional()),
+  Area: z.preprocess(emptyStringToNull, z.string().nullable().optional()),
   Address: z.preprocess(emptyStringToNull, z.string().nullable().optional()),
   GSTNumber: z.preprocess(emptyStringToNull, z.string().nullable().optional()),
   Pincode: z.string().min(6).max(10).optional(),

@@ -72,6 +72,42 @@ export class ProductionService {
       `Production Batch: ${batchId}`
     );
 
+    // CONSUMPTION LOGIC: Deduct Raw Materials & Packaging Materials
+    try {
+      const batchMaterials = await this.repository.getBatchMaterials(batchId);
+
+      // Calculate consumption ratio based on actual vs planned output
+      // If planned is 0 (shouldn't happen), assume ratio 1
+      const plannedQty = parseFloat(batch.production_batch.plannedQuantity || 0);
+      const actualQty = parseFloat(actualProductionQty || 0);
+      const ratio = plannedQty > 0 ? (actualQty / plannedQty) : 1;
+
+      console.log(`[Production] Completing Batch ${batchId}. Planned: ${plannedQty}, Actual: ${actualQty}, Ratio: ${ratio}`);
+
+      for (const bm of batchMaterials) {
+        const requiredQty = parseFloat(bm.requiredQuantity || 0);
+
+        // Calculate actual consumption
+        // We use the ratio to determine how much *should* have been used given the output
+        const consumedQty = requiredQty * ratio;
+
+        if (consumedQty > 0) {
+          await this.inventoryService.deductInventory(
+            bm.materialId,
+            consumedQty, // This writes to inventory_transactions
+            'Production Consumption',
+            batchId,
+            null, // weightKg - TODO: calculate if needed
+            `Auto-deduction for Batch ${batchId} (Ratio: ${ratio.toFixed(4)})`
+          );
+        }
+      }
+    } catch (error) {
+      // Log error but don't fail the batch completion, as the main output is already recorded
+      // In a strict system, we might want to throw or rollback
+      console.error('Failed to record material consumption for batch:', batchId, error);
+    }
+
     // Notify about completion
     try {
       await this.notificationsService.createBatchCompletionNotification(

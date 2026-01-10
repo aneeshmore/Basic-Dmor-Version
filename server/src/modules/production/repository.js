@@ -53,4 +53,13 @@ export class ProductionRepository {
             .delete(productionBatch)
             .where(eq(productionBatch.batchId, batchId));
     }
+
+    async getBatchMaterials(batchId) {
+        return await db.query.batchMaterials.findMany({
+            where: (batchMaterials, { eq }) => eq(batchMaterials.batchId, batchId),
+            with: {
+                material: true
+            }
+        });
+    }
 }

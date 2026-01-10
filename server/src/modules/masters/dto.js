@@ -55,6 +55,7 @@ export class CustomerDTO {
 
     this.EmailID = customer.emailId || customer.email_id;
     this.Location = customer.location;
+    this.Area = customer.area;
     this.Address = customer.address;
     this.GSTNumber = customer.gstNumber || customer.gst_number;
     this.Pincode = customer.pinCode || customer.pin_code;

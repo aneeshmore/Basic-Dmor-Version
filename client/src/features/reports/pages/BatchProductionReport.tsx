@@ -1041,13 +1041,12 @@ const BatchProductionReport = () => {
             <div className="flex justify-center">
               <Badge
                 variant="outline"
-                className={`${
-                  isPositive
-                    ? 'bg-green-600 text-white hover:bg-green-700'
-                    : isNegative
-                      ? 'bg-red-600 text-white hover:bg-red-700'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                } border-none rounded-sm px-1.5`}
+                className={`${isPositive
+                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  : isNegative
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                  } border-none rounded-sm px-1.5`}
               >
                 {isPositive ? '+' : ''}
                 {diff.toFixed(3)}
@@ -1128,7 +1127,13 @@ const BatchProductionReport = () => {
       {/* Statistics Cards */}
       {!isLoading && data.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="card p-4 border border-gray-100 shadow-sm hover:shadow-md transition-all">
+          <div
+            onClick={() => setStatusFilter('All')}
+            className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === 'All'
+              ? 'ring-2 ring-[var(--primary)] border-[var(--primary)] bg-[var(--primary-50)]'
+              : 'border-gray-100 bg-white'
+              }`}
+          >
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -1136,12 +1141,23 @@ const BatchProductionReport = () => {
                 </p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">{stats.total}</p>
               </div>
-              <div className="p-2 bg-gray-50 rounded-lg text-gray-400">
+              <div
+                className={`p-2 rounded-lg ${statusFilter === 'All'
+                  ? 'bg-[var(--primary)] text-white'
+                  : 'bg-gray-50 text-gray-400'
+                  }`}
+              >
                 <Layers className="w-6 h-6" />
               </div>
             </div>
           </div>
-          <div className="card p-4 border border-amber-100 bg-amber-50/30 shadow-sm hover:shadow-md transition-all">
+          <div
+            onClick={() => setStatusFilter('Scheduled')}
+            className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === 'Scheduled'
+              ? 'ring-2 ring-amber-500 border-amber-500 bg-amber-50'
+              : 'border-amber-100 bg-amber-50/30'
+              }`}
+          >
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider">
@@ -1149,12 +1165,23 @@ const BatchProductionReport = () => {
                 </p>
                 <p className="text-3xl font-bold text-amber-700 mt-2">{stats.scheduled}</p>
               </div>
-              <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
+              <div
+                className={`p-2 rounded-lg ${statusFilter === 'Scheduled'
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-amber-100 text-amber-600'
+                  }`}
+              >
                 <Calendar className="w-6 h-6" />
               </div>
             </div>
           </div>
-          <div className="card p-4 border border-blue-100 bg-blue-50/30 shadow-sm hover:shadow-md transition-all">
+          <div
+            onClick={() => setStatusFilter('In Progress')}
+            className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === 'In Progress'
+              ? 'ring-2 ring-blue-500 border-blue-500 bg-blue-50'
+              : 'border-blue-100 bg-blue-50/30'
+              }`}
+          >
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
@@ -1162,12 +1189,23 @@ const BatchProductionReport = () => {
                 </p>
                 <p className="text-3xl font-bold text-blue-700 mt-2">{stats.inProgress}</p>
               </div>
-              <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+              <div
+                className={`p-2 rounded-lg ${statusFilter === 'In Progress'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-blue-100 text-blue-600'
+                  }`}
+              >
                 <Loader className="w-6 h-6 animate-spin-slow" />
               </div>
             </div>
           </div>
-          <div className="card p-4 border border-green-100 bg-green-50/30 shadow-sm hover:shadow-md transition-all">
+          <div
+            onClick={() => setStatusFilter('Completed')}
+            className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === 'Completed'
+              ? 'ring-2 ring-green-500 border-green-500 bg-green-50'
+              : 'border-green-100 bg-green-50/30'
+              }`}
+          >
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-xs font-semibold text-green-600 uppercase tracking-wider">
@@ -1175,7 +1213,12 @@ const BatchProductionReport = () => {
                 </p>
                 <p className="text-3xl font-bold text-green-700 mt-2">{stats.completed}</p>
               </div>
-              <div className="p-2 bg-green-100 rounded-lg text-green-600">
+              <div
+                className={`p-2 rounded-lg ${statusFilter === 'Completed'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-green-100 text-green-600'
+                  }`}
+              >
                 <CheckCircle className="w-6 h-6" />
               </div>
             </div>
@@ -1211,11 +1254,10 @@ const BatchProductionReport = () => {
             size="sm"
             variant={statusFilter === status ? 'primary' : 'secondary'}
             onClick={() => setStatusFilter(status)}
-            className={`min-w-[100px] transition-all duration-200 ${
-              statusFilter === status
-                ? 'bg-[var(--primary)] text-white shadow-md transform scale-105'
-                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-            }`}
+            className={`min-w-[100px] transition-all duration-200 ${statusFilter === status
+              ? 'bg-[var(--primary)] text-white shadow-md transform scale-105'
+              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
           >
             {status}
           </Button>
@@ -1244,13 +1286,13 @@ const BatchProductionReport = () => {
                   Sub-Products (Batch Variants)
                 </h4>
                 {row.original.subProducts &&
-                row.original.subProducts.filter(sub => {
-                  const qty =
-                    typeof sub.actualQty === 'number'
-                      ? sub.actualQty
-                      : parseFloat(sub.actualQty || '0');
-                  return qty > 0;
-                }).length > 0 ? (
+                  row.original.subProducts.filter(sub => {
+                    const qty =
+                      typeof sub.actualQty === 'number'
+                        ? sub.actualQty
+                        : parseFloat(sub.actualQty || '0');
+                    return qty > 0;
+                  }).length > 0 ? (
                   <table className="w-full text-sm text-left bg-[var(--surface)] rounded-lg border border-[var(--border)]">
                     <thead className="bg-[var(--color-neutral-100)] text-[var(--text-secondary)]">
                       <tr>
@@ -1275,8 +1317,8 @@ const BatchProductionReport = () => {
                             </td>
                             <td className="px-4 py-2 text-right text-[var(--text-secondary)]">
                               {sub.batchQty !== null &&
-                              sub.batchQty !== undefined &&
-                              sub.batchQty !== '-'
+                                sub.batchQty !== undefined &&
+                                sub.batchQty !== '-'
                                 ? sub.batchQty
                                 : '-'}
                             </td>
@@ -1499,7 +1541,7 @@ const BatchProductionReport = () => {
                             <td className="border border-gray-300 px-2 py-1 text-right">
                               {viscosityVariance.toFixed(2)}
                             </td>
-                          </tr> 
+                          </tr>
                           <tr>
                             <td className="border border-gray-300 px-2 py-1">Total Weight (Kg)</td>
                             <td className="border border-gray-300 px-2 py-1 text-right">
@@ -1622,14 +1664,14 @@ const BatchProductionReport = () => {
                   </thead>
                   <tbody>
                     {previewBatch.subProducts &&
-                    previewBatch.subProducts.filter(sp => {
-                      // Only show SKUs with actualQty > 0
-                      const qty =
-                        typeof sp.actualQty === 'number'
-                          ? sp.actualQty
-                          : parseFloat(sp.actualQty || '0');
-                      return qty > 0;
-                    }).length > 0 ? (
+                      previewBatch.subProducts.filter(sp => {
+                        // Only show SKUs with actualQty > 0
+                        const qty =
+                          typeof sp.actualQty === 'number'
+                            ? sp.actualQty
+                            : parseFloat(sp.actualQty || '0');
+                        return qty > 0;
+                      }).length > 0 ? (
                       previewBatch.subProducts
                         .filter(sp => {
                           const qty =

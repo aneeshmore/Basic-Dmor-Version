@@ -196,6 +196,7 @@ const CustomerForm = ({
     CountryCode3: item?.CountryCode3 || '+91',
     EmailID: item?.EmailID || '',
     Location: item?.Location || '',
+    Area: item?.Area || '',
     Address: item?.Address || '',
     Pincode: item?.Pincode || '',
     GSTNumber: item?.GSTNumber || '',
@@ -235,6 +236,7 @@ const CustomerForm = ({
         CountryCode3: item.CountryCode3 || '+91',
         EmailID: item.EmailID || '',
         Location: item.Location || '',
+        Area: item.Area || '',
         Address: item.Address || '',
         Pincode: item.Pincode || '',
         GSTNumber: item.GSTNumber || '',
@@ -260,6 +262,7 @@ const CustomerForm = ({
         CountryCode3: '+91',
         EmailID: '',
         Location: '',
+        Area: '',
         Address: '',
         GSTNumber: '',
         Pincode: '',
@@ -486,6 +489,16 @@ const CustomerForm = ({
         }
         break;
 
+      case 'Area':
+        if (value.trim()) {
+          if (value.length < 3) {
+            error = 'Area must be at least 3 characters';
+          } else if (value.length > 50) {
+            error = 'Area must be at most 50 characters';
+          }
+        }
+        break;
+
       case 'GSTNumber':
         if (value.trim()) {
           const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
@@ -551,6 +564,7 @@ const CustomerForm = ({
     const emailError = validateField('EmailID', formData.EmailID || '');
     const addressError = validateField('Address', formData.Address || '');
     const locationError = validateField('Location', formData.Location || '');
+    const areaError = validateField('Area', formData.Area || '');
     const gstinError = validateField('GSTNumber', formData.GSTNumber || '');
     const pincodeError = validateField('Pincode', formData.Pincode || '');
 
@@ -560,6 +574,7 @@ const CustomerForm = ({
     if (emailError) newErrors.EmailID = emailError;
     if (addressError) newErrors.Address = addressError;
     if (locationError) newErrors.Location = locationError;
+    if (areaError) newErrors.Area = areaError;
     if (gstinError) newErrors.GSTNumber = gstinError;
     if (pincodeError) newErrors.Pincode = pincodeError;
 
@@ -584,6 +599,7 @@ const CustomerForm = ({
       CountryCode3: formData.MobileNo3?.trim() ? formData.CountryCode3 || '+91' : '',
       EmailID: formData.EmailID?.trim() || '',
       Location: formData.Location?.trim() || '',
+      Area: formData.Area?.trim() || '',
       Address: formData.Address?.trim() || '',
       Pincode: formData.Pincode?.trim() || '',
       GSTNumber: formData.GSTNumber?.trim() || '',
@@ -617,6 +633,7 @@ const CustomerForm = ({
         CountryCode3: '+91',
         EmailID: '',
         Location: '',
+        Area: '',
         Address: '',
         GSTNumber: '',
         SalesPersonID: undefined,
@@ -731,6 +748,12 @@ const CustomerForm = ({
                 </span>
                 <p className="text-[var(--text-primary)] font-medium">
                   {pendingData?.Location || '-'}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[var(--text-secondary)]">Area</span>
+                <p className="text-[var(--text-primary)] font-medium">
+                  {pendingData?.Area || '-'}
                 </p>
               </div>
               {pendingData?.Address && (
@@ -854,19 +877,19 @@ const CustomerForm = ({
                     />
                   </div>
                   <div className="flex-1 h-10">
-                      <Input
-                        ref={mobileRef}
-                        type="tel"
-                        value={formData.MobileNo || ''}
-                        onChange={e => {
-                          setFormData({ ...formData, MobileNo: e.target.value });
-                          validateField('MobileNo', e.target.value);
-                        }}
-                        placeholder="Enter 10-digit mobile number"
-                        required
-                        maxLength={10}
-                        className="h-10"
-                      />
+                    <Input
+                      ref={mobileRef}
+                      type="tel"
+                      value={formData.MobileNo || ''}
+                      onChange={e => {
+                        setFormData({ ...formData, MobileNo: e.target.value });
+                        validateField('MobileNo', e.target.value);
+                      }}
+                      placeholder="Enter 10-digit mobile number"
+                      required
+                      maxLength={10}
+                      className="h-10"
+                    />
                   </div>
                 </div>
                 {errors.MobileNo && (
@@ -1056,14 +1079,29 @@ const CustomerForm = ({
               )}
             </div>
 
+            <div className="space-y-1">
+              <Input
+                label="Area"
+                value={formData.Area || ''}
+                onChange={e => {
+                  setFormData({ ...formData, Area: e.target.value });
+                  validateField('Area', e.target.value);
+                }}
+                placeholder="Enter Area"
+                className="h-10"
+              />
+              {errors.Area && (
+                <p className="text-xs text-red-500 font-medium">{errors.Area}</p>
+              )}
+            </div>
+
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-[var(--text-primary)]">
                 Complete Address (Optional)
               </label>
               <textarea
-                className={`w-full h-10 px-3 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--surface)] border ${
-                  errors.Address ? 'border-red-500' : 'border-[var(--border)]'
-                } text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] placeholder:opacity-60 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all duration-200 resize-none`}
+                className={`w-full h-10 px-3 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--surface)] border ${errors.Address ? 'border-red-500' : 'border-[var(--border)]'
+                  } text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] placeholder:opacity-60 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all duration-200 resize-none`}
                 value={formData.Address || ''}
                 onChange={e => {
                   setFormData({ ...formData, Address: e.target.value });
@@ -1316,6 +1354,11 @@ export default function CustomerMaster() {
       cell: ({ row }) => <span>{row.original.Location || '-'}</span>,
     },
     {
+      accessorKey: 'Area',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Area" />,
+      cell: ({ row }) => <span>{row.original.Area || '-'}</span>,
+    },
+    {
       accessorKey: 'Pincode',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Pincode" />,
       cell: ({ row }) => <span>{row.original.Pincode || '-'}</span>,
@@ -1356,11 +1399,10 @@ export default function CustomerMaster() {
           </button>
           <button
             onClick={() => handleToggleStatus(row.original)}
-            className={`p-2 rounded-lg transition-colors border border-transparent focus-ring ${
-              row.original.IsActive
-                ? 'hover:bg-red-50 text-[var(--text-secondary)] hover:text-[var(--danger)] hover:border-red-200'
-                : 'hover:bg-green-50 text-[var(--text-secondary)] hover:text-green-600 hover:border-green-200'
-            }`}
+            className={`p-2 rounded-lg transition-colors border border-transparent focus-ring ${row.original.IsActive
+              ? 'hover:bg-red-50 text-[var(--text-secondary)] hover:text-[var(--danger)] hover:border-red-200'
+              : 'hover:bg-green-50 text-[var(--text-secondary)] hover:text-green-600 hover:border-green-200'
+              }`}
             title={row.original.IsActive ? 'Deactivate' : 'Activate'}
             aria-label={row.original.IsActive ? 'Deactivate' : 'Activate'}
           >

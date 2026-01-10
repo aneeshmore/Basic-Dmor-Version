@@ -17,6 +17,7 @@ export const customers = appSchema.table('customers', {
   countryCode: varchar('country_code', { length: 10 }).array(),
   emailId: varchar('email_id', { length: 255 }),
   location: varchar('location', { length: 255 }),
+  area: varchar('area', { length: 255 }),
   address: text('address'),
   gstNumber: varchar('gst_number', { length: 50 }),
   pinCode: varchar('pin_code', { length: 10 }),
