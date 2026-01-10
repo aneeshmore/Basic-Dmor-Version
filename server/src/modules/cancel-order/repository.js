@@ -10,6 +10,8 @@ const CANCELLABLE_STATUSES = [
   'Scheduled',
   'In Production',
   'Ready for Dispatch',
+  'Confirmed',
+  'Started',
 ];
 
 export class CancelOrderRepository {
@@ -158,7 +160,7 @@ export class CancelOrderRepository {
           })
           .where(eq(products.productId, item.productId));
       }
-    } else if (['Accepted', 'Scheduled', 'In Production'].includes(order.status)) {
+    } else if (['Accepted', 'Scheduled', 'In Production', 'Confirmed', 'Started'].includes(order.status)) {
       // Stock was reserved but not yet deducted from available
       // Release the reservation
       for (const item of details) {
