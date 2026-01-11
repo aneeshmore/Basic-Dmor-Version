@@ -328,9 +328,8 @@ export class ReportsService {
           )
         );
 
-      // 2. Calculate Opening Stock for each material (Transactions BEFORE startOfDay)
-      // We need to sum quantity from inventory_transactions
-      // Handle both direct masterProductId reference and indirect via productId
+      // 2. Calculate Opening Stock based on Inventory Transactions (Ledger)
+      // This remains the "Ledger View" of what was in stock at start of day
       const openingStockMap = new Map();
 
       const openingStockData = await db
@@ -353,36 +352,47 @@ export class ReportsService {
         }
       });
 
-      // 3. Calculate Consumption for the day (Transactions BETWEEN startOfDay and endOfDay)
-      // Filter for 'Production Consumption' type
+      // 3. Calculate Consumption based on COMPLETED BATCHES for the day
+      // Instead of ledger transactions, we look at what was "Used" in batches finished today.
       const consumptionMap = new Map();
 
-      const consumptionData = await db
+      // Find batches completed today
+      const completedBatches = await db
         .select({
-          masterProductId: sql`COALESCE(${inventoryTransactions.masterProductId}, ${products.masterProductId})`,
-          totalConsumption: sql`SUM(ABS(${inventoryTransactions.quantity}))`,
+          batchId: productionBatch.batchId,
         })
-        .from(inventoryTransactions)
-        .leftJoin(products, eq(inventoryTransactions.productId, products.productId))
+        .from(productionBatch)
         .where(
           and(
-            gte(inventoryTransactions.createdAt, startOfDay),
-            lte(inventoryTransactions.createdAt, endOfDay),
-            inArray(inventoryTransactions.transactionType, ['Production Consumption', 'Discard', 'Consumption'])
+            eq(productionBatch.status, 'Completed'),
+            gte(productionBatch.completedAt, startOfDay),
+            lte(productionBatch.completedAt, endOfDay)
           )
-        )
-        .groupBy(sql`COALESCE(${inventoryTransactions.masterProductId}, ${products.masterProductId})`);
+        );
 
-      consumptionData.forEach(item => {
-        if (item.masterProductId) {
-          consumptionMap.set(item.masterProductId, parseFloat(item.totalConsumption || '0'));
-        }
-      });
+      const completedBatchIds = completedBatches.map(b => b.batchId);
+
+      if (completedBatchIds.length > 0) {
+        const batchConsumptionData = await db
+          .select({
+            materialId: batchMaterials.materialId,
+            totalConsumption: sql`SUM(${batchMaterials.requiredQuantity})`,
+          })
+          .from(batchMaterials)
+          .where(inArray(batchMaterials.batchId, completedBatchIds))
+          .groupBy(batchMaterials.materialId);
+
+        batchConsumptionData.forEach(item => {
+          consumptionMap.set(item.materialId, parseFloat(item.totalConsumption || '0'));
+        });
+      }
 
       // 4. Merge Data
       const reportData = materials.map(material => {
         const openingQty = openingStockMap.get(material.masterProductId) || 0;
         const consumption = consumptionMap.get(material.masterProductId) || 0;
+        // Closing Stock is Opening - Consumption (Production View)
+        // Note: This might diverge from Ledger Stock if there were Inwards/Other transactions today
         const closingQty = openingQty - consumption;
 
         return {
