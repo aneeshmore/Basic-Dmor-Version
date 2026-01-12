@@ -1041,7 +1041,12 @@ export class ReportsService {
             category = 'Sub-Product';
           }
 
-          const preTransactionStock = (tx.balanceAfter || 0) - (isInward ? quantity : -Math.abs(quantity));
+          const cr = isInward ? quantity : 0;
+          const dr = isOutward ? Math.abs(quantity) : 0;
+          const balance = tx.balanceAfter || 0;
+
+          // Formula: Available Stock = Balance + DR - CR
+          const preTransactionStock = balance + dr - cr;
 
           return {
             transactionId: Number(tx.transactionId),
@@ -1049,9 +1054,9 @@ export class ReportsService {
             date: tx.createdAt ? new Date(tx.createdAt).toISOString() : '-', // Return full ISO string for time display
             type: referenceInfo,
             batchType: batch?.batchType, // Return batch type (MTS/MTO)
-            cr: isInward ? quantity : 0,
-            dr: isOutward ? Math.abs(quantity) : 0,
-            balance: tx.balanceAfter || 0,
+            cr,
+            dr,
+            balance,
             stockBefore: preTransactionStock, // Initially set to individual pre-tx stock
             transactionType: transitionType,
             productCategory: category,
@@ -1060,39 +1065,7 @@ export class ReportsService {
         }
       );
 
-      // Post-processing: "Available Stock" should be the Stock at Start of Day (Opening Balance)
-      // Since formattedTransactions is ordered by DESC (Latest -> Earliest),
-      // we can iterate through it. The *last* transaction we encounter for a given Product+Date
-      // is effectively the *first* transaction of that day.
-      // Its 'stockBefore' (individual pre-tx stock) represents the Day's Opening Balance.
 
-      const dayOpeningBalances = new Map(); // Key: "ProductName_YYYY-MM-DD", Value: OpeningBalance
-
-      // Pass 1: find the opening balance for each Product+Date
-      formattedTransactions.forEach(item => {
-        if (item.date === '-') return;
-        const dateKey = item.date.split('T')[0];
-        const key = `${item.productName}_${dateKey}`;
-
-        // Since we iterate DESC, we overwrite the value.
-        // The last overwrite will be from the earliest transaction of the day.
-        dayOpeningBalances.set(key, item.stockBefore);
-      });
-
-      // Pass 2: apply the day's opening balance to all items
-      const finalTransactions = formattedTransactions.map(item => {
-        if (item.date === '-') return item;
-        const dateKey = item.date.split('T')[0];
-        const key = `${item.productName}_${dateKey}`;
-
-        if (dayOpeningBalances.has(key)) {
-          return {
-            ...item,
-            stockBefore: dayOpeningBalances.get(key),
-          };
-        }
-        return item;
-      });
 
       return {
         product: product
@@ -1105,7 +1078,7 @@ export class ReportsService {
             pmDetails: product.masterProduct?.pmDetails,
           }
           : null,
-        transactions: finalTransactions,
+        transactions: formattedTransactions,
         bom: bom.map(b => ({
           rawMaterialName:
             b.rawMaterial?.masterProduct?.masterProductName || b.rawMaterial?.productName,
