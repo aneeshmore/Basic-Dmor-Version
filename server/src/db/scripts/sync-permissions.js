@@ -9,7 +9,7 @@
 
 import db from '../index.js';
 import { permissions, rolePermissions, roles } from '../schema/index.js';
-import { eq } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -293,6 +293,54 @@ async function syncPermissions() {
 
       await db.insert(rolePermissions).values(rolePermValues);
       console.log(`   ✓ Granted ${rolePermValues.length} permissions to Admin`);
+    }
+
+    // ============================================
+    // STEP 4: Grant to Sales Team
+    // ============================================
+    console.log('\n💼 Granting permissions to Sales Team...');
+
+    const salesRoles = await db
+      .select()
+      .from(roles)
+      .where(sql`${roles.roleName} ILIKE 'Sales%'`);
+
+    if (salesRoles.length > 0) {
+      // Define modules that Sales should access
+      // 'orders' contains the 'Get Mixing Ratios' API
+      const salesModules = [
+        'orders',
+        'quotations',
+        'crm',
+        'sales-dashboard',
+        'Add New Customer',
+        'customers',
+        'quotation-maker',
+      ];
+
+      const salesPerms = await db
+        .select({
+          id: permissions.permissionId,
+          name: permissions.permissionName,
+          apis: permissions.availableActions,
+        })
+        .from(permissions)
+        .where(inArray(permissions.permissionName, salesModules));
+
+      for (const role of salesRoles) {
+        const rolePermValues = salesPerms.map(perm => ({
+          roleId: role.roleId,
+          permissionId: perm.id,
+          grantedActions: Array.isArray(perm.apis) ? perm.apis : [],
+        }));
+
+        if (rolePermValues.length > 0) {
+          await db.insert(rolePermissions).values(rolePermValues);
+          console.log(`   ✓ Granted ${rolePermValues.length} permissions to ${role.roleName}`);
+        }
+      }
+    } else {
+      console.log('   ⚠️ No Sales roles found (Sales Manager/Executive)');
     }
 
     console.log(

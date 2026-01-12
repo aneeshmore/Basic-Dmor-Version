@@ -211,7 +211,7 @@
       {
         "id": "terms",
         "path": "/masters/terms",
-        "label": "Terms and Conditions",
+        "label": "Quotation Terms and Conditions",
         "permission": {
           "module": "tnc"
         },
@@ -235,41 +235,6 @@
             "route": "/tnc/:id",
             "method": "DELETE",
             "label": "Delete Term"
-          }
-        ]
-      },
-      {
-        "id": "quotation-master",
-        "path": "/masters/quotation-master",
-        "label": "Quotation Master",
-        "permission": {
-          "module": "quotations"
-        },
-        "apis": [
-          {
-            "route": "/quotations",
-            "method": "GET",
-            "label": "View Quotations"
-          },
-          {
-            "route": "/catalog/products/type/:type",
-            "method": "GET",
-            "label": "View Products"
-          },
-          {
-            "route": "/catalog/master-products",
-            "method": "GET",
-            "label": "View Master Products"
-          },
-          {
-            "route": "/quotations/:id/approve",
-            "method": "POST",
-            "label": "Approve Quotation"
-          },
-          {
-            "route": "/quotations/:id/reject",
-            "method": "POST",
-            "label": "Reject Quotation"
           }
         ]
       },
@@ -422,6 +387,7 @@
         "id": "quotation-maker",
         "path": "/quotation-maker",
         "label": "Quotation Maker",
+        "showInSidebar": false,
         "permission": {
           "module": "quotation-maker"
         },
@@ -508,13 +474,53 @@
             "route": "/orders",
             "method": "POST",
             "label": "Create Order"
+          },
+          {
+            "route": "/product-development/ratios/:baseMpId/:hardenerMpId",
+            "method": "GET",
+            "label": "Get Mixing Ratios"
+          }
+        ]
+      },
+      {
+        "id": "quotation-master",
+        "path": "/operations/quotation-requests",
+        "label": "Quotation Requests",
+        "permission": {
+          "module": "quotations"
+        },
+        "apis": [
+          {
+            "route": "/quotations",
+            "method": "GET",
+            "label": "View Quotations"
+          },
+          {
+            "route": "/catalog/products/type/:type",
+            "method": "GET",
+            "label": "View Products"
+          },
+          {
+            "route": "/catalog/master-products",
+            "method": "GET",
+            "label": "View Master Products"
+          },
+          {
+            "route": "/quotations/:id/approve",
+            "method": "POST",
+            "label": "Approve Quotation"
+          },
+          {
+            "route": "/quotations/:id/reject",
+            "method": "POST",
+            "label": "Reject Quotation"
           }
         ]
       },
       {
         "id": "admin-accounts",
         "path": "/operations/admin-accounts",
-        "label": "Admin Accounts",
+        "label": "Order Approval by Accounts",
         "permission": {
           "module": "admin-accounts"
         },
@@ -585,7 +591,7 @@
       {
         "id": "accepted-orders",
         "path": "/operations/accepted-orders",
-        "label": "PM - Accepted Orders",
+        "label": "Accept Order at Factory",
         "permission": {
           "module": "accepted-orders"
         },
@@ -825,7 +831,7 @@
       {
         "id": "pm-inward",
         "path": "/operations/pm-inward",
-        "label": "PM Material Inward",
+        "label": "All Material Inward",
         "permission": {
           "module": "inward"
         },
@@ -1135,6 +1141,21 @@
           }
         ],
         "showInSidebar": false
+      },
+      {
+        "id": "daily-consumption-report",
+        "path": "/reports/daily-consumption",
+        "label": "Daily Consumption",
+        "permission": {
+          "module": "report-daily-consumption"
+        },
+        "apis": [
+          {
+            "route": "/reports/daily-consumption",
+            "method": "GET",
+            "label": "View Daily Consumption"
+          }
+        ]
       }
     ]
   },
