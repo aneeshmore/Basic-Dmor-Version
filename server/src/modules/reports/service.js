@@ -1054,8 +1054,8 @@ export class ReportsService {
             date: tx.createdAt ? new Date(tx.createdAt).toISOString() : '-', // Return full ISO string for time display
             type: referenceInfo,
             batchType: batch?.batchType, // Return batch type (MTS/MTO)
-            cr,
-            dr,
+            inward: cr,
+            outward: dr,
             balance,
             stockBefore: preTransactionStock, // Initially set to individual pre-tx stock
             transactionType: transitionType,

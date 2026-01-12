@@ -9,7 +9,8 @@ import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table';
 import { Button, Input, SearchableSelect } from '@/components/ui';
 import { reportsApi } from '../api/reportsApi';
 import { Bar } from 'react-chartjs-2';
-import { ProductWiseReportItem, ProductInfo, BOMItem, StockReportItem } from '../types';
+import { ProductInfo, BOMItem, StockReportItem } from '../types';
+import ProductTransactionHistory from '../components/ProductTransactionHistory';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -37,13 +38,13 @@ ChartJS.register(
 const ProductWiseReport = () => {
   const chartRef = useRef<ChartJS<'bar'> | null>(null);
   const [chartKey, setChartKey] = useState(0);
-  const [data, setData] = useState<ProductWiseReportItem[]>([]);
-  const [summaryData, setSummaryData] = useState<StockReportItem[]>([]);
+  const [data, setData] = useState<StockReportItem[]>([]);
+  // const [summaryData, setSummaryData] = useState<StockReportItem[]>([]); // Using 'data' for summary list now
   const [productInfo, setProductInfo] = useState<ProductInfo | null>(null);
   const [_bomData, setBomData] = useState<BOMItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [productTypeFilter, setProductTypeFilter] = useState<string>('FG');
-  const [selectedProduct, setSelectedProduct] = useState<string>('');
+  const [selectedProduct, setSelectedProduct] = useState<string>(''); // Used for searching within the list
   const [products, setProducts] = useState<
     { id: string; value: string; label: string; type: string }[]
   >([]);
@@ -128,26 +129,30 @@ const ProductWiseReport = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        // ALL views are now Transaction Ledger views (unified design)
-        // Transaction View (Ledger Mode)
+        // Default to Stock Report View (List of Products)
         // Pass filter directly (including 'Sub-Product') to backend, which handles the logic
-        const type = productTypeFilter;
+        const type =
+          productTypeFilter === 'Sub-Product'
+            ? 'Sub-Product'
+            : (productTypeFilter === 'All' ? undefined : (productTypeFilter as 'FG' | 'RM' | 'PM' | 'Sub-Product'));
 
-        const result = await reportsApi.getProductWiseReport(
-          selectedProduct || undefined,
+        // Always fetch stock report for the list view
+        // We filter by selectedProduct locally or via API if supported, but here acts as a search
+        const result = await reportsApi.getStockReport(
+          type,
+          selectedProduct || undefined, // If product selected from dropdown, filter the list
           startDate,
-          endDate,
-          type // Always pass productType so backend knows how to interpret the productId
+          endDate
         );
 
-        setData(result.transactions || []);
-        setProductInfo(result.product || null);
-        setBomData(result.bom || []);
-        setSummaryData([]);
+        setData(result || []);
+        setProductInfo(null);
+        setBomData([]);
+        // setSummaryData([]);
       } catch (error: unknown) {
         console.error('Error fetching data:', error);
         setData([]);
-        setSummaryData([]);
+        // setSummaryData([]);
         setProductInfo(null);
         setBomData([]);
         const err = error as { response?: { status: number } };
@@ -192,26 +197,22 @@ const ProductWiseReport = () => {
     if (endDate) doc.text(`To: ${endDate}`, 14, 48);
 
     // Define columns based on whether a specific product is selected
-    const tableColumn = selectedProduct
-      ? ['Date', 'Type', 'Avail. Stock', 'CR', 'DR', 'Balance', 'TypeIs']
-      : ['Date', 'Product Name', 'Avail. Stock', 'CR', 'DR', 'Balance', 'TypeIs'];
+    const tableColumn = [
+      'Product Name',
+      'Category',
+      'Avail. Qty',
+      'Total Inward',
+      'Total Outward',
+    ];
 
     // Define rows
-    const tableRows = (data as ProductWiseReportItem[]).map(item => {
-      let typeIs = item.transactionType;
-      if (
-        item.transactionType === 'Production Output' ||
-        item.transactionType === 'Production Consumption'
-      ) {
-        typeIs = 'Production';
-      } else if (item.transactionType === 'Initial Stock') {
-        typeIs = 'Inward';
-      }
-
-      return selectedProduct
-        ? [item.date, item.type || '-', item.stockBefore || 0, item.cr || '0', item.dr || '0', item.balance, typeIs]
-        : [item.date, item.productName, item.stockBefore || 0, item.cr || '0', item.dr || '0', item.balance, typeIs];
-    });
+    const tableRows = (data as StockReportItem[]).map(item => [
+      item.productName || item.masterProductName,
+      item.productType,
+      item.availableQuantity,
+      item.totalInward || 0,
+      item.totalOutward || 0,
+    ]);
 
     // Generate Table
     autoTable(doc, {
@@ -223,9 +224,8 @@ const ProductWiseReport = () => {
     });
 
     // Save PDF
-    const fileName = isLedgerMode
-      ? `product_ledger_${selectedProduct || productTypeFilter}_${new Date().toISOString().split('T')[0]}.pdf`
-      : `stock_summary_all_${new Date().toISOString().split('T')[0]}.pdf`;
+    const fileName = `product_stock_report_${productTypeFilter}_${new Date().toISOString().split('T')[0]
+      }.pdf`;
 
     doc.save(fileName);
     showToast.success('Report exported successfully');
@@ -233,154 +233,110 @@ const ProductWiseReport = () => {
 
   // Define Columns for DataTable
   const columns = useMemo<ColumnDef<any>[]>(() => {
-    // Transaction View Columns matching the image format
-    const baseColumns: ColumnDef<any>[] = [
+    return [
       {
-        accessorKey: 'date',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Date & Time" />,
-        cell: ({ row }) => {
-          const dateStr = row.original.date;
-          if (!dateStr || dateStr === '-')
-            return <div className="text-[var(--text-secondary)]">-</div>;
-
-          const dateObj = new Date(dateStr);
-          const datePart = dateObj.toLocaleDateString();
-          const timePart = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-          return (
-            <div className="flex flex-col">
-              <span className="font-medium text-[var(--text-primary)]">{datePart}</span>
-              <span className="text-xs text-[var(--text-tertiary)]">{timePart}</span>
-            </div>
-          );
-        },
-      },
-    ];
-
-    // Add Product Name column if not filtering for a single product
-    if (!selectedProduct) {
-      baseColumns.push({
         accessorKey: 'productName',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Product Name" />,
         cell: ({ row }) => (
-          <div className="font-semibold text-[var(--text-primary)]">{row.original.productName}</div>
-        ),
-      });
-    }
-
-    // Add Type column (Supplier/Customer name) - shown when a specific product is selected
-    if (selectedProduct) {
-      baseColumns.push({
-        accessorKey: 'type',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Type / Details" />,
-        cell: ({ row }) => {
-          const type = row.original.type;
-          const batchType = row.original.batchType;
-
-          return (
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+              {row.original.productType}
+            </span>
             <div className="flex flex-col">
-              <div
-                className="text-[var(--text-primary)] font-medium max-w-[250px] truncate"
-                title={type}
-              >
-                {type || '-'}
-              </div>
-              {batchType && (
-                <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-tight">
-                  {batchType === 'MAKE_TO_STOCK' ? 'Make to Stock' : 'Make to Order'}
-                </span>
-              )}
+              <span className="font-semibold text-[var(--text-primary)]">
+                {row.original.productName || row.original.masterProductName}
+              </span>
+              {row.original.masterProductName &&
+                row.original.productName !== row.original.masterProductName && (
+                  <span className="text-xs text-[var(--text-tertiary)]">
+                    {row.original.masterProductName}
+                  </span>
+                )}
             </div>
-          );
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'productType',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
+        cell: ({ row }) => <div className="text-[var(--text-primary)]">{row.original.productType}</div>,
+      },
+      {
+        accessorKey: 'availableQuantity',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Available Qty" />,
+        cell: ({ row }) => (
+          <div
+            className={`font-bold ${row.original.availableQuantity <= (row.original.minStockLevel || 0)
+              ? 'text-red-600'
+              : 'text-green-600'
+              }`}
+          >
+            {row.original.availableQuantity}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'totalInward',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Total Inward" />,
+        cell: ({ row }) => (
+          <div className="text-center font-medium text-green-700">
+            {row.original.totalInward || 0}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'totalOutward',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Total Outward" />,
+        cell: ({ row }) => (
+          <div className="text-center font-medium text-red-700">
+            {row.original.totalOutward || 0}
+          </div>
+        ),
+      },
+    ];
+  }, []);
+
+  // Prepare chart data
+  const chartData = useMemo(() => {
+    // Get top 10 products by name
+    const topProducts = Array.from(
+      new Set(data.filter(i => i.productName || i.masterProductName).map(i => i.productName || i.masterProductName))
+    ).slice(0, 10);
+
+    const chartLabels = topProducts as string[];
+    const chartValues = chartLabels.map(p => {
+      const item = data.find(i => (i.productName || i.masterProductName) === p);
+      return item ? item.availableQuantity : 0;
+    });
+
+    return {
+      labels: chartLabels,
+      datasets: [
+        {
+          label: 'Available Stock',
+          data: chartValues,
+          backgroundColor: 'rgba(59, 130, 246, 0.7)',
+          borderColor: 'rgb(59, 130, 246)',
+          borderWidth: 1,
+          barPercentage: 0.4, // Adjust for thinner bars
+          categoryPercentage: 0.5,
         },
-      });
-    }
-
-    baseColumns.push(
-      {
-        accessorKey: 'stockBefore',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Avail. Stock" />,
-        cell: ({ row }) => (
-          <div className="text-center font-bold text-gray-700">{row.original.stockBefore || '0'}</div>
-        ),
-      },
-
-      {
-        accessorKey: 'cr',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="CR" />,
-        cell: ({ row }) => (
-          <div className="text-center text-green-600 font-bold">{row.original.cr || '0'}</div>
-        ),
-      },
-      {
-        accessorKey: 'dr',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="DR" />,
-        cell: ({ row }) => (
-          <div className="text-center text-red-600 font-bold">{row.original.dr || '0'}</div>
-        ),
-      },
-
-      {
-        accessorKey: 'balance',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Balance" />,
-        cell: ({ row }) => (
-          <div className="text-center font-bold text-blue-700">{row.original.balance}</div>
-        ),
-      },
-
-      {
-        accessorKey: 'transactionType',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="TypeIs" />,
-        cell: ({ row }) => {
-          const type = row.original.transactionType;
-          let colorClass = 'bg-slate-100 text-slate-500';
-          let displayType = type;
-
-          if (type === 'Inward') colorClass = 'bg-green-100 text-green-700';
-          else if (type === 'Initial Stock') {
-            colorClass = 'bg-green-100 text-green-700';
-            displayType = 'Inward';
-          } else if (type === 'Production Output') {
-            colorClass = 'bg-blue-100 text-blue-700';
-            displayType = 'Production';
-          } else if (type === 'Production Consumption') {
-            colorClass = 'bg-orange-100 text-orange-700';
-            displayType = 'Production';
-          } else if (type === 'Dispatch' || type === 'Outward')
-            colorClass = 'bg-red-100 text-red-700';
-
-          return (
-            <div
-              className={`text-[10px] uppercase font-bold whitespace-nowrap px-2 py-1 rounded inline-block ${colorClass}`}
-            >
-              {displayType}
-            </div>
-          );
-        },
-      }
-    );
-
-    return baseColumns;
-  }, [selectedProduct]);
+      ],
+    };
+  }, [data]);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Product Wise Stock Report"
-        description={
-          isLedgerMode
-            ? 'Stock movements and transaction ledger'
-            : 'Overview of stock levels across products'
-        }
+        description="Overview of stock levels and transaction history"
         actions={
           <Button
             variant="primary"
             className="bg-blue-600 hover:bg-blue-700 text-white"
             onClick={handleExportPdf}
             leftIcon={<FileDown size={20} />}
-            disabled={
-              (isLedgerMode && data.length === 0) || (!isLedgerMode && summaryData.length === 0)
-            }
+            disabled={data.length === 0}
           >
             Export PDF
           </Button>
@@ -413,90 +369,6 @@ const ProductWiseReport = () => {
               ))}
             </div>
           </div>
-
-          <div className="h-10 w-px bg-gray-300 mx-1 hidden lg:block" />
-
-          {/* Product Dropdown */}
-          <div className="flex-grow min-w-[250px]">
-            <SearchableSelect
-              label="Product"
-              value={selectedProduct}
-              onChange={val => setSelectedProduct(val || '')}
-              options={products}
-              placeholder="Search Product..."
-              className="w-full"
-            />
-          </div>
-
-          <div className="h-10 w-px bg-gray-300 mx-1 hidden lg:block" />
-
-          {/* Date Range Shortcuts and Inputs */}
-          <div className="flex items-end gap-2">
-            <div className="flex gap-1 mr-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-8 px-2 text-xs"
-                onClick={() => {
-                  const today = new Date();
-                  const lastWeek = new Date(today);
-                  lastWeek.setDate(today.getDate() - 7);
-                  setStartDate(lastWeek.toISOString().split('T')[0]);
-                  setEndDate(today.toISOString().split('T')[0]);
-                }}
-              >
-                Week
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-8 px-2 text-xs"
-                onClick={() => {
-                  const today = new Date();
-                  const lastMonth = new Date(today);
-                  lastMonth.setMonth(today.getMonth() - 1);
-                  setStartDate(lastMonth.toISOString().split('T')[0]);
-                  setEndDate(today.toISOString().split('T')[0]);
-                }}
-              >
-                Month
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-8 px-2 text-xs"
-                onClick={() => {
-                  const today = new Date();
-                  const lastYear = new Date(today);
-                  lastYear.setFullYear(today.getFullYear() - 1);
-                  setStartDate(lastYear.toISOString().split('T')[0]);
-                  setEndDate(today.toISOString().split('T')[0]);
-                }}
-              >
-                Year
-              </Button>
-            </div>
-
-            <Input
-              type="date"
-              label="From"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              inputSize="sm"
-              fullWidth={false}
-              className="w-[130px]"
-            />
-
-            <Input
-              type="date"
-              label="To"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-              inputSize="sm"
-              fullWidth={false}
-              className="w-[130px]"
-            />
-          </div>
         </div>
       </div>
 
@@ -521,45 +393,31 @@ const ProductWiseReport = () => {
         </div>
       )}
 
-      {/* Aggregate Stats Section (Multiple Products) */}
-      {!isLoading && !productInfo && data.length > 0 && (
+      {/* Aggregate Stats Section - Optional: keep if helpful, or remove if too cluttered */}
+      {!isLoading && data.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in mb-6">
           <div className="card p-4 border-l-4 border-green-500 bg-white shadow-sm">
             <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
-              Total Inward
+              Total Inward (Selected Period)
             </p>
             <p className="text-xl font-bold text-green-700 mt-1">
-              {data.reduce((sum, item) => sum + (item.cr || 0), 0)}
+              {data.reduce((sum, item) => sum + (item.totalInward || 0), 0)}
             </p>
           </div>
           <div className="card p-4 border-l-4 border-red-500 bg-white shadow-sm">
             <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
-              Total Outward
+              Total Outward (Selected Period)
             </p>
             <p className="text-xl font-bold text-red-700 mt-1">
-              {data.reduce((sum, item) => sum + (item.dr || 0), 0)}
-            </p>
-          </div>
-          <div className="card p-4 border-l-4 border-blue-500 bg-white shadow-sm">
-            <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Net Flow</p>
-            <p
-              className={`text-xl font-bold mt-1 ${data.reduce((sum, item) => sum + (item.cr || 0), 0) -
-                data.reduce((sum, item) => sum + (item.dr || 0), 0) >=
-                0
-                ? 'text-blue-700'
-                : 'text-red-700'
-                }`}
-            >
-              {data.reduce((sum, item) => sum + (item.cr || 0), 0) -
-                data.reduce((sum, item) => sum + (item.dr || 0), 0)}
+              {data.reduce((sum, item) => sum + (item.totalOutward || 0), 0)}
             </p>
           </div>
           <div className="card p-4 border-l-4 border-purple-500 bg-white shadow-sm">
             <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
-              Active Products
+              Total Products
             </p>
             <p className="text-xl font-bold text-purple-700 mt-1">
-              {new Set(data.map(item => item.productName)).size}
+              {data.length}
             </p>
           </div>
         </div>
@@ -573,64 +431,7 @@ const ProductWiseReport = () => {
             <Bar
               key={chartKey}
               ref={chartRef}
-              data={{
-                labels: (() => {
-                  // Strategy 1: Product Specific -> Dates on Axis
-                  if (selectedProduct) {
-                    return Array.from(new Set(data.map(i => i.date))).sort(
-                      (a, b) => new Date(a).getTime() - new Date(b).getTime()
-                    );
-                  }
-                  // Strategy 2: Specific Type -> Top Products on Axis
-                  return Array.from(new Set(data.map(i => i.productName))).slice(0, 10);
-                })(),
-                datasets: [
-                  {
-                    label: 'Inward',
-                    data: (() => {
-                      if (selectedProduct) {
-                        const dates = Array.from(new Set(data.map(i => i.date))).sort(
-                          (a, b) => new Date(a).getTime() - new Date(b).getTime()
-                        );
-                        return dates.map(d =>
-                          data.filter(i => i.date === d).reduce((s, i) => s + (i.cr || 0), 0)
-                        );
-                      }
-                      const prods = Array.from(new Set(data.map(i => i.productName))).slice(0, 10);
-                      return prods.map(p =>
-                        data.filter(i => i.productName === p).reduce((s, i) => s + (i.cr || 0), 0)
-                      );
-                    })(),
-                    backgroundColor: 'rgba(34, 197, 94, 0.7)',
-                    borderColor: 'rgb(34, 197, 94)',
-                    borderWidth: 1,
-                    barPercentage: 0.4,
-                    categoryPercentage: 0.5,
-                  },
-                  {
-                    label: 'Outward',
-                    data: (() => {
-                      if (selectedProduct) {
-                        const dates = Array.from(new Set(data.map(i => i.date))).sort(
-                          (a, b) => new Date(a).getTime() - new Date(b).getTime()
-                        );
-                        return dates.map(d =>
-                          data.filter(i => i.date === d).reduce((s, i) => s + (i.dr || 0), 0)
-                        );
-                      }
-                      const prods = Array.from(new Set(data.map(i => i.productName))).slice(0, 10);
-                      return prods.map(p =>
-                        data.filter(i => i.productName === p).reduce((s, i) => s + (i.dr || 0), 0)
-                      );
-                    })(),
-                    backgroundColor: 'rgba(239, 68, 68, 0.7)',
-                    borderColor: 'rgb(239, 68, 68)',
-                    borderWidth: 1,
-                    barPercentage: 0.4,
-                    categoryPercentage: 0.5,
-                  },
-                ],
-              }}
+              data={chartData}
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
@@ -638,9 +439,7 @@ const ProductWiseReport = () => {
                   legend: { position: 'top' },
                   title: {
                     display: true,
-                    text: selectedProduct
-                      ? 'Daily Transaction Trend'
-                      : 'Top Products Inward vs Outward',
+                    text: 'Top Products by Available Stock',
                     font: { size: 16 },
                   },
                 },
@@ -662,11 +461,19 @@ const ProductWiseReport = () => {
       ) : (
         <DataTable
           columns={columns}
-          data={isLedgerMode ? (data as any[]) : (summaryData as any[])}
-          searchPlaceholder={isLedgerMode ? 'Search transactions...' : 'Search products...'}
+          data={data} // Now explicitly data is StockReportItem[]
+          searchPlaceholder="Search products..."
           defaultPageSize={15}
           showToolbar={true}
           showPagination={true}
+          getRowCanExpand={() => true}
+          renderSubComponent={({ row }) => (
+            <ProductTransactionHistory
+              productId={row.original.productId?.toString()}
+              productType={row.original.productType}
+              endDate={endDate} // Pass end date for "till date" context (ignores startDate for history)
+            />
+          )}
         />
       )}
     </div>

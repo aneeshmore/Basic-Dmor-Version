@@ -156,8 +156,8 @@ export interface ProductWiseReportItem {
   productName: string;
   date: string;
   type: string; // Supplier name or customer name or batch info
-  cr: number; // Credit (Inward)
-  dr: number; // Debit (Outward)
+  inward: number; // Credit (Inward) -- renamed from cr
+  outward: number; // Debit (Outward) -- renamed from dr
   balance: number; // Running balance
   stockBefore?: number; // Opening balance for this transaction
   transactionType: string;
