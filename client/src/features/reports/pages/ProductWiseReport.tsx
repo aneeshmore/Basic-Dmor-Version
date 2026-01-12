@@ -193,8 +193,8 @@ const ProductWiseReport = () => {
 
     // Define columns based on whether a specific product is selected
     const tableColumn = selectedProduct
-      ? ['Date', 'Type', 'CR', 'DR', 'Balance', 'TypeIs']
-      : ['Date', 'Product Name', 'CR', 'DR', 'Balance', 'TypeIs'];
+      ? ['Date', 'Type', 'Avail. Stock', 'CR', 'DR', 'Balance', 'TypeIs']
+      : ['Date', 'Product Name', 'Avail. Stock', 'CR', 'DR', 'Balance', 'TypeIs'];
 
     // Define rows
     const tableRows = (data as ProductWiseReportItem[]).map(item => {
@@ -209,8 +209,8 @@ const ProductWiseReport = () => {
       }
 
       return selectedProduct
-        ? [item.date, item.type || '-', item.cr || '0', item.dr || '0', item.balance, typeIs]
-        : [item.date, item.productName, item.cr || '0', item.dr || '0', item.balance, typeIs];
+        ? [item.date, item.type || '-', item.stockBefore || 0, item.cr || '0', item.dr || '0', item.balance, typeIs]
+        : [item.date, item.productName, item.stockBefore || 0, item.cr || '0', item.dr || '0', item.balance, typeIs];
     });
 
     // Generate Table
@@ -297,6 +297,14 @@ const ProductWiseReport = () => {
     }
 
     baseColumns.push(
+      {
+        accessorKey: 'stockBefore',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Avail. Stock" />,
+        cell: ({ row }) => (
+          <div className="text-center font-bold text-gray-700">{row.original.stockBefore || '0'}</div>
+        ),
+      },
+
       {
         accessorKey: 'cr',
         header: ({ column }) => <DataTableColumnHeader column={column} title="CR" />,
@@ -395,11 +403,10 @@ const ProductWiseReport = () => {
                     setProductTypeFilter(type);
                     setSelectedProduct('');
                   }}
-                  className={`min-w-[3rem] transition-all duration-200 ${
-                    productTypeFilter === type
-                      ? 'bg-blue-600 text-white hover:bg-blue-700 border-none shadow-md'
-                      : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-                  }`}
+                  className={`min-w-[3rem] transition-all duration-200 ${productTypeFilter === type
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 border-none shadow-md'
+                    : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                    }`}
                 >
                   {type}
                 </Button>
@@ -536,13 +543,12 @@ const ProductWiseReport = () => {
           <div className="card p-4 border-l-4 border-blue-500 bg-white shadow-sm">
             <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Net Flow</p>
             <p
-              className={`text-xl font-bold mt-1 ${
-                data.reduce((sum, item) => sum + (item.cr || 0), 0) -
-                  data.reduce((sum, item) => sum + (item.dr || 0), 0) >=
+              className={`text-xl font-bold mt-1 ${data.reduce((sum, item) => sum + (item.cr || 0), 0) -
+                data.reduce((sum, item) => sum + (item.dr || 0), 0) >=
                 0
-                  ? 'text-blue-700'
-                  : 'text-red-700'
-              }`}
+                ? 'text-blue-700'
+                : 'text-red-700'
+                }`}
             >
               {data.reduce((sum, item) => sum + (item.cr || 0), 0) -
                 data.reduce((sum, item) => sum + (item.dr || 0), 0)}

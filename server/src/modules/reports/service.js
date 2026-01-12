@@ -1041,6 +1041,8 @@ export class ReportsService {
             category = 'Sub-Product';
           }
 
+          const preTransactionStock = (tx.balanceAfter || 0) - (isInward ? quantity : -Math.abs(quantity));
+
           return {
             transactionId: Number(tx.transactionId),
             productName: currentProductName,
@@ -1050,12 +1052,47 @@ export class ReportsService {
             cr: isInward ? quantity : 0,
             dr: isOutward ? Math.abs(quantity) : 0,
             balance: tx.balanceAfter || 0,
+            stockBefore: preTransactionStock, // Initially set to individual pre-tx stock
             transactionType: transitionType,
             productCategory: category,
             notes: tx.notes || '',
           };
         }
       );
+
+      // Post-processing: "Available Stock" should be the Stock at Start of Day (Opening Balance)
+      // Since formattedTransactions is ordered by DESC (Latest -> Earliest),
+      // we can iterate through it. The *last* transaction we encounter for a given Product+Date
+      // is effectively the *first* transaction of that day.
+      // Its 'stockBefore' (individual pre-tx stock) represents the Day's Opening Balance.
+
+      const dayOpeningBalances = new Map(); // Key: "ProductName_YYYY-MM-DD", Value: OpeningBalance
+
+      // Pass 1: find the opening balance for each Product+Date
+      formattedTransactions.forEach(item => {
+        if (item.date === '-') return;
+        const dateKey = item.date.split('T')[0];
+        const key = `${item.productName}_${dateKey}`;
+
+        // Since we iterate DESC, we overwrite the value.
+        // The last overwrite will be from the earliest transaction of the day.
+        dayOpeningBalances.set(key, item.stockBefore);
+      });
+
+      // Pass 2: apply the day's opening balance to all items
+      const finalTransactions = formattedTransactions.map(item => {
+        if (item.date === '-') return item;
+        const dateKey = item.date.split('T')[0];
+        const key = `${item.productName}_${dateKey}`;
+
+        if (dayOpeningBalances.has(key)) {
+          return {
+            ...item,
+            stockBefore: dayOpeningBalances.get(key),
+          };
+        }
+        return item;
+      });
 
       return {
         product: product
@@ -1068,7 +1105,7 @@ export class ReportsService {
             pmDetails: product.masterProduct?.pmDetails,
           }
           : null,
-        transactions: formattedTransactions,
+        transactions: finalTransactions,
         bom: bom.map(b => ({
           rawMaterialName:
             b.rawMaterial?.masterProduct?.masterProductName || b.rawMaterial?.productName,

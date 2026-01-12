@@ -159,6 +159,7 @@ export interface ProductWiseReportItem {
   cr: number; // Credit (Inward)
   dr: number; // Debit (Outward)
   balance: number; // Running balance
+  stockBefore?: number; // Opening balance for this transaction
   transactionType: string;
   productCategory?: string;
 }
