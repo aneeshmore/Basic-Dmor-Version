@@ -1,6 +1,4 @@
-# DMOR Paints - Frontend Client
-
-Modern React application for DMOR Paints ERP system built with TypeScript, Vite, and Tailwind CSS.
+Modern React application for Morex Technologies ERP system built with TypeScript, Vite, and Tailwind CSS.
 
 ## Features
 

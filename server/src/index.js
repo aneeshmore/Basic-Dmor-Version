@@ -80,7 +80,7 @@ app.use(`/api/${config.apiVersion}`, routes);
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
-    message: 'DMOR Paints ERP API',
+    message: 'Morex Technologies ERP API',
     version: config.apiVersion,
     status: 'running',
   });

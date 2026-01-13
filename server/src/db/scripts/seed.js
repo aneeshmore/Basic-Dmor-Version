@@ -43,7 +43,7 @@ import { sql } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
 /**
- * DMOR Paints - Comprehensive Seed File
+ * Morex Technologies - Comprehensive Seed File
  *
  * Based on real product development data (PU 7038 / Epoxy Base White Coat formula)
  *
@@ -65,7 +65,7 @@ import bcrypt from 'bcryptjs';
 
 async function seedDatabase() {
   try {
-    console.log('🌱 Starting DMOR Paints database seed...\n');
+    console.log('🌱 Starting Morex Technologies database seed...\n');
 
     const shouldReset = process.argv.includes('--reset');
     if (shouldReset) {
@@ -164,6 +164,7 @@ async function seedDatabase() {
         { departmentName: 'Procurement' },
         { departmentName: 'Logistics' },
         { departmentName: 'Finance' },
+        { departmentName: 'Dealer' },
       ])
       .returning();
     console.log(`   ✓ ${deptRows.length} departments`);
@@ -175,15 +176,25 @@ async function seedDatabase() {
         { roleName: 'SuperAdmin', description: 'Complete system access', isActive: true },
         { roleName: 'Admin', description: 'Administrative access', isActive: true },
         { roleName: 'Production Manager', description: 'Manage production', isActive: true },
-        { roleName: 'Sales Manager', description: 'Manage sales', isActive: true },
-        { roleName: 'Sales Executive', description: 'Handle orders', isActive: true },
+        {
+          roleName: 'Sales Manager',
+          description: 'Manage sales',
+          isActive: true,
+          isSalesRole: true,
+        },
+        {
+          roleName: 'Sales Executive',
+          description: 'Handle orders',
+          isActive: true,
+          isSalesRole: true,
+        },
         { roleName: 'Inventory Manager', description: 'Manage inventory', isActive: true },
         {
           roleName: 'Production Supervisor',
           description: 'Execute production batches',
           isActive: true,
         },
-        { roleName: 'Viewer', description: 'Read-only access', isActive: true },
+        { roleName: 'Dealer', description: 'Read-only access', isActive: true },
       ])
       .returning();
     console.log(`   ✓ ${roleRows.length} roles`);
@@ -249,6 +260,7 @@ async function seedDatabase() {
           description: 'Industrial epoxy base white coating - Premium quality (2-component)',
           defaultUnitId: unitRows[1].unitId, // LTR
           isActive: true,
+          // Add other needed fields if any, or accept defaults
         },
         // Index 1: PU Enamel Black
         {
@@ -258,6 +270,10 @@ async function seedDatabase() {
           defaultUnitId: unitRows[1].unitId,
           isActive: true,
         },
+        // ... (rest of master products logic stays same, I'm just replacing the chunk surrounding the error)
+        // Wait, I shouldn't replace the huge chunk if I can target small.
+        // I will just target the Departments section and the Employees section.
+
         // Index 2: Exterior Weather Shield
         {
           masterProductName: 'Exterior Weather Shield',
@@ -792,7 +808,7 @@ async function seedDatabase() {
           username: 'admin',
           passwordHash: adminHash,
           mobileNo: ['9999999999', null, null],
-          emailId: 'admin@dmor.com',
+          emailId: 'admin@morex.com',
           departmentId: deptRows[4].departmentId,
           currentBranchId: branchRows[0].branchId,
           status: 'Active',
@@ -804,7 +820,7 @@ async function seedDatabase() {
           username: 'rajesh',
           passwordHash: userHash,
           mobileNo: ['9876543210', null, null],
-          emailId: 'rajesh@dmor.com',
+          emailId: 'rajesh@morex.com',
           departmentId: deptRows[0].departmentId,
           currentBranchId: branchRows[1].branchId,
           status: 'Active',
@@ -816,7 +832,7 @@ async function seedDatabase() {
           username: 'priya',
           passwordHash: userHash,
           mobileNo: ['9876543211', null, null],
-          emailId: 'priya@dmor.com',
+          emailId: 'priya@morex.com',
           departmentId: deptRows[2].departmentId,
           currentBranchId: branchRows[0].branchId,
           status: 'Active',
@@ -828,7 +844,7 @@ async function seedDatabase() {
           username: 'amit',
           passwordHash: userHash,
           mobileNo: ['9876543212', null, null],
-          emailId: 'amit@dmor.com',
+          emailId: 'amit@morex.com',
           departmentId: deptRows[2].departmentId,
           currentBranchId: branchRows[0].branchId,
           status: 'Active',
@@ -840,7 +856,7 @@ async function seedDatabase() {
           username: 'deepak',
           passwordHash: userHash,
           mobileNo: ['9876543213', null, null],
-          emailId: 'deepak@dmor.com',
+          emailId: 'deepak@morex.com',
           departmentId: deptRows[0].departmentId,
           currentBranchId: branchRows[1].branchId,
           status: 'Active',
@@ -852,7 +868,7 @@ async function seedDatabase() {
           username: 'sunita',
           passwordHash: userHash,
           mobileNo: ['9876543214', null, null],
-          emailId: 'sunita@dmor.com',
+          emailId: 'sunita@morex.com',
           departmentId: deptRows[5].departmentId,
           currentBranchId: branchRows[2].branchId,
           status: 'Active',
@@ -861,6 +877,107 @@ async function seedDatabase() {
       ])
       .returning();
     console.log(`   ✓ ${employeeRows.length} employees created`);
+
+    // Create Dealer separately to link salesperson
+    const dealerRows = await db
+      .insert(employees)
+      .values([
+        {
+          firstName: 'Dealer',
+          lastName: 'North',
+          username: 'dealer_north',
+          passwordHash: userHash,
+          mobileNo: ['9876543299', null, null],
+          emailId: 'dealer.north@morex.com',
+          departmentId: deptRows[8].departmentId, // Dealer Dept
+          currentBranchId: branchRows[0].branchId, // Head Office
+          status: 'Active',
+          joiningDate: '2024-04-01',
+          // Dealer Fields
+          companyName: 'North India Paints & H/W',
+          gstin: '07AAACD7890E1Z2',
+          pincode: '110020',
+          addressCity: 'New Delhi',
+          addressState: 'Delhi',
+          area: 'Okhla Phase 3',
+          addressComplete: 'Shop 12B, Industrial Complex, Okhla',
+          customerType: 'Dealer',
+          assignedSalespersonId: employeeRows[3].employeeId, // Amit
+        },
+        {
+          firstName: 'Dealer',
+          lastName: 'West',
+          username: 'dealer_west',
+          passwordHash: userHash,
+          mobileNo: ['9876543298', null, null],
+          emailId: 'dealer.west@morex.com',
+          departmentId: deptRows[8].departmentId,
+          currentBranchId: branchRows[1].branchId, // Manufacturing Plant (Gurugram)
+          status: 'Active',
+          joiningDate: '2024-04-05',
+          companyName: 'Gurugram Traders',
+          gstin: '06BBACD7890E1Z3',
+          pincode: '122050',
+          addressCity: 'Gurugram',
+          addressState: 'Haryana',
+          area: 'Manesar Sector 1',
+          addressComplete: 'Plot 45, Sector 1, Manesar',
+          customerType: 'Dealer',
+          assignedSalespersonId: employeeRows[2].employeeId, // Priya (Sales Manager)
+        },
+        {
+          firstName: 'Dealer',
+          lastName: 'South',
+          username: 'dealer_south',
+          passwordHash: userHash,
+          mobileNo: ['9876543297', null, null],
+          emailId: 'dealer.south@morex.com',
+          departmentId: deptRows[8].departmentId,
+          currentBranchId: branchRows[0].branchId,
+          status: 'Active',
+          joiningDate: '2024-04-10',
+          companyName: 'Chennai Color World',
+          gstin: '33CCACD7890E1Z4',
+          pincode: '600001',
+          addressCity: 'Chennai',
+          addressState: 'Tamil Nadu',
+          area: 'Parrys Corner',
+          addressComplete: '123, NSC Bose Road, Parrys',
+          customerType: 'Distributor',
+          assignedSalespersonId: employeeRows[3].employeeId, // Amit
+        },
+        {
+          firstName: 'Dealer',
+          lastName: 'East',
+          username: 'dealer_east',
+          passwordHash: userHash,
+          mobileNo: ['9876543296', null, null],
+          emailId: 'dealer.east@morex.com',
+          departmentId: deptRows[8].departmentId,
+          currentBranchId: branchRows[0].branchId,
+          status: 'Active',
+          joiningDate: '2024-04-15',
+          companyName: 'Kolkata Hardware Mart',
+          gstin: '19DDACD7890E1Z5',
+          pincode: '700001',
+          addressCity: 'Kolkata',
+          addressState: 'West Bengal',
+          area: 'Dalhousie',
+          addressComplete: '88, Strand Road, Dalhousie',
+          customerType: 'Dealer',
+          assignedSalespersonId: employeeRows[2].employeeId, // Priya
+        },
+      ])
+      .returning();
+    console.log(`   ✓ ${dealerRows.length} dealer created`);
+
+    //Morex Authorized Dealer to role assignment (Dealer role - index 7)
+    // We want to assign roles to ALL created dealers
+    const dealerRoleUpdates = dealerRows.map(d => ({
+      employeeId: d.employeeId,
+      roleId: roleRows[7].roleId,
+    }));
+    await db.insert(employeeRoles).values(dealerRoleUpdates);
 
     // Role Permissions & Employee Roles
     const allPerms = permissionRows.map(p => ({

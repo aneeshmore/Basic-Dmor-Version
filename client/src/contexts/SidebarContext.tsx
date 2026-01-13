@@ -16,7 +16,7 @@ interface SidebarContextType {
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
-const SIDEBAR_STORAGE_KEY = 'dmor-sidebar-collapsed';
+const SIDEBAR_STORAGE_KEY = 'morex-sidebar-collapsed';
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
   // Mobile: closed by default, Desktop: open by default

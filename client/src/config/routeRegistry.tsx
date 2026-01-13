@@ -234,6 +234,22 @@ export const routeRegistry: RouteNode[] = [
     showInSidebar: false,
     apis: [{ route: '/dashboard/stats', method: 'GET', label: 'Load Dashboard Stats' }],
   },
+  {
+    id: 'sales-access',
+    path: '/sales-access',
+    label: 'Sales Access',
+    icon: Users,
+    group: 'Sales',
+    showInSidebar: false,
+    permission: { module: 'sales_access' },
+    apis: [
+      {
+        route: 'view_all_sales_persons',
+        method: 'GET',
+        label: 'View All Sales Persons',
+      },
+    ],
+  },
 
   // ========== MASTERS ==========
   {

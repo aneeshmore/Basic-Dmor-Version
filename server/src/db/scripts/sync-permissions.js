@@ -303,7 +303,7 @@ async function syncPermissions() {
     const salesRoles = await db
       .select()
       .from(roles)
-      .where(sql`${roles.roleName} ILIKE 'Sales%'`);
+      .where(sql`${roles.roleName} ILIKE 'Sales%' OR ${roles.roleName} = 'Dealer'`);
 
     if (salesRoles.length > 0) {
       // Define modules that Sales should access
@@ -316,6 +316,7 @@ async function syncPermissions() {
         'Add New Customer',
         'customers',
         'quotation-maker',
+        'sales_access',
       ];
 
       const salesPerms = await db

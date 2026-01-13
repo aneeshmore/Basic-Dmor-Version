@@ -29,7 +29,7 @@ Edit `config.ts` to customize behavior:
 ```typescript
 export const THEME_EDITOR_CONFIG = {
   enabled: import.meta.env.VITE_ENABLE_THEME_EDITOR === "true",
-  storageKey: "dmor-theme",
+  storageKey: "morex-theme",
 
   defaultTheme: {
     primary: "#6366f1",
@@ -223,4 +223,4 @@ Both plugins follow the same modular pattern:
 
 ## License
 
-Part of DMOR Paints ERP System
+Part of Morex Technologies ERP System

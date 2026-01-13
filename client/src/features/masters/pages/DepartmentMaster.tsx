@@ -220,7 +220,7 @@ const RolesSubRow = ({
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {!role.isSystemRole && (
+                {!role.isSystemRole && !['Admin', 'Administrator', 'SuperAdmin'].includes(role.roleName) && (
                   <button
                     onClick={() => onEditRole(role)}
                     className="p-1.5 rounded-md hover:bg-[var(--surface-highlight)] text-[var(--text-secondary)] hover:text-[var(--primary)] transition-colors"
@@ -229,7 +229,7 @@ const RolesSubRow = ({
                     <Edit2 size={14} />
                   </button>
                 )}
-                {!role.isSystemRole && (
+                {!role.isSystemRole && !['Admin', 'Administrator', 'SuperAdmin'].includes(role.roleName) && (
                   <button
                     onClick={() => onDeleteRole(role.roleId)}
                     className="p-1.5 rounded-md hover:bg-red-50 text-[var(--text-secondary)] hover:text-red-500 transition-colors"
@@ -584,24 +584,41 @@ export default function DepartmentMaster() {
       header: 'Actions',
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-2">
-          <button
-            onClick={() => handleEdit(row.original)}
-            className="p-2 rounded-lg hover:bg-[var(--surface-highlight)] text-[var(--text-secondary)] hover:text-[var(--primary)] transition-colors border border-transparent hover:border-[var(--border)] focus-ring"
-            title="Edit"
-            aria-label="Edit"
-          >
-            <Edit2 size={16} />
-          </button>
-          {!row.original.IsSystemDepartment && (
-            <button
-              onClick={() => handleDelete(row.original.DepartmentID)}
-              className="p-2 rounded-lg hover:bg-red-50 text-[var(--text-secondary)] hover:text-[var(--danger)] transition-colors border border-transparent hover:border-red-200 focus-ring"
-              title="Delete"
-              aria-label="Delete"
-            >
-              <Trash2 size={16} />
-            </button>
-          )}
+          {![
+            'Accounts',
+            'Administration',
+            'Production',
+            'Sales & Marketing',
+            'Dealer',
+            'Administrator',
+          ].includes(row.original.DepartmentName) && (
+              <button
+                onClick={() => handleEdit(row.original)}
+                className="p-2 rounded-lg hover:bg-[var(--surface-highlight)] text-[var(--text-secondary)] hover:text-[var(--primary)] transition-colors border border-transparent hover:border-[var(--border)] focus-ring"
+                title="Edit"
+                aria-label="Edit"
+              >
+                <Edit2 size={16} />
+              </button>
+            )}
+          {!row.original.IsSystemDepartment &&
+            ![
+              'Accounts',
+              'Administration',
+              'Production',
+              'Sales & Marketing',
+              'Dealer',
+              'Administrator',
+            ].includes(row.original.DepartmentName) && (
+              <button
+                onClick={() => handleDelete(row.original.DepartmentID)}
+                className="p-2 rounded-lg hover:bg-red-50 text-[var(--text-secondary)] hover:text-[var(--danger)] transition-colors border border-transparent hover:border-red-200 focus-ring"
+                title="Delete"
+                aria-label="Delete"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
         </div>
       ),
     },
@@ -638,9 +655,9 @@ export default function DepartmentMaster() {
                   editingItem
                     ? initiateUpdate
                     : item => {
-                        setNewDepartmentName(item.DepartmentName);
-                        setIsAddConfirmModalOpen(true);
-                      }
+                      setNewDepartmentName(item.DepartmentName);
+                      setIsAddConfirmModalOpen(true);
+                    }
                 }
                 onCancel={() => {
                   setEditingItem(null);

@@ -21,8 +21,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const TOKEN_KEY = 'dmor_auth_token';
-const USER_KEY = 'dmor_user';
+const TOKEN_KEY = 'morex_auth_token';
+const USER_KEY = 'morex_user';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);

@@ -42,7 +42,7 @@ router.use('/auth', authorityRoutes);
 router.get('/health', (req, res) => {
   res.json({
     success: true,
-    message: 'DMOR Paints API is running',
+    message: 'Morex Technologies API is running',
     version: '2.0.0',
     architecture: 'Modular Feature-based',
     orm: 'Drizzle ORM',

@@ -1432,7 +1432,7 @@ const BatchProductionReport = () => {
           <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 max-w-4xl mx-auto printable-content">
             {/* Header */}
             <div className="text-center mb-6 border-b pb-4">
-              <h1 className="text-2xl font-bold text-gray-900">DMOR PAINTS</h1>
+              <h1 className="text-2xl font-bold text-gray-900">MOREX TECHNOLOGIES</h1>
             </div>
 
             {/* Info Grid */}

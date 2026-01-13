@@ -31,4 +31,16 @@ export const employees = appSchema.table('employees', {
   dob: timestamp('dob', { mode: 'string' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  // Dealer specific fields
+  companyName: varchar('company_name', { length: 255 }),
+  gstin: varchar('gstin', { length: 50 }),
+  pincode: varchar('pincode', { length: 10 }),
+  addressCity: varchar('address_city', { length: 100 }),
+  addressState: varchar('address_state', { length: 100 }),
+  area: varchar('area', { length: 100 }),
+  addressComplete: varchar('address_complete', { length: 500 }),
+  customerType: varchar('customer_type', { length: 50 }).default('Dealer'),
+  assignedSalespersonId: integer('assigned_salesperson_id').references(() => employees.employeeId, {
+    onDelete: 'set null',
+  }),
 });

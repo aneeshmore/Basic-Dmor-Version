@@ -323,7 +323,7 @@ const CustomerContactReport: React.FC = () => {
       // Add title
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('DMOR PAINTS', 14, 15);
+      pdf.text('MOREX TECHNOLOGIES', 14, 15);
 
       // Add generation date
       pdf.setFontSize(10);
@@ -612,9 +612,8 @@ const CustomerContactReport: React.FC = () => {
                   setSelectedSalesperson(e.target.value);
                   setCurrentPage(1);
                 }}
-                className={`input ${
-                  user?.Role === 'Sales Person' ? 'opacity-60 cursor-not-allowed' : ''
-                }`}
+                className={`input ${user?.Role === 'Sales Person' ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}
               >
                 {user?.Role !== 'Sales Person' && <option value="">All Salespersons</option>}
                 {salespersons.map(sp => (
@@ -981,11 +980,10 @@ const CustomerContactReport: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 text-sm">
                           <span
-                            className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                              customer.isActive
+                            className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${customer.isActive
                                 ? 'bg-green-100 text-green-800'
                                 : 'bg-red-100 text-red-800'
-                            }`}
+                              }`}
                           >
                             {customer.isActive ? 'Active' : 'Inactive'}
                           </span>

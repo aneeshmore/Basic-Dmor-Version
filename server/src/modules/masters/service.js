@@ -47,6 +47,22 @@ export class MastersService {
       throw new NotFoundError('Department not found');
     }
 
+    const systemDepartmentNames = [
+      'Accounts',
+      'Administration',
+      'Production',
+      'Sales & Marketing',
+      'Sales & Marketing',
+      'Dealer',
+      'Administrator',
+    ];
+
+    if (systemDepartmentNames.includes(existing.departmentName)) {
+      throw new ConflictError(
+        `Cannot update system department: ${existing.departmentName}. These departments are essential for system operation.`
+      );
+    }
+
     const updateFields = {};
     if (updateData.DepartmentName !== undefined)
       updateFields.departmentName = updateData.DepartmentName;
@@ -66,6 +82,22 @@ export class MastersService {
     // Prevent deletion of system departments
     if (existing.isSystemDepartment) {
       throw new ConflictError('Cannot delete system departments');
+    }
+
+    const systemDepartmentNames = [
+      'Accounts',
+      'Administration',
+      'Production',
+      'Sales & Marketing',
+      'Sales & Marketing',
+      'Dealer',
+      'Administrator',
+    ];
+
+    if (systemDepartmentNames.includes(existing.departmentName)) {
+      throw new ConflictError(
+        `Cannot delete system department: ${existing.departmentName}. These departments are essential for system operation.`
+      );
     }
 
     await this.repository.deleteDepartment(departmentId);
@@ -537,6 +569,17 @@ export class MastersService {
     }
 
     const updateFields = {};
+
+    // Check for protected roles by name
+    const protectedRoleNames = ['Admin', 'Administrator', 'SuperAdmin', 'Dealer'];
+    if (protectedRoleNames.includes(existing.roleName) || (updateData.roleName && protectedRoleNames.includes(updateData.roleName))) {
+      // Only allow specific updates or block completely? The requirement says "uneditable", so block.
+      // However, we might want to allow updating description or landing page? 
+      // "also uneditable" implies completely. 
+      // But wait, system roles might need some updates? 
+      // For now, I'll block any update if it is a protected role.
+      throw new ConflictError(`Cannot update protected role: ${existing.roleName}`);
+    }
     if (updateData.roleName !== undefined) updateFields.roleName = updateData.roleName;
     if (updateData.description !== undefined) updateFields.description = updateData.description;
     if (updateData.landingPage !== undefined) updateFields.landingPage = updateData.landingPage;
@@ -556,6 +599,12 @@ export class MastersService {
     // Prevent deletion of system roles
     if (existing.isSystemRole) {
       throw new ConflictError('Cannot delete system roles');
+    }
+
+    // Check for protected roles by name
+    const protectedRoleNames = ['Admin', 'Administrator', 'SuperAdmin', 'Dealer'];
+    if (protectedRoleNames.includes(existing.roleName)) {
+      throw new ConflictError(`Cannot delete protected role: ${existing.roleName}`);
     }
 
     // Check if role is in use

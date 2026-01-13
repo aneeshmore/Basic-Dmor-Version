@@ -1,4 +1,4 @@
-# DMOR Paints - Modern ERP System
+# Morex Technologies - Modern ERP System
 
 [![Production Ready](https://img.shields.io/badge/status-production--ready-green)]()
 [![Drizzle ORM](https://img.shields.io/badge/ORM-Drizzle-blue)]()

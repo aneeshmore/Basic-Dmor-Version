@@ -1,7 +1,7 @@
 {
-  "name": "dmor-paints-server",
+  "name": "morex-paints-server",
   "version": "1.0.0",
-  "description": "DMOR Paints Management System - Backend API",
+  "description": "Morex Technologies Management System - Backend API",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
@@ -22,8 +22,8 @@
     "db:drop": "node src/db/scripts/dropSchema.js",
     "db:init": "node src/db/scripts/dropSchema.js && drizzle-kit push --force && node src/db/scripts/seed.js --reset",
     "schema:generate": "node src/db/schema/generate-schema-files.js",
-    "db:seed:departments": "node scripts/seed-departments-roles.js",
     "db:seed:admin": "node src/db/scripts/create-admin.js",
+    "db:clone": "node src/db/scripts/clone-db.js",
     "sync:permissions": "cd ../client && node scripts/extract-permissions.js && cd ../server && node src/db/scripts/sync-permissions.js"
   },
   "keywords": [
@@ -32,7 +32,7 @@
     "manufacturing"
   ],
   "packageManager": "pnpm@10.22.0",
-  "author": "DMOR Paints",
+  "author": "Morex Technologies",
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^3.0.3",

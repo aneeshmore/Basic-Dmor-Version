@@ -2,7 +2,7 @@
   "name": "dmor-paints-modern-dashboard",
   "version": "1.0.0",
   "private": true,
-  "description": "DMOR Paints Order Management System - Monorepo",
+  "description": "Morex Technologies Order Management System - Monorepo",
   "scripts": {
     "dev": "concurrently \"pnpm --filter server dev\" \"pnpm --filter client dev\"",
     "dev:client": "pnpm --filter client dev",

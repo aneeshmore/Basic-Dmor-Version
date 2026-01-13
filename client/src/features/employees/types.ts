@@ -22,4 +22,14 @@ export interface Employee {
   EmployeeType?: EmployeeType; // 'SalesPerson', 'Supervisor', or 'Regular'
   IsSalesPerson?: boolean;
   IsSupervisor?: boolean;
+  // Dealer specific fields
+  CompanyName?: string;
+  GSTIN?: string;
+  Pincode?: string;
+  AddressCity?: string;
+  AddressState?: string;
+  Area?: string;
+  AddressComplete?: string;
+  CustomerType?: string;
+  AssignedSalespersonID?: number;
 }

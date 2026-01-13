@@ -49,6 +49,9 @@ type FlexibleCustomer = Customer & {
   state?: string;
   State?: string;
   salesPersonId?: number;
+  area?: string;
+  location?: string;
+  pinCode?: string;
 };
 type FlexibleEmployee = Employee & {
   employeeId?: number;
@@ -333,7 +336,10 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
     };
 
     fetchData();
+    fetchData();
   }, [user, fetchQuotations]);
+
+
 
   // =====================
   // HELPER FUNCTIONS
@@ -618,14 +624,22 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
   // CUSTOMER SELECTION HANDLER
   // =====================
 
-  const handleCustomerChange = (id: number) => {
+  const handleCustomerChange = useCallback((id: number) => {
     setCustomerId(id);
     setValidationErrors(prev => ({ ...prev, customerId: false }));
 
     setCompanyName(getCompanyName(id));
     const customer = customers.find(c => (c.customerId || c.CustomerID) === id);
     if (customer) {
-      setDeliveryAddress(customer.address || customer.Address || '');
+      // Construct full address from components
+      const addressParts = [
+        customer.address || customer.Address,
+        customer.area || customer.Area,
+        customer.location || customer.Location,
+        customer.pinCode || customer.Pincode
+      ].filter(part => part && part.trim());
+
+      setDeliveryAddress(addressParts.join(', '));
 
       // Auto-populate sales person from customer
       const customerSalesPersonId = customer.SalesPersonID || customer.salesPersonId;
@@ -638,7 +652,31 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
         setSalesPersonId('');
       }
     }
-  };
+  }, [customers, getCompanyName]);
+
+  // Auto-fill for Dealer Role
+  useEffect(() => {
+    if (user?.Role === 'Dealer' && customers.length > 0) {
+      // Find customer record matching the dealer
+      // Try linking by Company Name (best guess) or Mobile
+      const dealerCompanyName = user.companyName?.trim().toLowerCase();
+
+      if (dealerCompanyName) {
+        const matchingCustomer = customers.find(
+          c => c.CompanyName.trim().toLowerCase() === dealerCompanyName
+        );
+
+        if (matchingCustomer) {
+          handleCustomerChange(matchingCustomer.CustomerID);
+        }
+      }
+
+      // Pre-fill Delivery Address from Dealer Profile
+      if (user.address) {
+        setDeliveryAddress(user.address);
+      }
+    }
+  }, [user, customers, handleCustomerChange]);
 
   // =====================
   // FORM SUBMISSION
@@ -867,13 +905,11 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
         customerId: Number(customerId),
 
         // Company Details
-        companyName: 'Dmor Polymers Private Limited',
-        companyAddress:
-          'Office No. 403 & 404, "Ambegaon Valley"\nIn Front of Swaminarayan Temple\nAmbegaon Khurd-46\nM-7261913838',
-        companyGSTIN: '27AAGCD5732R1Z1',
-        companyState: 'Maharashtra',
-        companyCode: '27',
-        companyEmail: 'office@dmorpolymers.com',
+        companyName: 'Morex Technologies',
+        companyAddress: 'Plot No. 123, Sector 45, Gurugram, India',
+        companyPhone: '+91 98765 43210',
+        companyWeb: 'www.morex.com',
+        companyEmail: 'office@morex.com',
 
         // Salesperson Info (for order conversion)
         salespersonId: typeof salesPersonId === 'number' ? salesPersonId : undefined,
@@ -1077,7 +1113,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
         ...editingQuotation.content,
         quotationNo: editingQuotation.quotationNo,
         customerId: Number(customerId),
-        companyName: 'Dmor Polymers Private Limited',
+        companyName: 'Morex Technologies',
         buyerName: customer?.companyName || customer?.CompanyName || '',
         buyerAddress: quotationAddress || deliveryAddress,
         buyerGSTIN: customer?.gstin || customer?.GSTIN || '',
@@ -1682,11 +1718,10 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
           {(() => {
             const orderItemsContent = (
               <div
-                className={`bg-[var(--surface)] p-6 rounded-lg flex flex-col transition-all duration-300 ${
-                  isOrderItemsFullScreen
-                    ? 'fixed inset-0 rounded-none overflow-auto'
-                    : 'lg:col-span-2'
-                }`}
+                className={`bg-[var(--surface)] p-6 rounded-lg flex flex-col transition-all duration-300 ${isOrderItemsFullScreen
+                  ? 'fixed inset-0 rounded-none overflow-auto'
+                  : 'lg:col-span-2'
+                  }`}
                 style={isOrderItemsFullScreen ? { zIndex: 999999, isolation: 'isolate' } : {}}
               >
                 {/* Header with Expand Button */}
@@ -1732,11 +1767,10 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                       <div
                         key={index}
                         data-item-card
-                        className={`border rounded-lg p-4 transition-all ${
-                          isComplete
-                            ? 'border-[var(--success)]/50 bg-[var(--success)]/5'
-                            : 'border-[var(--border)] bg-[var(--surface-secondary)]'
-                        } hover:border-[var(--primary)] hover:shadow-md`}
+                        className={`border rounded-lg p-4 transition-all ${isComplete
+                          ? 'border-[var(--success)]/50 bg-[var(--success)]/5'
+                          : 'border-[var(--border)] bg-[var(--surface-secondary)]'
+                          } hover:border-[var(--primary)] hover:shadow-md`}
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-2">
@@ -1843,11 +1877,10 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                                 Line Total
                               </label>
                               <div
-                                className={`px-3 py-2 border rounded-lg font-semibold ${
-                                  isComplete
-                                    ? 'border-[var(--success)] bg-[var(--success)]/10 text-[var(--success)]'
-                                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]'
-                                }`}
+                                className={`px-3 py-2 border rounded-lg font-semibold ${isComplete
+                                  ? 'border-[var(--success)] bg-[var(--success)]/10 text-[var(--success)]'
+                                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]'
+                                  }`}
                               >
                                 ₹{calculateLineTotal(item).toFixed(2)}
                               </div>
@@ -2087,13 +2120,12 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                 <span className="text-[var(--text-secondary)]">Status:</span>
                 <Badge
                   variant={previewQuotation.status === 'Rejected' ? 'destructive' : 'secondary'}
-                  className={`ml-2 ${
-                    previewQuotation.status === 'Approved'
-                      ? 'bg-green-100 text-green-800'
-                      : previewQuotation.status === 'Pending'
-                        ? 'bg-orange-100 text-orange-800'
-                        : ''
-                  }`}
+                  className={`ml-2 ${previewQuotation.status === 'Approved'
+                    ? 'bg-green-100 text-green-800'
+                    : previewQuotation.status === 'Pending'
+                      ? 'bg-orange-100 text-orange-800'
+                      : ''
+                    }`}
                 >
                   {previewQuotation.status}
                 </Badge>

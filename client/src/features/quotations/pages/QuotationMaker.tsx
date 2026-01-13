@@ -44,13 +44,13 @@ const INITIAL_DATA: QuotationData = {
   destination: '',
   deliveryTerms: '',
 
-  companyName: 'Dmor Polymers Private Limited',
-  companyAddress:
-    'Office No. 403 & 404, "Ambegaon Valley"\nIn Front of Swaminarayan Temple\nAmbegaon Khurd-46\nM-7261913838',
-  companyGSTIN: '27AAGCD5732R1Z1',
-  companyState: 'Maharashtra',
-  companyCode: '27',
-  companyEmail: 'office@dmorpolymers.com',
+  companyName: 'Morex Technologies',
+  companyAddress: 'Plot No. 123, Sector 45, Gurugram, India',
+  companyPhone: '+91 98765 43210',
+  companyEmail: 'office@morex.com',
+  companyGSTIN: '06AAACD7890E1Z2',
+  companyState: 'Haryana',
+  companyCode: '06',
 
   items: [
     {
@@ -1020,9 +1020,8 @@ const QuotationMaker = () => {
             onClick={() => handleDownloadPDF()}
             isLoading={isGenerating}
             disabled={!canDownload}
-            className={`flex items-center gap-2 text-white no-print ${
-              canDownload ? 'bg-[var(--primary)]' : 'bg-gray-400 cursor-not-allowed'
-            }`}
+            className={`flex items-center gap-2 text-white no-print ${canDownload ? 'bg-[var(--primary)]' : 'bg-gray-400 cursor-not-allowed'
+              }`}
           >
             <Download size={18} /> Download PDF
           </Button>
@@ -1055,7 +1054,7 @@ const QuotationMaker = () => {
                 <div className="p-1 flex gap-2">
                   <div className="w-[100px] flex-shrink-0 flex items-start justify-center pt-1">
                     <img
-                      src="/dmor-logo.png"
+                      src="/morex-logo.png"
                       alt="Logo"
                       className="w-auto max-h-[35px] object-contain"
                       crossOrigin="anonymous"

@@ -58,14 +58,14 @@ export default function LoginPage() {
             <div className="mb-8 flex flex-col items-center">
               <div className="flex h-32 w-32 items-center justify-center rounded-3xl bg-white p-4 shadow-[0_0_50px_rgba(59,130,246,0.25)] mb-10 animate-fade-in border border-white/20 transition-transform hover:scale-105 duration-300 overflow-hidden">
                 <img
-                  src="/dmor-logo.png"
-                  alt="DMOR Logo"
+                  src="/morex-logo.png"
+                  alt="Morex Logo"
                   className="w-full h-full object-contain"
                 />
               </div>
               <h1 className="text-6xl font-[900] tracking-tighter mb-4 leading-tight">
                 <span className="text-white drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-                  DMOR Paints
+                  Morex Technologies
                 </span>
                 <span className="block text-blue-500 text-4xl mt-1 font-bold">
                   Operation Management System
@@ -209,7 +209,7 @@ export default function LoginPage() {
         </div>
 
         <div className="absolute bottom-10 left-0 right-0 text-center text-[10px] font-bold text-gray-300 uppercase tracking-[0.2em]">
-          Powered by DMOR Paints OMS
+          Powered by Morex Technologies OMS
         </div>
       </div>
     </div>

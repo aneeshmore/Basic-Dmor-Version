@@ -17,8 +17,122 @@ console.log('create-admin.js starting', {
   env: process.env.NODE_ENV,
 });
 
+// SEED DATA from seed-org-structure.js
+const SEED_DATA = [
+  {
+    department: 'Administrator',
+    roles: ['SuperAdmin', 'Admin']
+  },
+  {
+    department: 'Accounts',
+    roles: ['Accounts Manager']
+  },
+  {
+    department: 'Production',
+    roles: ['Production Manager']
+  },
+  {
+    department: 'Dealer',
+    roles: ['Dealer']
+  },
+  {
+    department: 'Sales & Marketing',
+    roles: ['Sales Person']
+  }
+];
+
+async function seedOrgStructure() {
+  console.log('Starting Organization Structure Seed...');
+
+  // PRE-SEED: Rename 'Viewer' to 'Dealer' if exists and 'Dealer' does not
+  // This ensures we migrate the role instead of creating a duplicate
+  const [viewerRole] = await db.select().from(roles).where(eq(roles.roleName, 'Viewer'));
+  const [dealerRole] = await db.select().from(roles).where(eq(roles.roleName, 'Dealer'));
+
+  if (viewerRole && !dealerRole) {
+    console.log('🔄 Renaming "Viewer" role to "Dealer"...');
+    await db
+      .update(roles)
+      .set({ roleName: 'Dealer', description: 'Read-only access (Dealer)' })
+      .where(eq(roles.roleId, viewerRole.roleId));
+  }
+
+  for (const group of SEED_DATA) {
+    // 1. Ensure Department Exists
+    let [dept] = await db
+      .select()
+      .from(departments)
+      .where(eq(departments.departmentName, group.department));
+
+    if (!dept) {
+      console.log(`Creating department: ${group.department}`);
+      const [newDept] = await db
+        .insert(departments)
+        .values({
+          departmentName: group.department,
+          isActive: true
+        })
+        .returning();
+      dept = newDept;
+    } else {
+      console.log(`Department exists: ${group.department}`);
+    }
+
+    // 2. Ensure Roles Exist and are linked to Department
+    for (const roleName of group.roles) {
+      let [role] = await db
+        .select()
+        .from(roles)
+        .where(eq(roles.roleName, roleName));
+
+      if (!role) {
+        console.log(`Creating role: ${roleName} in ${group.department}`);
+        const roleData = {
+          roleName: roleName,
+          description: `${roleName} role for ${group.department}`,
+          isActive: true,
+          departmentId: dept.departmentId,
+          landingPage: '/dashboard'
+        };
+
+        // Specific configurations
+        if (roleName === 'SuperAdmin') {
+          roleData.description = 'Super administrator with all permissions';
+          roleData.landingPage = '/dashboard/admin';
+        }
+
+        if (roleName.includes('Sales') || roleName === 'Dealer') {
+          roleData.isSalesRole = true;
+        }
+
+        await db
+          .insert(roles)
+          .values(roleData);
+      } else {
+        console.log(`Role exists: ${roleName}`);
+        // Ensure department link is correct
+        if (role.departmentId !== dept.departmentId) {
+          console.log(`Updating role ${roleName} department to ${group.department}`);
+          await db
+            .update(roles)
+            .set({ departmentId: dept.departmentId })
+            .where(eq(roles.roleId, role.roleId));
+        }
+        // Ensure SuperAdmin landing page
+        if (roleName === 'SuperAdmin' && role.landingPage !== '/dashboard/admin') {
+          await db.update(roles).set({ landingPage: '/dashboard/admin' }).where(eq(roles.roleId, role.roleId));
+        }
+      }
+    }
+  }
+  console.log('Organization Structure Seed Completed Successfully.');
+}
+
 async function createAdmin() {
   try {
+    // RUN ORG STRUCTURE SEED FIRST
+    await seedOrgStructure();
+
     console.log('Checking for existing admin user...');
     const [existing] = await db.select().from(employees).where(eq(employees.username, 'admin'));
     console.log('Existing admin user:', existing);
@@ -48,7 +162,7 @@ async function createAdmin() {
           username: 'admin',
           passwordHash: hashed,
           mobileNo: ['9999999999', null, null],
-          emailId: 'admin@dmor.com',
+          emailId: 'admin@morex.com',
           status: 'Active',
         })
         .returning();
@@ -56,60 +170,9 @@ async function createAdmin() {
       employeeRecord = inserted;
     }
 
-    // Ensure Administrator department exists
-    console.log('Ensuring Administrator department exists...');
-    let [adminDept] = await db
-      .select()
-      .from(departments)
-      .where(eq(departments.departmentName, 'Administrator'));
-    if (!adminDept) {
-      console.log('Administrator department not found, creating it...');
-      const [newDept] = await db
-        .insert(departments)
-        .values({ departmentName: 'Administrator', isActive: true })
-        .returning();
-      adminDept = newDept;
-      console.log('Created Administrator department:', adminDept);
-    } else {
-      console.log('Found Administrator department:', adminDept);
-    }
-
-    // Ensure SuperAdmin role exists and is linked to Administrator dept and landingPage
-    console.log('Ensuring SuperAdmin role exists and is configured...');
-    let [superRole] = await db.select().from(roles).where(eq(roles.roleName, 'SuperAdmin'));
-    if (!superRole) {
-      console.log('SuperAdmin role not found, creating it...');
-      const [newRole] = await db
-        .insert(roles)
-        .values({
-          roleName: 'SuperAdmin',
-          description: 'Super administrator with all permissions',
-          isActive: true,
-          departmentId: adminDept.departmentId,
-          landingPage: '/dashboard/admin',
-        })
-        .returning();
-      superRole = newRole;
-      console.log('Created SuperAdmin role:', superRole);
-    } else {
-      // make sure departmentId and landingPage are set correctly
-      console.log('Found SuperAdmin role, ensuring department and landingPage are set...');
-      const updateData = {};
-      if (superRole.departmentId !== adminDept.departmentId)
-        updateData.departmentId = adminDept.departmentId;
-      if (superRole.landingPage !== '/dashboard/admin') updateData.landingPage = '/dashboard/admin';
-      if (Object.keys(updateData).length > 0) {
-        const [updatedRole] = await db
-          .update(roles)
-          .set(updateData)
-          .where(eq(roles.roleId, superRole.roleId))
-          .returning();
-        superRole = updatedRole;
-        console.log('Updated SuperAdmin role:', superRole);
-      } else {
-        console.log('SuperAdmin role already configured correctly');
-      }
-    }
+    // Fetch necessary Admin Dept and Role objects (guaranteed to exist now)
+    const [adminDept] = await db.select().from(departments).where(eq(departments.departmentName, 'Administrator'));
+    const [superRole] = await db.select().from(roles).where(eq(roles.roleName, 'SuperAdmin'));
 
     // Assign role to the user if not already assigned
     console.log('Assigning role to admin if missing...');

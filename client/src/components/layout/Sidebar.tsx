@@ -179,12 +179,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ items, activePath, onNavigate,
             )}
           >
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm border border-gray-100 overflow-hidden">
-              <img src="/dmor-logo.png" alt="DMOR Logo" className="w-full h-full object-contain" />
+              <img src="/morex-logo.png" alt="Morex Logo" className="w-full h-full object-contain" />
             </div>
             {!isCollapsed && (
               <div className="flex flex-col">
                 <span className="font-bold tracking-tight text-base text-[var(--sidebar-text-active)]">
-                  DMOR PAINTS
+                  MOREX TECH
                 </span>
                 <span className="text-[11px] text-[var(--sidebar-text)] uppercase tracking-wider font-medium">
                   OMS
@@ -280,7 +280,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ items, activePath, onNavigate,
                               className={cn(
                                 'transition-transform duration-200',
                                 (isMobile ? isMobileExpanded || searchQuery : isExpanded) &&
-                                  'rotate-180'
+                                'rotate-180'
                               )}
                             />
                           )}

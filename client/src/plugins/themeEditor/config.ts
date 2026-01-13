@@ -12,7 +12,7 @@
 
 export const THEME_EDITOR_CONFIG = {
   enabled: import.meta.env.VITE_ENABLE_THEME_EDITOR === "true",
-  storageKey: "dmor-theme",
+  storageKey: "morex-theme",
 
   // Default theme
   defaultTheme: {

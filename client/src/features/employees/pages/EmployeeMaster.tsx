@@ -19,6 +19,7 @@ const EmployeeForm = ({
   departments,
   roles,
   onDepartmentChange,
+  salesPersons,
 }: {
   item: Partial<Employee> | null;
   onSave: (item: Employee) => void;
@@ -28,6 +29,7 @@ const EmployeeForm = ({
   departments: { value: number; label: string }[];
   roles: { value: number; label: string }[];
   onDepartmentChange: (departmentId: number | undefined) => void;
+  salesPersons: Employee[];
 }) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -234,10 +236,27 @@ const EmployeeForm = ({
     DepartmentID: item?.DepartmentID,
     RoleID: item?.RoleID,
     JoiningDate: formatDateForInput(item?.JoiningDate) || new Date().toISOString().split('T')[0],
+
     DOB: formatDateForInput(item?.DOB),
+    // Dealer fields
+    CompanyName: item?.CompanyName || '',
+    GSTIN: item?.GSTIN || '',
+    Pincode: item?.Pincode || '',
+    AddressCity: item?.AddressCity || '',
+    AddressState: item?.AddressState || '',
+    Area: item?.Area || '',
+    AddressComplete: item?.AddressComplete || '',
+    CustomerType: item?.CustomerType || 'Dealer',
+    AssignedSalespersonID: item?.AssignedSalespersonID,
   });
 
   // Clear errors when item changes
+  useEffect(() => {
+    setErrors({});
+  }, [item]);
+
+  const isDealerDept = departments.find(d => d.value === formData.DepartmentID)?.label === 'Dealer';
+
   useEffect(() => {
     setErrors({});
   }, [item]);
@@ -266,7 +285,16 @@ const EmployeeForm = ({
       DepartmentID: item?.DepartmentID,
       RoleID: item?.RoleID,
       JoiningDate: formatDateForInput(item?.JoiningDate) || new Date().toISOString().split('T')[0],
-      DOB: formatDateForInput(item?.DOB),
+      // Dealer fields
+      CompanyName: item?.CompanyName || '',
+      GSTIN: item?.GSTIN || '',
+      Pincode: item?.Pincode || '',
+      AddressCity: item?.AddressCity || '',
+      AddressState: item?.AddressState || '',
+      Area: item?.Area || '',
+      AddressComplete: item?.AddressComplete || '',
+      CustomerType: item?.CustomerType || 'Dealer',
+      AssignedSalespersonID: item?.AssignedSalespersonID,
     });
   }, [item]);
 
@@ -307,6 +335,35 @@ const EmployeeForm = ({
     setFormData({ ...formData, Password: shuffled });
     // Validate immediately
     validateField('Password', shuffled);
+  };
+
+  const handlePincodeChange = async (pincode: string) => {
+    setFormData(prev => ({ ...prev, Pincode: pincode }));
+
+    // Validate pincode immediately
+    validateField('Pincode', pincode);
+
+    if (pincode.length === 6 && /^\d{6}$/.test(pincode)) {
+      try {
+        const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+        const data = await response.json();
+        if (data && data[0] && data[0].Status === 'Success') {
+          const details = data[0].PostOffice[0];
+          setFormData(prev => ({
+            ...prev,
+            Pincode: pincode,
+            AddressCity: details.District,
+            AddressState: details.State,
+            Area: details.Name, // Auto-fill Area with Post Office name as a suggestion
+            AddressComplete: prev.AddressComplete || `${details.Name}, ${details.District}, ${details.State}`
+          }));
+          // Re-validate Area as we auto-filled it
+          if (details.Name) validateField('Area', details.Name);
+        }
+      } catch (err) {
+        console.error("Failed to fetch pincode details", err);
+      }
+    }
   };
 
   const validateField = (name: string, value: any, index?: number) => {
@@ -408,6 +465,28 @@ const EmployeeForm = ({
           if (error) newErrors[mobileKey] = error;
           else delete newErrors[mobileKey];
         }
+        break;
+
+      case 'CompanyName':
+        if (isDealerDept && !value?.trim()) error = 'Company Name is required';
+        if (error) newErrors.CompanyName = error;
+        else delete newErrors.CompanyName;
+        break;
+
+      case 'Pincode':
+        if (isDealerDept) {
+          if (!value?.trim()) error = 'Pincode is required';
+          else if (!/^\d{6}$/.test(value)) error = 'Invalid Pincode';
+
+          if (error) newErrors.Pincode = error;
+          else delete newErrors.Pincode;
+        }
+        break;
+
+      case 'Area':
+        if (isDealerDept && !value?.trim()) error = 'Area is required';
+        if (error) newErrors.Area = error;
+        else delete newErrors.Area;
         break;
     }
 
@@ -646,6 +725,29 @@ const EmployeeForm = ({
         newErrors.JoiningDate = 'Joining date cannot be a future date';
         hasErrors = true;
       }
+      if (joiningDate > today) {
+        newErrors.JoiningDate = 'Joining date cannot be a future date';
+        hasErrors = true;
+      }
+    }
+
+    // Dealer Validation
+    if (isDealerDept) {
+      if (!formData.CompanyName?.trim()) {
+        newErrors.CompanyName = 'Company Name is required';
+        hasErrors = true;
+      }
+      if (!formData.Pincode?.trim()) {
+        newErrors.Pincode = 'Pincode is required';
+        hasErrors = true;
+      } else if (!/^\d{6}$/.test(formData.Pincode)) {
+        newErrors.Pincode = 'Invalid Pincode';
+        hasErrors = true;
+      }
+      if (!formData.Area?.trim()) {
+        newErrors.Area = 'Area is required';
+        hasErrors = true;
+      }
     }
 
     setErrors(newErrors);
@@ -672,8 +774,16 @@ const EmployeeForm = ({
       RoleID: formData.RoleID,
       JoiningDate: formData.JoiningDate,
       DOB: formData.DOB,
-      Status: item?.Status || 'Active',
-      // EmployeeType is now determined by role flags on the backend
+
+      CompanyName: formData.CompanyName,
+      GSTIN: formData.GSTIN,
+      Pincode: formData.Pincode,
+      AddressCity: formData.AddressCity,
+      AddressState: formData.AddressState,
+      Area: formData.Area,
+      AddressComplete: formData.AddressComplete,
+      CustomerType: formData.CustomerType,
+      AssignedSalespersonID: formData.AssignedSalespersonID,
     };
 
     // Only include username and password if:
@@ -1064,6 +1174,120 @@ const EmployeeForm = ({
           </div>
         </div>
 
+        {/* Dealer Information */}
+        {isDealerDept && (
+          <div className="animate-fade-in border-t border-[var(--border)] pt-4 mt-4">
+            <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">
+              Dealer Information
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Input
+                  label="Company Name"
+                  value={formData.CompanyName}
+                  onChange={e => {
+                    setFormData({ ...formData, CompanyName: e.target.value });
+                    validateField('CompanyName', e.target.value);
+                  }}
+                  placeholder="Enter Company Name"
+                  required
+                  className="h-11"
+                />
+                {errors.CompanyName && <p className="text-red-500 text-xs">{errors.CompanyName}</p>}
+              </div>
+
+              <div className="space-y-1">
+                <Input
+                  label="GSTIN (Optional)"
+                  value={formData.GSTIN}
+                  onChange={e => setFormData({ ...formData, GSTIN: e.target.value })}
+                  placeholder="Enter GSTIN"
+                  className="h-11"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Input
+                  label="Pincode"
+                  value={formData.Pincode}
+                  onChange={e => {
+                    // Allow only numbers
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    handlePincodeChange(val);
+                  }}
+                  placeholder="Enter 6-digit Pincode"
+                  required
+                  maxLength={6}
+                  className="h-11"
+                />
+                {errors.Pincode && <p className="text-red-500 text-xs">{errors.Pincode}</p>}
+              </div>
+
+              <div className="space-y-1">
+                <Input
+                  label="City"
+                  value={formData.AddressCity}
+                  readOnly
+                  className="h-11 bg-gray-50"
+                  placeholder="Auto-filled from Pincode"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Input
+                  label="State"
+                  value={formData.AddressState}
+                  readOnly
+                  className="h-11 bg-gray-50"
+                  placeholder="Auto-filled from Pincode"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Input
+                  label="Area"
+                  value={formData.Area}
+                  onChange={e => {
+                    setFormData({ ...formData, Area: e.target.value });
+                    validateField('Area', e.target.value);
+                  }}
+                  placeholder="Enter Area"
+                  required
+                  className="h-11"
+                />
+                {errors.Area && <p className="text-red-500 text-xs">{errors.Area}</p>}
+              </div>
+
+              <div className="col-span-1 sm:col-span-2 space-y-1">
+                <Input
+                  label="Complete Address (Optional)"
+                  value={formData.AddressComplete}
+                  onChange={e => setFormData({ ...formData, AddressComplete: e.target.value })}
+                  placeholder="Enter Complete Address"
+                  className="h-11"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Select
+                  label="Assigned Salesperson"
+                  options={salesPersons.map(sp => ({
+                    value: sp.EmployeeID,
+                    label: `${sp.FirstName} ${sp.LastName || ''}`.trim()
+                  }))}
+                  value={formData.AssignedSalespersonID || ''}
+                  onChange={e => {
+                    const val = parseInt(e.target.value) || undefined;
+                    setFormData({ ...formData, AssignedSalespersonID: val });
+                  }}
+                  placeholder="Select Salesperson"
+                  className="h-11"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4 sm:pt-6 border-t-2 border-[var(--border)]">
           <Button
             variant="ghost"
@@ -1358,11 +1582,10 @@ export default function EmployeeMaster() {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => (
         <span
-          className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-            row.original.Status === 'Active'
-              ? 'bg-green-100 text-green-700'
-              : 'bg-gray-100 text-gray-700'
-          }`}
+          className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${row.original.Status === 'Active'
+            ? 'bg-green-100 text-green-700'
+            : 'bg-gray-100 text-gray-700'
+            }`}
         >
           {row.original.Status}
         </span>
@@ -1470,10 +1693,10 @@ export default function EmployeeMaster() {
                   <p className="text-[var(--text-primary)] font-medium">
                     {viewingEmployee.DOB
                       ? new Date(viewingEmployee.DOB).toLocaleDateString('en-IN', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })
                       : '-'}
                   </p>
                 </div>
@@ -1558,10 +1781,10 @@ export default function EmployeeMaster() {
                   <p className="text-[var(--text-primary)] font-medium">
                     {viewingEmployee.JoiningDate
                       ? new Date(viewingEmployee.JoiningDate).toLocaleDateString('en-IN', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })
                       : '-'}
                   </p>
                 </div>
@@ -1569,11 +1792,10 @@ export default function EmployeeMaster() {
                   <span className="text-xs font-medium text-[var(--text-secondary)]">Status</span>
                   <p className="text-[var(--text-primary)] font-medium">
                     <span
-                      className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        viewingEmployee.Status === 'Active'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
+                      className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${viewingEmployee.Status === 'Active'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gray-100 text-gray-700'
+                        }`}
                     >
                       {viewingEmployee.Status}
                     </span>
@@ -1613,13 +1835,12 @@ export default function EmployeeMaster() {
                     Employee Type
                   </span>
                   <p
-                    className={`font-medium ${
-                      viewingEmployee.EmployeeType === 'SalesPerson'
-                        ? 'text-green-600'
-                        : viewingEmployee.EmployeeType === 'Supervisor'
-                          ? 'text-purple-600'
-                          : 'text-blue-600'
-                    }`}
+                    className={`font-medium ${viewingEmployee.EmployeeType === 'SalesPerson'
+                      ? 'text-green-600'
+                      : viewingEmployee.EmployeeType === 'Supervisor'
+                        ? 'text-purple-600'
+                        : 'text-blue-600'
+                      }`}
                   >
                     {viewingEmployee.EmployeeType === 'SalesPerson'
                       ? 'Sales Person'
@@ -1669,6 +1890,14 @@ export default function EmployeeMaster() {
           departments={departments}
           roles={roles}
           onDepartmentChange={handleDepartmentChange}
+          salesPersons={employees.filter(e => {
+            // Filter by EmployeeType 'SalesPerson' or if the Role name contains 'Sales'
+            // This covers both explicit type assignment and role-based matching
+            return (
+              e.EmployeeType === 'SalesPerson' ||
+              e.Role?.toLowerCase().includes('sales')
+            );
+          })}
         />
       </div>
 

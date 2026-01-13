@@ -97,7 +97,13 @@ class AuthorityController {
         Username: user.username,
         Role: role?.roleName,
         landingPage: role?.landingPage || '/dashboard',
+        landingPage: role?.landingPage || '/dashboard',
         permissions,
+        // Dealer specific fields
+        companyName: user.companyName,
+        address: user.addressComplete, // Map addressComplete to address
+        gstin: user.gstin,
+        mobileNo: user.mobileNo?.[0], // First mobile number
       };
 
       logger.info('User logged in successfully', { username, employeeId: user.employeeId });
@@ -195,7 +201,13 @@ class AuthorityController {
           Username: user.username,
           Role: role?.roleName,
           landingPage: role?.landingPage || '/dashboard',
+          landingPage: role?.landingPage || '/dashboard',
           permissions,
+          // Dealer specific fields
+          companyName: user.companyName,
+          address: user.addressComplete,
+          gstin: user.gstin,
+          mobileNo: user.mobileNo?.[0],
         },
       });
     } catch (error) {

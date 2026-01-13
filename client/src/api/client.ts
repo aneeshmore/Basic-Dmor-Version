@@ -75,8 +75,8 @@ apiClient.interceptors.response.use(
         case 401:
           errorMessage = 'Unauthorized - Please login';
           // Clear auth tokens and redirect to login
-          localStorage.removeItem('dmor_auth_token');
-          localStorage.removeItem('dmor_user');
+          localStorage.removeItem('morex_auth_token');
+          localStorage.removeItem('morex_user');
           // Redirect to login after a short delay to allow toast to show
           setTimeout(() => {
             window.location.href = '/login';

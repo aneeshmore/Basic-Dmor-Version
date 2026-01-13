@@ -28,9 +28,18 @@ export class EmployeesRepository {
           },
           roleId: employeeRoles.roleId,
           role: roles.roleName,
-          // Role-based flags (replaces employeeSubTable)
           isSalesRole: roles.isSalesRole,
           isSupervisorRole: roles.isSupervisorRole,
+          // Dealer specific fields
+          companyName: employees.companyName,
+          gstin: employees.gstin,
+          pincode: employees.pincode,
+          addressCity: employees.addressCity,
+          addressState: employees.addressState,
+          area: employees.area,
+          addressComplete: employees.addressComplete,
+          customerType: employees.customerType,
+          assignedSalespersonId: employees.assignedSalespersonId,
         })
         .from(employees)
         .leftJoin(departments, eq(employees.departmentId, departments.departmentId))
@@ -133,9 +142,18 @@ export class EmployeesRepository {
         },
         roleId: employeeRoles.roleId,
         role: roles.roleName,
-        // Role-based flags (replaces employeeSubTable)
         isSalesRole: roles.isSalesRole,
         isSupervisorRole: roles.isSupervisorRole,
+        // Dealer specific fields
+        companyName: employees.companyName,
+        gstin: employees.gstin,
+        pincode: employees.pincode,
+        addressCity: employees.addressCity,
+        addressState: employees.addressState,
+        area: employees.area,
+        addressComplete: employees.addressComplete,
+        customerType: employees.customerType,
+        assignedSalespersonId: employees.assignedSalespersonId,
       })
       .from(employees)
       .leftJoin(departments, eq(employees.departmentId, departments.departmentId))

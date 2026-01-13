@@ -1,6 +1,6 @@
-# DMOR Paints ERP - Server
+# Morex Technologies ERP - Server
 
-A production-ready Express.js backend API for the DMOR Paints ERP system, built with TypeScript and following MVC architecture patterns.
+A production-ready Express.js backend API for the Morex Technologies ERP system, built with TypeScript and following MVC architecture patterns.
 
 ## ��� Features
 
@@ -464,4 +464,4 @@ For issues and questions, please refer to the main project README or create an i
 
 ## ��� License
 
-This project is part of the DMOR Paints ERP system.
+This project is part of the Morex Technologies ERP system.

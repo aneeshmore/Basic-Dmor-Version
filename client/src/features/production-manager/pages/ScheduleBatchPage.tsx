@@ -1472,11 +1472,11 @@ export default function ScheduleBatchPage() {
     const totalOutputWeight = availableSkus.reduce((sum, sku) => {
       const qty = skuOutput[sku.productId] || 0;
 
-          const capacityLtr = parseFloat(sku.packagingCapacityLtr || '0');
-          if (capacityLtr > 0) {
-            const density = (actualDensity && actualDensity > 0) ? actualDensity : parseFloat(sku.fillingDensity || '1');
-            return sum + qty * capacityLtr * density;
-          }
+      const capacityLtr = parseFloat(sku.packagingCapacityLtr || '0');
+      if (capacityLtr > 0) {
+        const density = (actualDensity && actualDensity > 0) ? actualDensity : parseFloat(sku.fillingDensity || '1');
+        return sum + qty * capacityLtr * density;
+      }
 
       const pkgWeight = parseFloat(sku.packageCapacityKg || '0');
       return sum + qty * pkgWeight;
@@ -1615,7 +1615,7 @@ export default function ScheduleBatchPage() {
 
       // Header
       doc.setFontSize(16);
-      doc.text('DMOR PAINTS', 105, 15, { align: 'center' });
+      doc.text('MOREX TECHNOLOGIES', 105, 15, { align: 'center' });
 
       doc.setFontSize(10);
       doc.text(`Batch No : ${batch.batchNo} / ${batch.masterProductName || ''}`, 14, 25);
@@ -1970,15 +1970,15 @@ export default function ScheduleBatchPage() {
                               return 0;
                             })
                             .map(mat => (
-                            <tr key={mat.batchMaterialId}>
-                              <td className={`py-2 px-3 text-[var(--text-primary)] ${mat.materialName.toLowerCase().includes('water') ? 'font-bold' : ''}`}>
-                                {mat.materialName}
-                              </td>
-                              <td className={`py-2 px-3 text-right text-[var(--text-secondary)] ${mat.materialName.toLowerCase().includes('water') ? 'font-bold' : ''}`}>
-                                {mat.plannedQuantity.toFixed(3)}
-                              </td>
-                            </tr>
-                          ))}
+                              <tr key={mat.batchMaterialId}>
+                                <td className={`py-2 px-3 text-[var(--text-primary)] ${mat.materialName.toLowerCase().includes('water') ? 'font-bold' : ''}`}>
+                                  {mat.materialName}
+                                </td>
+                                <td className={`py-2 px-3 text-right text-[var(--text-secondary)] ${mat.materialName.toLowerCase().includes('water') ? 'font-bold' : ''}`}>
+                                  {mat.plannedQuantity.toFixed(3)}
+                                </td>
+                              </tr>
+                            ))}
                           {/* Extra Materials */}
                           {extraMaterials.map((mat, index) => {
                             const available = getAvailableStock(mat.materialId);
@@ -2193,9 +2193,9 @@ export default function ScheduleBatchPage() {
 
                               return (
                                 <>
-            <span className="font-semibold text-[var(--text-secondary)]">
-              Total Produced Quantity :{' '}
-            </span>
+                                  <span className="font-semibold text-[var(--text-secondary)]">
+                                    Total Produced Quantity :{' '}
+                                  </span>
                                   <span className="font-bold text-[var(--text-primary)]">
                                     {totalOutputWeight.toFixed(2)} kg
                                   </span>

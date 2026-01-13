@@ -163,9 +163,9 @@ export default function BatchReportModal({
       relatedSkus.length > 0
         ? relatedSkus
         : orders.map((o: any) => ({
-            productId: o.product?.productId,
-            productName: o.product?.productName || 'Unknown',
-          }));
+          productId: o.product?.productId,
+          productName: o.product?.productName || 'Unknown',
+        }));
 
     skusToShow.forEach((sku: any) => {
       const order = ordersMapScreen.get(sku.productId);
@@ -193,7 +193,7 @@ export default function BatchReportModal({
 
     // Header
     doc.setFontSize(16);
-    doc.text('DMOR PAINTS', 105, 15, { align: 'center' });
+    doc.text('MOREX TECHNOLOGIES', 105, 15, { align: 'center' });
     doc.line(14, 18, 196, 18);
 
     doc.setFontSize(10);
@@ -902,9 +902,9 @@ export default function BatchReportModal({
                         relatedSkus.length > 0
                           ? relatedSkus
                           : orders.map((o: any) => ({
-                              productId: o.product?.productId,
-                              productName: o.product?.productName || 'Unknown',
-                            }));
+                            productId: o.product?.productId,
+                            productName: o.product?.productName || 'Unknown',
+                          }));
 
                       return skusToShow.map((sku: any, idx: number) => {
                         const order = ordersMapScreen.get(sku.productId);

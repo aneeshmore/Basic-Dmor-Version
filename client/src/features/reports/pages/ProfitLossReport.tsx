@@ -228,7 +228,7 @@ const ProfitLossReport = () => {
       // Title
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('DMOR PAINTS', margin, 15);
+      pdf.text('MOREX TECHNOLOGIES', margin, 15);
 
       pdf.setFontSize(12);
       pdf.text('Profit & Loss Report', margin, 22);

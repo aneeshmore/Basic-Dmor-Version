@@ -70,6 +70,11 @@ export interface AuthUser {
   Role: string;
   landingPage?: string;
   permissions?: UserPermission[];
+  // Dealer fields
+  companyName?: string;
+  address?: string;
+  gstin?: string;
+  mobileNo?: string;
 }
 
 export interface AuthResponse {

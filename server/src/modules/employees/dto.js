@@ -37,7 +37,19 @@ export class EmployeeDTO {
 
     // Employee type fields derived from role flags (replaces employeeSubTable)
     this.IsSalesPerson = employee.isSalesRole || employee.is_sales_role || false;
+    this.IsSalesPerson = employee.isSalesRole || employee.is_sales_role || false;
     this.IsSupervisor = employee.isSupervisorRole || employee.is_supervisor_role || false;
+
+    // Dealer/Customer Info
+    this.CompanyName = employee.companyName || employee.company_name;
+    this.GSTIN = employee.gstin;
+    this.Pincode = employee.pincode;
+    this.AddressCity = employee.addressCity || employee.address_city;
+    this.AddressState = employee.addressState || employee.address_state;
+    this.Area = employee.area;
+    this.AddressComplete = employee.addressComplete || employee.address_complete;
+    this.CustomerType = employee.customerType || employee.customer_type;
+    this.AssignedSalespersonID = employee.assignedSalespersonId || employee.assigned_salesperson_id;
 
     // Computed EmployeeType for frontend convenience
     if (this.IsSalesPerson) {

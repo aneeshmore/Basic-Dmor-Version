@@ -590,7 +590,7 @@ const CustomerReport: React.FC = () => {
       // Add title
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('DMOR PAINTS', 14, 15);
+      pdf.text('MOREX TECHNOLOGIES', 14, 15);
 
       pdf.setFontSize(12);
       pdf.text('Customer Sales Report', 14, 22);
@@ -1275,11 +1275,10 @@ const CustomerReport: React.FC = () => {
                     {customer.monthlyAmounts.map((amount, monthIdx) => (
                       <td
                         key={monthIdx}
-                        className={`px-3 py-4 text-center font-medium ${
-                          amount > 0
+                        className={`px-3 py-4 text-center font-medium ${amount > 0
                             ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/20'
                             : 'text-[var(--text-secondary)]'
-                        }`}
+                          }`}
                       >
                         {amount > 0 ? `₹${(amount / 1000).toFixed(1)}K` : '0'}
                       </td>

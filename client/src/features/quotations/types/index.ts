@@ -28,6 +28,8 @@ export interface QuotationData {
   companyState: string;
   companyCode: string;
   companyEmail: string;
+  companyPhone?: string;
+  companyWeb?: string;
 
   // Buyer/Customer Information
   buyerName?: string;

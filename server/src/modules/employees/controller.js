@@ -34,12 +34,18 @@ export class EmployeesController {
 
   getSalesPersons = async (req, res, next) => {
     try {
+      // Get effective permissions to check for view_all_sales_persons
+      const { getEffectivePermissions } = await import('../../middleware/requirePermission.js');
+      const permissions = await getEffectivePermissions(req.user.employeeId);
+      const canViewAllSalesPersons = permissions.includes('GET:view_all_sales_persons');
+
       const userContext = {
         employeeId: req.user?.employeeId,
         role: req.user?.role,
-        isAdmin: ['Admin', 'SuperAdmin', 'Accounts Manager', 'Production Manager'].includes(
-          req.user?.role
-        ),
+        isAdmin:
+          ['Admin', 'SuperAdmin', 'Accounts Manager', 'Production Manager'].includes(
+            req.user?.role
+          ) || canViewAllSalesPersons,
       };
 
       const salesPersons = await this.service.getSalesPersons(userContext);

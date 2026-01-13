@@ -237,9 +237,9 @@ const CancelledOrdersReport: React.FC = () => {
       totalOrders = allOrders.filter(order => {
         const date = new Date(
           order.OrderCreatedDate ||
-            (order as any).orderDate ||
-            (order as any).order_date ||
-            (order as any).createdAt
+          (order as any).orderDate ||
+          (order as any).order_date ||
+          (order as any).createdAt
         );
         if (date.getFullYear().toString() !== selectedYear) return false;
         if (selectedMonth !== '' && date.getMonth().toString() !== selectedMonth) return false;
@@ -298,9 +298,9 @@ const CancelledOrdersReport: React.FC = () => {
       allOrders.forEach(order => {
         const date = new Date(
           order.OrderCreatedDate ||
-            (order as any).orderDate ||
-            (order as any).order_date ||
-            (order as any).createdAt
+          (order as any).orderDate ||
+          (order as any).order_date ||
+          (order as any).createdAt
         );
         if (
           date.getFullYear().toString() === selectedYear &&
@@ -327,9 +327,9 @@ const CancelledOrdersReport: React.FC = () => {
       allOrders.forEach(order => {
         const date = new Date(
           order.OrderCreatedDate ||
-            (order as any).orderDate ||
-            (order as any).order_date ||
-            (order as any).createdAt
+          (order as any).orderDate ||
+          (order as any).order_date ||
+          (order as any).createdAt
         );
         if (date.getFullYear().toString() === selectedYear) {
           const month = date.getMonth();
@@ -387,7 +387,7 @@ const CancelledOrdersReport: React.FC = () => {
       // Add title
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('DMOR PAINTS', 14, 15);
+      pdf.text('MOREX TECHNOLOGIES', 14, 15);
 
       pdf.setFontSize(12);
       pdf.text('Cancelled Orders Report', 14, 22);
@@ -1064,13 +1064,12 @@ const CancelledOrdersReport: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            order.Status?.toLowerCase().includes('reject')
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.Status?.toLowerCase().includes('reject')
                               ? 'bg-amber-100 text-amber-700'
                               : order.Status?.toLowerCase().includes('return')
                                 ? 'bg-blue-100 text-blue-700'
                                 : 'bg-red-100 text-red-700'
-                          }`}
+                            }`}
                         >
                           {order.Status}
                         </span>
