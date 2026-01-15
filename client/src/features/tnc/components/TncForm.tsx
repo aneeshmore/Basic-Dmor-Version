@@ -64,11 +64,10 @@ export const TncForm: React.FC<TncFormProps> = ({
     <div className="bg-[var(--surface)] rounded-xl shadow-lg border border-[var(--border)] overflow-hidden">
       {/* Header with gradient */}
       <div
-        className={`px-6 py-4 border-b border-[var(--border)] ${
-          editingTnc
-            ? 'bg-gradient-to-r from-indigo-500 to-purple-500'
-            : 'bg-gradient-to-r from-emerald-500 to-teal-500'
-        }`}
+        className={`px-6 py-4 border-b border-[var(--border)] ${editingTnc
+          ? 'bg-gradient-to-r from-indigo-500 to-purple-500'
+          : 'bg-gradient-to-r from-emerald-500 to-teal-500'
+          }`}
       >
         <p className="text-white/80 text-sm mt-1">
           {editingTnc
@@ -95,6 +94,7 @@ export const TncForm: React.FC<TncFormProps> = ({
                   onCreateNew={val => setType(val)}
                   placeholder="Select or create type"
                   className="w-full"
+                  disabled={true}
                 />
               </div>
 
@@ -103,11 +103,10 @@ export const TncForm: React.FC<TncFormProps> = ({
                 <button
                   type="button"
                   onClick={() => setType('Payment')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                    type === 'Payment'
-                      ? 'bg-emerald-100 text-emerald-700 border-2 border-emerald-500'
-                      : 'bg-[var(--surface-secondary)] text-[var(--text-secondary)] border border-[var(--border)] hover:border-emerald-300'
-                  }`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${type === 'Payment'
+                    ? 'bg-emerald-100 text-emerald-700 border-2 border-emerald-500'
+                    : 'bg-[var(--surface-secondary)] text-[var(--text-secondary)] border border-[var(--border)] hover:border-emerald-300'
+                    }`}
                 >
                   <CreditCard size={12} />
                   Payment
@@ -115,11 +114,10 @@ export const TncForm: React.FC<TncFormProps> = ({
                 <button
                   type="button"
                   onClick={() => setType('Delivery')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                    type === 'Delivery'
-                      ? 'bg-blue-100 text-blue-700 border-2 border-blue-500'
-                      : 'bg-[var(--surface-secondary)] text-[var(--text-secondary)] border border-[var(--border)] hover:border-blue-300'
-                  }`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${type === 'Delivery'
+                    ? 'bg-blue-100 text-blue-700 border-2 border-blue-500'
+                    : 'bg-[var(--surface-secondary)] text-[var(--text-secondary)] border border-[var(--border)] hover:border-blue-300'
+                    }`}
                 >
                   <Truck size={12} />
                   Delivery
@@ -156,13 +154,12 @@ export const TncForm: React.FC<TncFormProps> = ({
                 <div className="p-2 bg-white rounded-lg shadow-sm">{selectedTypeIcon}</div>
                 <div>
                   <span
-                    className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold mb-1 ${
-                      type === 'Payment'
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : type === 'Delivery'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-gray-100 text-gray-700'
-                    }`}
+                    className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold mb-1 ${type === 'Payment'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : type === 'Delivery'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 text-gray-700'
+                      }`}
                   >
                     {type || 'No type selected'}
                   </span>
@@ -180,11 +177,10 @@ export const TncForm: React.FC<TncFormProps> = ({
               type="submit"
               variant="primary"
               disabled={isLoading || !description.trim() || !type.trim()}
-              className={`min-w-[140px] ${
-                editingTnc
-                  ? 'bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600'
-                  : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600'
-              }`}
+              className={`min-w-[140px] ${editingTnc
+                ? 'bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600'
+                : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600'
+                }`}
               leftIcon={
                 isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
