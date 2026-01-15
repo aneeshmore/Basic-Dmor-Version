@@ -46,11 +46,13 @@ export const authenticate = (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, JWT_SECRET);
 
+
     // Add user info to request object
     req.user = {
       employeeId: decoded.employeeId,
       username: decoded.username,
       role: decoded.role,
+      companyName: decoded.companyName,
     };
 
     next();

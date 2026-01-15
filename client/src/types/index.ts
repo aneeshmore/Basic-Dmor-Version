@@ -75,6 +75,8 @@ export interface AuthUser {
   address?: string;
   gstin?: string;
   mobileNo?: string;
+  customerId?: number;
+  customerUuid?: string;
 }
 
 export interface AuthResponse {

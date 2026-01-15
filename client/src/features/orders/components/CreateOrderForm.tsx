@@ -675,38 +675,62 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
   useEffect(() => {
     if (user?.Role === 'Dealer') {
       // 1. Auto-select Sales Person (Self)
-      setSalesPersonId(user.EmployeeID);
-      setValidationErrors(prev => ({ ...prev, salesPersonId: false }));
+      const empId = user.EmployeeID;
+      if (empId) {
+        setSalesPersonId(empId);
+        setValidationErrors(prev => ({ ...prev, salesPersonId: false }));
+      }
 
-      // 2. Auto-select Customer (Use Dealer's EmployeeID)
-      setCustomerId(user.EmployeeID);
-      setValidationErrors(prev => ({ ...prev, customerId: false }));
+      console.log('Dealer Auto-fill Debug:', {
+        userCompanyName: user.companyName,
+        userAddress: user.address,
+        userCustomerId: user.customerId, // Access new field directly
+        totalCustomers: customers.length
+      });
 
-      // 3. Pre-fill Company Name & Address from Dealer Profile
-      setCompanyName(user.companyName || '');
+      // 2. Pre-fill Company Name from Dealer Profile
+      const dealerCompanyName = (user.companyName || '').trim();
+      setCompanyName(dealerCompanyName);
 
+      // 3. Auto-select Customer
+      // PRIORITY 1: Use customerId from Backend Login response (Most Reliable)
+      const backendCustomerId = user.customerId;
+
+      if (backendCustomerId) {
+        setCustomerId(backendCustomerId);
+        setValidationErrors(prev => ({ ...prev, customerId: false }));
+      }
+      // PRIORITY 2: Match by Company Name (Fallback)
+      else if (customers.length > 0 && dealerCompanyName) {
+        const matchingCustomer = customers.find(
+          c => (c.companyName || c.CompanyName || '').trim().toLowerCase() === dealerCompanyName.toLowerCase()
+        );
+
+        if (matchingCustomer) {
+          setCustomerId(matchingCustomer.customerId || matchingCustomer.CustomerID);
+          setValidationErrors(prev => ({ ...prev, customerId: false }));
+        }
+      }
+
+      // 4. Address Logic
       // ALWAYS use the Dealer's profile address as the primary source
-      // The user explicitly requested: "deliveryAddress = company address which is taken while creating the dealer user"
       if (user.address) {
         setDeliveryAddress(user.address);
       } else {
-        // Fallback: Try to find address from matching customer record if profile address is missing
-        if (customers.length > 0) {
-          const matchingCustomer = customers.find(
-            c => (c.customerId || c.CustomerID) === user.EmployeeID
-          );
+        // Fallback: Try to find address from matching customer record
+        const currentCustId = backendCustomerId || customerId;
+        const matchingCustomer = customers.find(c => (c.customerId || c.CustomerID) === currentCustId);
 
-          if (matchingCustomer) {
-            const addressParts = [
-              matchingCustomer.address || matchingCustomer.Address,
-              matchingCustomer.area || matchingCustomer.Area,
-              matchingCustomer.location || matchingCustomer.Location,
-              matchingCustomer.pinCode || matchingCustomer.Pincode
-            ].filter(part => part && part.trim());
+        if (matchingCustomer) {
+          const addressParts = [
+            matchingCustomer.address || matchingCustomer.Address,
+            matchingCustomer.area || matchingCustomer.Area,
+            matchingCustomer.location || matchingCustomer.Location,
+            matchingCustomer.pinCode || matchingCustomer.Pincode,
+          ].filter(part => part && part.trim());
 
-            if (addressParts.length > 0) {
-              setDeliveryAddress(addressParts.join(', '));
-            }
+          if (addressParts.length > 0) {
+            setDeliveryAddress(addressParts.join(', '));
           }
         }
       }

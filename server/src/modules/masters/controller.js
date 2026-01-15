@@ -227,6 +227,7 @@ export class MastersController {
         isAdmin: ['Admin', 'SuperAdmin', 'Accounts Manager', 'Production Manager'].includes(
           req.user?.role
         ),
+        companyName: req.user?.companyName,
       };
 
       // For non-admin users, apply ownership filtering
@@ -255,6 +256,7 @@ export class MastersController {
         isAdmin: ['Admin', 'SuperAdmin', 'Accounts Manager', 'Production Manager'].includes(
           req.user?.role
         ),
+        companyName: req.user?.companyName,
       };
       const customers = await this.service.getCustomersForUser(userContext);
       res.json({ success: true, data: customers });
@@ -275,6 +277,7 @@ export class MastersController {
         isAdmin: ['Admin', 'SuperAdmin', 'Accounts Manager', 'Production Manager'].includes(
           req.user?.role
         ),
+        companyName: req.user?.companyName,
       };
 
       let customers;

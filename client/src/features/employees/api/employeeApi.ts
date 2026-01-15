@@ -30,7 +30,10 @@ const toBackendFormat = (employee: Partial<Employee>) => {
   if (employee.Status) data.status = employee.Status;
 
   // Dealer specific fields
-  if (employee.CompanyName) data.companyName = employee.CompanyName;
+  if (employee.CompanyName) {
+    data.companyName = employee.CompanyName;
+  }
+
   if (employee.GSTIN) data.gstin = employee.GSTIN;
   if (employee.Pincode) data.pincode = employee.Pincode;
   if (employee.AddressCity) data.addressCity = employee.AddressCity;

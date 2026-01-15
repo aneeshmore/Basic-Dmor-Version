@@ -28,7 +28,7 @@ export default function LoginPage() {
       const result = await login({ username, password });
 
       if (result.success) {
-        navigate(result.landingPage || '/');
+        navigate('/dashboard/admin');
       } else {
         setError(result.message || 'Invalid credentials');
       }

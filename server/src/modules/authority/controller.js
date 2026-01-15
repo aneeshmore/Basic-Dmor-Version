@@ -54,6 +54,7 @@ class AuthorityController {
       logger.debug('Password verified, fetching permissions', {
         username,
         employeeId: user.employeeId,
+        companyName: user.companyName, // Debug company name
       });
 
       // Fetch user permissions using Drizzle
@@ -84,6 +85,7 @@ class AuthorityController {
           role: role?.roleName,
           isSalesRole: role?.isSalesRole || false,
           isSupervisorRole: role?.isSupervisorRole || false,
+          companyName: user.companyName,
         },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRES_IN }
@@ -96,8 +98,7 @@ class AuthorityController {
         LastName: user.lastName,
         Username: user.username,
         Role: role?.roleName,
-        landingPage: role?.landingPage || '/dashboard',
-        landingPage: role?.landingPage || '/dashboard',
+        landingPage: '/dashboard', // Force default to Dashboard as per user request
         permissions,
         // Dealer specific fields
         companyName: user.companyName,
@@ -106,7 +107,72 @@ class AuthorityController {
         mobileNo: user.mobileNo?.[0], // First mobile number
       };
 
-      logger.info('User logged in successfully', { username, employeeId: user.employeeId });
+      // == Dealer Customer Linking Logic ==
+      // If user is a Dealer, ensure they have a corresponding Customer record
+      // to satisfy Foreign Key constraints in Orders table.
+      if (role?.roleName === 'Dealer') {
+        const { MastersRepository } = await import('../masters/repository.js');
+        const mastersRepo = new MastersRepository();
+
+        // 1. Try to find existing customer linked to this dealer
+        // Matching logic:
+        // A. Match by Company Name (Strongest match for Dealers)
+        // B. Match by createdBy (Ownership) - less reliable if created by Admin
+        let linkedCustomer = null;
+
+        if (user.companyName) {
+          const allCustomers = await mastersRepo.findAllCustomers();
+          linkedCustomer = allCustomers.find(
+            c => c.companyName?.trim().toLowerCase() === user.companyName.trim().toLowerCase()
+          );
+        }
+
+        // 2. If no customer found, CREATE one automatically
+        if (!linkedCustomer) {
+          logger.info('Dealer login: No linked customer found. Creating new Customer record.', {
+            employeeId: user.employeeId,
+            companyName: user.companyName
+          });
+
+          // Create new customer payload
+          const newCustomerData = {
+            companyName: user.companyName || `${user.firstName} ${user.lastName} (Dealer)`,
+            contactPerson: `${user.firstName} ${user.lastName}`,
+            mobileNo: user.mobileNo || [],
+            emailId: user.email || '', // Assuming email might be on user object, or empty
+            address: user.addressComplete,
+            gstNumber: user.gstin,
+            pinCode: user.pincode,
+            salesPersonId: user.employeeId, // Dealer is their own salesperson
+            createdBy: user.employeeId,
+            isActive: true,
+            customerTypeId: 1, // Default to 'Dealer' type if ID 1 (standard convention, or fetch dynamically if needed)
+            // Note: If you have a specific 'Dealer' customer type in DB, it would be better to fetch it.
+            // For now, assuming standard flow.
+          };
+
+          try {
+            linkedCustomer = await mastersRepo.createCustomer(newCustomerData);
+          } catch (err) {
+            logger.error('Failed to create linked customer for dealer', err);
+            // Verify if it failed due to unique constraint or other issue
+          }
+        }
+
+        // 3. Attach customerId to response
+        if (linkedCustomer) {
+          userData.customerId = linkedCustomer.customerId;
+          userData.customerUuid = linkedCustomer.customerUuid;
+          logger.info('Dealer login: Linked to Customer ID', { customerId: linkedCustomer.customerId });
+        }
+      }
+
+      logger.info('User logged in successfully', {
+        username,
+        employeeId: user.employeeId,
+        companyName: user.companyName, // Log company name
+        userType: user.customerType || 'Regular'
+      });
 
       // Set httpOnly cookie for JWT (more secure than localStorage)
       const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds

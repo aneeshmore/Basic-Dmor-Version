@@ -28,13 +28,17 @@ export const errorHandler = (err, req, res, next) => {
   }
 
   // Handle database constraint violations (23xxx codes)
-  if (err.code && String(err.code).startsWith('23')) {
+  // Drizzle ORM often wraps the original error in `cause`
+  const code = err.code || (err.cause && err.cause.code);
+  
+  if (code && String(code).startsWith('23')) {
     return res.status(400).json({
       success: false,
       message: 'Database constraint violation',
       ...(process.env.NODE_ENV === 'development' && {
         stack: err.stack,
-        code: err.code,
+        code: code,
+        detail: err.detail || (err.cause && err.cause.detail),
       }),
     });
   }

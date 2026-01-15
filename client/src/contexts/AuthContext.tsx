@@ -56,6 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             Role: response.data.Role,
             landingPage: response.data.landingPage,
             permissions: response.data.permissions || [],
+            // Dealer specific fields
+            companyName: response.data.companyName,
+            address: response.data.address,
+            gstin: response.data.gstin,
+            mobileNo: response.data.mobileNo,
           };
 
           setToken(storedToken);

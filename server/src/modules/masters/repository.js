@@ -274,12 +274,17 @@ export class MastersRepository {
     // For admins, return all customers
     // For non-admins, filter by createdBy OR salesPersonId
     if (!userContext.isAdmin && userContext.employeeId) {
-      query = query.where(
-        or(
-          eq(customers.createdBy, userContext.employeeId),
-          eq(customers.salesPersonId, userContext.employeeId)
-        )
-      );
+      const conditions = [
+        eq(customers.createdBy, userContext.employeeId),
+        eq(customers.salesPersonId, userContext.employeeId),
+      ];
+
+      // Allow dealers to see their own customer record (matched by company name)
+      if (userContext.companyName) {
+        conditions.push(eq(customers.companyName, userContext.companyName));
+      }
+
+      query = query.where(or(...conditions));
     }
 
     return await query.orderBy(customers.companyName);
