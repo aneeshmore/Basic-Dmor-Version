@@ -628,9 +628,26 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
     setCustomerId(id);
     setValidationErrors(prev => ({ ...prev, customerId: false }));
 
-    setCompanyName(getCompanyName(id));
+    // For Dealers selecting themselves, strict priority to user profile data
+    if (user?.Role === 'Dealer' && id === user.EmployeeID) {
+      setCompanyName(user.companyName || '');
+      // Enforce user profile address as primary
+      if (user.address) {
+        setDeliveryAddress(user.address);
+        // We do strictly what user requested: deliveryAddress = company address from dealer user
+        // If user has address, we STOP here and don't look up customer record address.
+        return;
+      }
+      // Only fallback to customer record if user profile address is missing
+    } else {
+      setCompanyName(getCompanyName(id));
+    }
+
     const customer = customers.find(c => (c.customerId || c.CustomerID) === id);
     if (customer) {
+      // If we are here as a Dealer, it means user.address was missing, so we use customer record
+      // If we are NOT a Dealer, we always use customer record
+
       // Construct full address from components
       const addressParts = [
         customer.address || customer.Address,
@@ -652,31 +669,49 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
         setSalesPersonId('');
       }
     }
-  }, [customers, getCompanyName]);
+  }, [customers, getCompanyName, user]);
 
   // Auto-fill for Dealer Role
   useEffect(() => {
-    if (user?.Role === 'Dealer' && customers.length > 0) {
-      // Find customer record matching the dealer
-      // Try linking by Company Name (best guess) or Mobile
-      const dealerCompanyName = user.companyName?.trim().toLowerCase();
+    if (user?.Role === 'Dealer') {
+      // 1. Auto-select Sales Person (Self)
+      setSalesPersonId(user.EmployeeID);
+      setValidationErrors(prev => ({ ...prev, salesPersonId: false }));
 
-      if (dealerCompanyName) {
-        const matchingCustomer = customers.find(
-          c => c.CompanyName.trim().toLowerCase() === dealerCompanyName
-        );
+      // 2. Auto-select Customer (Use Dealer's EmployeeID)
+      setCustomerId(user.EmployeeID);
+      setValidationErrors(prev => ({ ...prev, customerId: false }));
 
-        if (matchingCustomer) {
-          handleCustomerChange(matchingCustomer.CustomerID);
-        }
-      }
+      // 3. Pre-fill Company Name & Address from Dealer Profile
+      setCompanyName(user.companyName || '');
 
-      // Pre-fill Delivery Address from Dealer Profile
+      // ALWAYS use the Dealer's profile address as the primary source
+      // The user explicitly requested: "deliveryAddress = company address which is taken while creating the dealer user"
       if (user.address) {
         setDeliveryAddress(user.address);
+      } else {
+        // Fallback: Try to find address from matching customer record if profile address is missing
+        if (customers.length > 0) {
+          const matchingCustomer = customers.find(
+            c => (c.customerId || c.CustomerID) === user.EmployeeID
+          );
+
+          if (matchingCustomer) {
+            const addressParts = [
+              matchingCustomer.address || matchingCustomer.Address,
+              matchingCustomer.area || matchingCustomer.Area,
+              matchingCustomer.location || matchingCustomer.Location,
+              matchingCustomer.pinCode || matchingCustomer.Pincode
+            ].filter(part => part && part.trim());
+
+            if (addressParts.length > 0) {
+              setDeliveryAddress(addressParts.join(', '));
+            }
+          }
+        }
       }
     }
-  }, [user, customers, handleCustomerChange]);
+  }, [user, customers]);
 
   // =====================
   // FORM SUBMISSION
@@ -1612,16 +1647,47 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                     Company Name <span className="text-red-500">*</span>
                   </label>
                   <SearchableSelect
-                    options={customers.map(c => ({
-                      id: c.customerId || c.CustomerID || 0,
-                      label: c.companyName || c.CompanyName || 'Unknown',
-                      subLabel: c.contactPerson || c.ContactPerson,
-                      value: c.customerId || c.CustomerID,
-                    }))}
+                    options={(() => {
+                      // If Dealer, ensure their own entry is in the list
+                      if (user?.Role === 'Dealer') {
+                        const dealerId = user.EmployeeID;
+                        const exists = customers.some(c => (c.customerId || c.CustomerID) === dealerId);
+
+                        const list = customers.map(c => ({
+                          id: c.customerId || c.CustomerID || 0,
+                          label: c.companyName || c.CompanyName || 'Unknown',
+                          subLabel: c.contactPerson || c.ContactPerson,
+                          value: c.customerId || c.CustomerID,
+                        }));
+
+                        if (!exists) {
+                          list.unshift({
+                            id: dealerId,
+                            label: user.companyName || 'My Company',
+                            subLabel: `${user.FirstName || ''} ${user.LastName || ''}`.trim(),
+                            value: dealerId
+                          });
+                        }
+                        return list;
+                      }
+
+                      return customers.map(c => ({
+                        id: c.customerId || c.CustomerID || 0,
+                        label: c.companyName || c.CompanyName || 'Unknown',
+                        subLabel: c.contactPerson || c.ContactPerson,
+                        value: c.customerId || c.CustomerID,
+                      }));
+                    })()}
                     value={customerId}
                     onChange={(val: any) => handleCustomerChange(Number(val))}
-                    disabled={dataLoading}
-                    placeholder={dataLoading ? 'Loading...' : 'Select Company'}
+                    disabled={dataLoading || user?.Role === 'Dealer'}
+                    placeholder={
+                      dataLoading
+                        ? 'Loading...'
+                        : user?.Role === 'Dealer'
+                          ? 'Auto-selected (You)'
+                          : 'Select Company'
+                    }
                   />
                   {validationErrors.customerId && (
                     <ValidationTooltip message="Please select an item in the list." />
@@ -1634,22 +1700,50 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                     Salesperson <span className="text-red-500">*</span>
                   </label>
                   <SearchableSelect
-                    options={salesPersonEmployees.map(e => ({
-                      id: e.employeeId || e.EmployeeID || 0,
-                      label:
-                        `${e.firstName || e.FirstName} ${e.lastName || e.LastName || ''}`.trim(),
-                      value: e.employeeId || e.EmployeeID,
-                    }))}
+                    options={(() => {
+                      // If Dealer, ensure their own entry is in the list
+                      if (user?.Role === 'Dealer') {
+                        const dealerId = user.EmployeeID;
+                        const exists = salesPersonEmployees.some(e => (e.employeeId || e.EmployeeID) === dealerId);
+
+                        const list = salesPersonEmployees.map(e => ({
+                          id: e.employeeId || e.EmployeeID || 0,
+                          label: `${e.firstName || e.FirstName} ${e.lastName || e.LastName || ''}`.trim(),
+                          value: e.employeeId || e.EmployeeID,
+                        }));
+
+                        if (!exists) {
+                          list.unshift({
+                            id: dealerId,
+                            label: `${user.FirstName || ''} ${user.LastName || ''}`.trim(),
+                            value: dealerId
+                          });
+                        }
+                        return list;
+                      }
+
+                      return salesPersonEmployees.map(e => ({
+                        id: e.employeeId || e.EmployeeID || 0,
+                        label:
+                          `${e.firstName || e.FirstName} ${e.lastName || e.LastName || ''}`.trim(),
+                        value: e.employeeId || e.EmployeeID,
+                      }));
+                    })()}
                     value={salesPersonId}
                     onChange={(val: any) => {
                       setSalesPersonId(Number(val));
                       setValidationErrors(prev => ({ ...prev, salesPersonId: false }));
                     }}
-                    disabled={dataLoading || isSalesPerson || !!customerId}
+                    disabled={
+                      dataLoading ||
+                      isSalesPerson ||
+                      !!customerId ||
+                      user?.Role === 'Dealer'
+                    }
                     placeholder={
                       dataLoading
                         ? 'Loading...'
-                        : isSalesPerson
+                        : isSalesPerson || user?.Role === 'Dealer'
                           ? 'Auto-selected'
                           : customerId
                             ? 'Linked to customer'
@@ -1659,7 +1753,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                   {validationErrors.salesPersonId && (
                     <ValidationTooltip message="Please select an item in the list." />
                   )}
-                  {isSalesPerson && (
+                  {(isSalesPerson || user?.Role === 'Dealer') && (
                     <p className="text-xs text-[var(--text-secondary)] mt-1">
                       Your account is automatically selected
                     </p>

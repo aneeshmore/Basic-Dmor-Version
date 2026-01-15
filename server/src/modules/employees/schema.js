@@ -53,6 +53,15 @@ export const createEmployeeSchema = z.object({
       },
       { message: 'Employee must be at least 18 years old' }
     ),
+  // Dealer specific fields
+  companyName: z.string().max(255).optional(),
+  gstin: z.string().max(50).optional(),
+  pincode: z.string().max(10).optional(),
+  addressCity: z.string().max(100).optional(),
+  addressState: z.string().max(100).optional(),
+  area: z.string().max(100).optional(),
+  addressComplete: z.string().max(500).optional(),
+  customerType: z.enum(['Dealer', 'Distributor', 'Retailer']).optional().default('Dealer'),
 });
 
 export const updateEmployeeSchema = z.object({
@@ -110,4 +119,13 @@ export const updateEmployeeSchema = z.object({
       },
       { message: 'Employee must be at least 18 years old' }
     ),
+  // Dealer specific fields
+  companyName: z.string().max(255).optional(),
+  gstin: z.string().max(50).optional(),
+  pincode: z.string().max(10).optional(),
+  addressCity: z.string().max(100).optional(),
+  addressState: z.string().max(100).optional(),
+  area: z.string().max(100).optional(),
+  addressComplete: z.string().max(500).optional(),
+  customerType: z.enum(['Dealer', 'Distributor', 'Retailer']).optional(),
 });

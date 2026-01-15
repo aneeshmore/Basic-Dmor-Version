@@ -95,6 +95,15 @@ export class EmployeesService {
       joiningDate: employeeData.joiningDate || null,
       dob: employeeData.dob || null,
       status: 'Active', // Always set new employees as Active
+      // Dealer specific fields
+      companyName: employeeData.companyName,
+      gstin: employeeData.gstin,
+      pincode: employeeData.pincode,
+      addressCity: employeeData.addressCity,
+      addressState: employeeData.addressState,
+      area: employeeData.area,
+      addressComplete: employeeData.addressComplete,
+      customerType: employeeData.customerType,
     };
 
     const employee = await this.repository.create(dbData);

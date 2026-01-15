@@ -493,7 +493,7 @@ const CustomerReport: React.FC = () => {
           size: 13,
         },
         callbacks: {
-          label: function (context: TooltipItem<'bar'>) {
+          label: function (context: TooltipItem<'line'>) {
             return `Revenue: ₹${(context.parsed.y as number).toLocaleString('en-IN', {
               maximumFractionDigits: 0,
             })}`;
@@ -1276,8 +1276,8 @@ const CustomerReport: React.FC = () => {
                       <td
                         key={monthIdx}
                         className={`px-3 py-4 text-center font-medium ${amount > 0
-                            ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/20'
-                            : 'text-[var(--text-secondary)]'
+                          ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/20'
+                          : 'text-[var(--text-secondary)]'
                           }`}
                       >
                         {amount > 0 ? `₹${(amount / 1000).toFixed(1)}K` : '0'}

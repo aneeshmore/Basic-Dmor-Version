@@ -331,11 +331,10 @@ const MasterProduct = () => {
                     setSelectedHardenerId(null);
                     setHighlightedIndex(-1);
                   }}
-                  className={`py-2 px-1 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                    activeTab === type
+                  className={`py-2 px-1 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-colors ${activeTab === type
                       ? 'bg-[var(--primary)] text-white shadow-md'
                       : 'bg-[var(--surface-highlight)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'
-                  }`}
+                    }`}
                 >
                   {fullForm}
                 </button>
@@ -616,6 +615,7 @@ const MasterProduct = () => {
                   <th className="px-6 py-3 w-24">ID</th>
                   <th className="px-6 py-3">Type</th>
                   <th className="px-6 py-3">Name</th>
+                  <th className="px-6 py-3">Sub Category</th>
                   <th className="px-6 py-3">Details</th>
                   <th className="px-6 py-3 w-24 text-right">Actions</th>
                 </tr>
@@ -623,7 +623,7 @@ const MasterProduct = () => {
               <tbody className="divide-y divide-[var(--border)]">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center">
+                    <td colSpan={6} className="px-6 py-8 text-center">
                       <div className="flex justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]"></div>
                       </div>
@@ -631,7 +631,7 @@ const MasterProduct = () => {
                   </tr>
                 ) : filteredProducts.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-[var(--text-secondary)]">
+                    <td colSpan={6} className="px-6 py-8 text-center text-[var(--text-secondary)]">
                       No master products found.
                     </td>
                   </tr>
@@ -640,32 +640,33 @@ const MasterProduct = () => {
                     <tr
                       key={product.masterProductId}
                       onClick={() => handleEdit(product)}
-                      className={`transition-colors cursor-pointer ${
-                        index === highlightedIndex
+                      className={`transition-colors cursor-pointer ${index === highlightedIndex
                           ? 'bg-[var(--primary)]/10 border-l-4 border-l-[var(--primary)]'
                           : selectedProduct?.masterProductId === product.masterProductId
                             ? 'bg-[var(--surface-highlight)]'
                             : 'hover:bg-[var(--surface-hover)]'
-                      }`}
+                        }`}
                     >
                       <td className="px-6 py-3 font-mono text-[var(--text-secondary)]">
                         {product.masterProductId}
                       </td>
                       <td className="px-6 py-3">
                         <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${
-                            product.productType === 'FG'
+                          className={`px-2 py-1 rounded text-xs font-medium ${product.productType === 'FG'
                               ? 'bg-blue-100 text-blue-700'
                               : product.productType === 'RM'
                                 ? 'bg-green-100 text-green-700'
                                 : 'bg-purple-100 text-purple-700'
-                          }`}
+                            }`}
                         >
                           {product.productType || 'FG'}
                         </span>
                       </td>
                       <td className="px-6 py-3 font-medium text-[var(--text-primary)]">
                         {product.masterProductName}
+                      </td>
+                      <td className="px-6 py-3 text-[var(--text-secondary)]">
+                        {product.Subcategory || '-'}
                       </td>
                       <td className="px-6 py-3 text-[var(--text-secondary)]">
                         {product.productType === 'FG' ? (

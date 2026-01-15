@@ -39,7 +39,8 @@ export class EmployeesRepository {
           area: employees.area,
           addressComplete: employees.addressComplete,
           customerType: employees.customerType,
-          assignedSalespersonId: employees.assignedSalespersonId,
+          addressComplete: employees.addressComplete,
+          customerType: employees.customerType,
         })
         .from(employees)
         .leftJoin(departments, eq(employees.departmentId, departments.departmentId))
@@ -153,7 +154,8 @@ export class EmployeesRepository {
         area: employees.area,
         addressComplete: employees.addressComplete,
         customerType: employees.customerType,
-        assignedSalespersonId: employees.assignedSalespersonId,
+        addressComplete: employees.addressComplete,
+        customerType: employees.customerType,
       })
       .from(employees)
       .leftJoin(departments, eq(employees.departmentId, departments.departmentId))

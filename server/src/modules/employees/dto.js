@@ -49,7 +49,7 @@ export class EmployeeDTO {
     this.Area = employee.area;
     this.AddressComplete = employee.addressComplete || employee.address_complete;
     this.CustomerType = employee.customerType || employee.customer_type;
-    this.AssignedSalespersonID = employee.assignedSalespersonId || employee.assigned_salesperson_id;
+    this.CustomerType = employee.customerType || employee.customer_type;
 
     // Computed EmployeeType for frontend convenience
     if (this.IsSalesPerson) {

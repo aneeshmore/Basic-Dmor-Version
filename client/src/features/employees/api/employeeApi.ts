@@ -29,6 +29,16 @@ const toBackendFormat = (employee: Partial<Employee>) => {
   if (employee.DOB !== undefined) data.dob = employee.DOB || null;
   if (employee.Status) data.status = employee.Status;
 
+  // Dealer specific fields
+  if (employee.CompanyName) data.companyName = employee.CompanyName;
+  if (employee.GSTIN) data.gstin = employee.GSTIN;
+  if (employee.Pincode) data.pincode = employee.Pincode;
+  if (employee.AddressCity) data.addressCity = employee.AddressCity;
+  if (employee.AddressState) data.addressState = employee.AddressState;
+  if (employee.Area) data.area = employee.Area;
+  if (employee.AddressComplete) data.addressComplete = employee.AddressComplete;
+  if (employee.CustomerType) data.customerType = employee.CustomerType;
+
   return data;
 };
 

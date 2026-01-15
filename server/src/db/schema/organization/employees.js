@@ -40,7 +40,4 @@ export const employees = appSchema.table('employees', {
   area: varchar('area', { length: 100 }),
   addressComplete: varchar('address_complete', { length: 500 }),
   customerType: varchar('customer_type', { length: 50 }).default('Dealer'),
-  assignedSalespersonId: integer('assigned_salesperson_id').references(() => employees.employeeId, {
-    onDelete: 'set null',
-  }),
 });

@@ -19,15 +19,15 @@ async function fixDealerRole() {
 
         console.log(`PO Current Dealer State: isSalesRole = ${dealer.isSalesRole}`);
 
-        if (!dealer.isSalesRole) {
-            console.log('🛠️  Updating Dealer role: Setting isSalesRole = true');
+        if (dealer.isSalesRole) {
+            console.log('🛠️  Updating Dealer role: Setting isSalesRole = false');
             await db
                 .update(roles)
-                .set({ isSalesRole: true })
+                .set({ isSalesRole: false })
                 .where(eq(roles.roleId, dealer.roleId));
-            console.log('✅ Dealer role updated successfully.');
+            console.log('✅ Dealer role updated successfully (isSalesRole = false).');
         } else {
-            console.log('✅ Dealer role is already correctly configured.');
+            console.log('✅ Dealer role is already correctly configured (isSalesRole = false).');
         }
     } catch (err) {
         console.error('❌ Error updating role:', err);

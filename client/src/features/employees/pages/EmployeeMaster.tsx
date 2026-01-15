@@ -257,9 +257,15 @@ const EmployeeForm = ({
 
   const isDealerDept = departments.find(d => d.value === formData.DepartmentID)?.label === 'Dealer';
 
+  // Auto-select Role for Dealer Department
   useEffect(() => {
-    setErrors({});
-  }, [item]);
+    if (isDealerDept && roles.length > 0) {
+      const dealerRole = roles.find(r => r.label === 'Dealer');
+      if (dealerRole) {
+        setFormData(prev => ({ ...prev, RoleID: dealerRole.value }));
+      }
+    }
+  }, [isDealerDept, roles]);
 
   const isEditMode = !!item?.EmployeeID;
 
@@ -367,130 +373,136 @@ const EmployeeForm = ({
   };
 
   const validateField = (name: string, value: any, index?: number) => {
-    let error = '';
-    const newErrors = { ...errors };
+    setErrors(prevErrors => {
+      let error = '';
+      const newErrors = { ...prevErrors };
 
-    switch (name) {
-      case 'FirstName':
-        if (!value?.trim()) error = 'First name is required';
-        else if (value.length < 2 || value.length > 50)
-          error = 'First name must be 2-50 characters';
-        else if (!/^[a-zA-Z\s]*$/.test(value))
-          error = 'First name cannot contain numbers or special characters';
+      switch (name) {
+        case 'FirstName':
+          if (!value?.trim()) error = 'First name is required';
+          else if (value.length < 2 || value.length > 50)
+            error = 'First name must be 2-50 characters';
+          else if (!/^[a-zA-Z\s]*$/.test(value))
+            error = 'First name cannot contain numbers or special characters';
 
-        if (error) newErrors.FirstName = error;
-        else delete newErrors.FirstName;
-        break;
+          if (error) newErrors.FirstName = error;
+          else delete newErrors.FirstName;
+          break;
 
-      case 'LastName':
-        if (!value?.trim()) error = 'Last name is required';
-        else if (value.length < 2 || value.length > 50) error = 'Last name must be 2-50 characters';
-        else if (!/^[a-zA-Z\s]*$/.test(value))
-          error = 'Last name cannot contain numbers or special characters';
+        case 'LastName':
+          if (!value?.trim()) error = 'Last name is required';
+          else if (value.length < 2 || value.length > 50) error = 'Last name must be 2-50 characters';
+          else if (!/^[a-zA-Z\s]*$/.test(value))
+            error = 'Last name cannot contain numbers or special characters';
 
-        if (error) newErrors.LastName = error;
-        else delete newErrors.LastName;
-        break;
+          if (error) newErrors.LastName = error;
+          else delete newErrors.LastName;
+          break;
 
-      case 'Username':
-        if (!isEditMode || showCredentialsEdit) {
-          if (!value?.trim()) error = 'Username is required';
-          else if (value.includes(' ')) error = 'No spaces allowed';
-          else if (value.length < 5 || value.length > 50) error = 'Length must be 5-50 characters';
-          else if (!/^[a-zA-Z0-9._]+$/.test(value)) error = 'Allowed: alphabets, numbers, . or _';
-          else if (/^[_.]|[_.]$/.test(value)) error = 'Cannot start/end with . or _';
-          else if (
-            existingUsernames.includes(value.trim()) &&
-            (!isEditMode || value.trim() !== item?.Username)
-          ) {
-            error = 'Username already taken please enter new / differnt';
+        case 'Username':
+          if (!isEditMode || showCredentialsEdit) {
+            if (!value?.trim()) error = 'Username is required';
+            else if (value.includes(' ')) error = 'No spaces allowed';
+            else if (value.length < 5 || value.length > 50) error = 'Length must be 5-50 characters';
+            else if (!/^[a-zA-Z0-9._]+$/.test(value)) error = 'Allowed: alphabets, numbers, . or _';
+            else if (/^[_.]|[_.]$/.test(value)) error = 'Cannot start/end with . or _';
+            else if (
+              existingUsernames.includes(value.trim()) &&
+              (!isEditMode || value.trim() !== item?.Username)
+            ) {
+              error = 'Username already taken please enter new / differnt';
+            }
+
+            if (error) newErrors.Username = error;
+            else delete newErrors.Username;
           }
+          break;
 
-          if (error) newErrors.Username = error;
-          else delete newErrors.Username;
-        }
-        break;
-
-      case 'Password':
-        if (!isEditMode || showCredentialsEdit) {
-          if (!value && !isEditMode) {
-            error = 'Password is required for new employees';
-          } else if (value) {
-            if (value.includes(' ')) {
-              error = 'No spaces allowed';
-            } else if (value.length < 8) {
-              error = 'Password length must be at least 8 characters';
-            } else {
-              const hasAlpha = /[A-Za-z]/.test(value);
-              const hasNum = /\d/.test(value);
-              const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(value);
-              if (!hasAlpha || !hasNum || !hasSpecial) {
-                error = 'Please enter strong password (include: alphabet, number & special char)';
+        case 'Password':
+          if (!isEditMode || showCredentialsEdit) {
+            if (!value && !isEditMode) {
+              error = 'Password is required for new employees';
+            } else if (value) {
+              if (value.includes(' ')) {
+                error = 'No spaces allowed';
+              } else if (value.length < 8) {
+                error = 'Password length must be at least 8 characters';
+              } else {
+                const hasAlpha = /[A-Za-z]/.test(value);
+                const hasNum = /\d/.test(value);
+                const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(value);
+                if (!hasAlpha || !hasNum || !hasSpecial) {
+                  error = 'Please enter strong password (include: alphabet, number & special char)';
+                }
               }
             }
+
+            if (error) newErrors.Password = error;
+            else delete newErrors.Password;
+          }
+          break;
+
+        case 'EmailID':
+          if (value?.trim()) {
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailRegex.test(value.trim())) error = 'Enter valid email';
+            else if (value.length > 254) error = 'Email must be at most 254 characters';
           }
 
-          if (error) newErrors.Password = error;
-          else delete newErrors.Password;
-        }
-        break;
+          if (error) newErrors.EmailID = error;
+          else delete newErrors.EmailID;
+          break;
 
-      case 'EmailID':
-        if (value?.trim()) {
-          const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-          if (!emailRegex.test(value.trim())) error = 'Enter valid email';
-          else if (value.length > 254) error = 'Email must be at most 254 characters';
-        }
+        case 'DepartmentID':
+          if (!value) error = 'Department is required';
 
-        if (error) newErrors.EmailID = error;
-        else delete newErrors.EmailID;
-        break;
+          if (error) newErrors.DepartmentID = error;
+          else delete newErrors.DepartmentID;
+          break;
 
-      case 'DepartmentID':
-        if (!value) error = 'Department is required';
+        case 'MobileNo':
+          if (typeof index === 'number') {
+            const val = value as string;
+            const mobileKey = `MobileNo_${index}`;
+            if (val.trim()) {
+              if (!/^\d+$/.test(val.trim())) error = 'Please enter digit';
+              else if (val.trim().length !== 10) error = 'Please enter 10 digit';
+            }
 
-        if (error) newErrors.DepartmentID = error;
-        else delete newErrors.DepartmentID;
-        break;
-
-      case 'MobileNo':
-        if (typeof index === 'number') {
-          const val = value as string;
-          const mobileKey = `MobileNo_${index}`;
-          if (val.trim()) {
-            if (!/^\d+$/.test(val.trim())) error = 'Please enter digit';
-            else if (val.trim().length !== 10) error = 'Please enter 10 digit';
+            if (error) newErrors[mobileKey] = error;
+            else delete newErrors[mobileKey];
           }
+          break;
 
-          if (error) newErrors[mobileKey] = error;
-          else delete newErrors[mobileKey];
-        }
-        break;
+        case 'CompanyName':
+          if (isDealerDept && !value?.trim()) error = 'Company Name is required';
+          if (error) newErrors.CompanyName = error;
+          else delete newErrors.CompanyName;
+          break;
 
-      case 'CompanyName':
-        if (isDealerDept && !value?.trim()) error = 'Company Name is required';
-        if (error) newErrors.CompanyName = error;
-        else delete newErrors.CompanyName;
-        break;
+        case 'Pincode':
+          if (isDealerDept) {
+            if (!value?.trim()) {
+              error = 'Pincode is required';
+            } else if (!/^\d{6}$/.test(value)) {
+              // Only show error if it's NOT 6 digits. 
+              error = 'Invalid Pincode';
+            }
 
-      case 'Pincode':
-        if (isDealerDept) {
-          if (!value?.trim()) error = 'Pincode is required';
-          else if (!/^\d{6}$/.test(value)) error = 'Invalid Pincode';
+            if (error) newErrors.Pincode = error;
+            else delete newErrors.Pincode;
+          }
+          break;
 
-          if (error) newErrors.Pincode = error;
-          else delete newErrors.Pincode;
-        }
-        break;
+        case 'Area':
+          if (isDealerDept && !value?.trim()) error = 'Area is required';
+          if (error) newErrors.Area = error;
+          else delete newErrors.Area;
+          break;
+      }
 
-      case 'Area':
-        if (isDealerDept && !value?.trim()) error = 'Area is required';
-        if (error) newErrors.Area = error;
-        else delete newErrors.Area;
-        break;
-    }
-
-    setErrors(newErrors);
+      return newErrors;
+    });
   };
 
   const handleSubmit = () => {
@@ -1147,22 +1159,25 @@ const EmployeeForm = ({
               />
               {errors.DepartmentID && <p className="text-red-500 text-xs">{errors.DepartmentID}</p>}
             </div>
-            <div className="space-y-1">
-              <Select
-                label="Role"
-                options={roles}
-                value={formData.RoleID || ''}
-                onChange={e => {
-                  const val = parseInt(e.target.value) || undefined;
-                  setFormData({ ...formData, RoleID: val });
-                }}
-                placeholder={formData.DepartmentID ? 'Select Role' : 'Select Department first'}
-                disabled={!formData.DepartmentID}
-                required
-                className="h-11"
-              />
-              {errors.RoleID && <p className="text-red-500 text-xs">{errors.RoleID}</p>}
-            </div>
+            {/* Role - Hidden for Dealer Dept (Auto-assigned) */}
+            {!isDealerDept && (
+              <div className="space-y-1">
+                <Select
+                  label="Role"
+                  options={roles}
+                  value={formData.RoleID || ''}
+                  onChange={e => {
+                    const val = parseInt(e.target.value) || undefined;
+                    setFormData({ ...formData, RoleID: val });
+                  }}
+                  placeholder={formData.DepartmentID ? 'Select Role' : 'Select Department first'}
+                  disabled={!formData.DepartmentID}
+                  required
+                  className="h-11"
+                />
+                {errors.RoleID && <p className="text-red-500 text-xs">{errors.RoleID}</p>}
+              </div>
+            )}
             <Input
               label="Joining Date"
               type="date"
@@ -1268,22 +1283,6 @@ const EmployeeForm = ({
                 />
               </div>
 
-              <div className="space-y-1">
-                <Select
-                  label="Assigned Salesperson"
-                  options={salesPersons.map(sp => ({
-                    value: sp.EmployeeID,
-                    label: `${sp.FirstName} ${sp.LastName || ''}`.trim()
-                  }))}
-                  value={formData.AssignedSalespersonID || ''}
-                  onChange={e => {
-                    const val = parseInt(e.target.value) || undefined;
-                    setFormData({ ...formData, AssignedSalespersonID: val });
-                  }}
-                  placeholder="Select Salesperson"
-                  className="h-11"
-                />
-              </div>
             </div>
           </div>
         )}
