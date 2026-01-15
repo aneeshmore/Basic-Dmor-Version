@@ -798,6 +798,16 @@ export const routeRegistry: RouteNode[] = [
         apis: [{ route: '/reports/stock', method: 'GET', label: 'View Stock Report' }],
       },
       {
+        id: 'low-stock-report',
+        path: '/reports/low-stock',
+        label: 'Low Stock Alert',
+        icon: AlertCircle,
+        component: LowStockReport,
+        permission: { module: 'report-low-stock' },
+        apis: [{ route: '/inventory/products/low-stock', method: 'GET', label: 'View Low Stock' }],
+        // showInSidebar: false,
+      },
+      {
         id: 'customer-contact-report',
         path: '/reports/customer-contact',
         label: 'Customer Contact Report',
@@ -855,16 +865,6 @@ export const routeRegistry: RouteNode[] = [
           { route: '/reports/product-wise', method: 'GET', label: 'View Product Report' },
           { route: '/catalog/products/type/:type', method: 'GET', label: 'View FG Products' },
         ],
-      },
-      {
-        id: 'low-stock-report',
-        path: '/reports/low-stock',
-        label: 'Low Stock Alert',
-        icon: AlertCircle,
-        component: LowStockReport,
-        permission: { module: 'report-low-stock' },
-        apis: [{ route: '/inventory/products/low-stock', method: 'GET', label: 'View Low Stock' }],
-        showInSidebar: false,
       },
       {
         id: 'daily-consumption-report',

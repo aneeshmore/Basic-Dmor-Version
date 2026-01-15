@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { PageHeader } from '@/components/common';
 import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table';
-import { Button, Badge, Input, SearchableSelect } from '@/components/ui';
+import { Button, Badge, SearchableSelect } from '@/components/ui';
 import { reportsApi } from '../api/reportsApi';
 import { StockReportItem } from '../types';
 import { FileDown, AlertTriangle } from 'lucide-react';
@@ -21,7 +21,7 @@ import {
   Legend,
   ArcElement,
 } from 'chart.js';
-import { Pie, Line } from 'react-chartjs-2';
+import { Pie, Bar } from 'react-chartjs-2';
 
 ChartJS.register(
   CategoryScale,
@@ -40,21 +40,18 @@ const LowStockReport = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [productTypeFilter, setProductTypeFilter] = useState<string>('All');
   const [productFilter, setProductFilter] = useState<string>('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [chartLimit, setChartLimit] = useState<number>(5);
+  const [chartLimit, setChartLimit] = useState<number>(10);
 
   useEffect(() => {
-    fetchData(startDate, endDate);
-  }, [startDate, endDate]);
+    fetchData();
+  }, []);
 
-  const fetchData = async (start?: string, end?: string) => {
+  const fetchData = async () => {
     try {
       setIsLoading(true);
-      const result = await reportsApi.getStockReport(undefined, undefined, start, end);
-      // Filter for low stock items immediately or keep all data and filter in memo?
-      // Better to check filteredData logic, but here we can just set data.
-      setData(result);
+      // No date filters required for low stock snapshot
+      const result = await reportsApi.getStockReport();
+      setData(result || []);
     } catch (error) {
       console.error('Failed to fetch stock report:', error);
       setData([]);
@@ -67,6 +64,42 @@ const LowStockReport = () => {
   const lowStockData = useMemo(() => {
     return data.filter(item => item.availableQuantity < item.minStockLevel);
   }, [data]);
+
+  // Get unique products for filter, filtered by selected type, FROM LOW STOCKDATA
+  const productOptions = useMemo(() => {
+    let sourceData = lowStockData;
+    if (productTypeFilter !== 'All') {
+      sourceData = lowStockData.filter(item => item.productType === productTypeFilter);
+    }
+
+    const products = new Set<string>();
+    sourceData.forEach(item => products.add(item.productName));
+    const sortedProducts = Array.from(products).sort();
+
+    return sortedProducts.map(p => ({ id: p, label: p, value: p }));
+  }, [lowStockData, productTypeFilter]);
+
+  useEffect(() => {
+    // Reset product filter when type changes if current product isn't in new list
+    if (productFilter && !productOptions.find(opt => opt.value === productFilter)) {
+      setProductFilter('');
+    }
+  }, [productTypeFilter, productOptions, productFilter]);
+
+  // Filter data based on product type and product name
+  const filteredData = useMemo(() => {
+    let result = lowStockData;
+
+    if (productTypeFilter !== 'All') {
+      result = result.filter(item => item.productType === productTypeFilter);
+    }
+
+    if (productFilter) {
+      result = result.filter(item => item.productName === productFilter);
+    }
+
+    return result;
+  }, [lowStockData, productTypeFilter, productFilter]);
 
   const handleExport = () => {
     if (filteredData.length === 0) {
@@ -160,46 +193,9 @@ const LowStockReport = () => {
     showToast.success('CSV exported successfully');
   };
 
-  // Get unique products for filter, filtered by selected type, FROM LOW STOCKDATA
-  const productOptions = useMemo(() => {
-    let sourceData = lowStockData;
-    if (productTypeFilter !== 'All') {
-      sourceData = lowStockData.filter(item => item.productType === productTypeFilter);
-    }
-
-    const products = new Set<string>();
-    sourceData.forEach(item => products.add(item.productName));
-    const sortedProducts = Array.from(products).sort();
-
-    return sortedProducts.map(p => ({ id: p, label: p, value: p }));
-  }, [lowStockData, productTypeFilter]);
-
-  useEffect(() => {
-    // Reset product filter when type changes if current product isn't in new list
-    if (productFilter && !productOptions.find(opt => opt.value === productFilter)) {
-      setProductFilter('');
-    }
-  }, [productTypeFilter, productOptions, productFilter]);
-
-  // Filter data based on product type and product name
-  const filteredData = useMemo(() => {
-    let result = lowStockData;
-
-    if (productTypeFilter !== 'All') {
-      result = result.filter(item => item.productType === productTypeFilter);
-    }
-
-    if (productFilter) {
-      result = result.filter(item => item.productName === productFilter);
-    }
-
-    return result;
-  }, [lowStockData, productTypeFilter, productFilter]);
-
   // Calculate statistics
   const stats = useMemo(() => {
     const totalLowStock = filteredData.length;
-    // const criticalStock = filteredData.filter(item => item.availableQuantity <= 0).length; // Example extra stat
     const totalShortage = filteredData.reduce(
       (sum, item) => sum + (item.minStockLevel - item.availableQuantity),
       0
@@ -248,18 +244,6 @@ const LowStockReport = () => {
     const typeData = Array.from(typeMap.values());
 
     return {
-      shortageDistribution: {
-        labels: sortedByShortage.map(p => p.productName),
-        datasets: [
-          {
-            label: 'Shortage Quantity',
-            data: sortedByShortage.map(p => p.minStockLevel - p.availableQuantity),
-            backgroundColor: shortageColors.map(c => c.bg),
-            borderColor: shortageColors.map(c => c.border),
-            borderWidth: 1,
-          },
-        ],
-      },
       typeDistribution: {
         labels: typeLabels,
         datasets: [
@@ -276,6 +260,27 @@ const LowStockReport = () => {
           },
         ],
       },
+      barChartData: {
+        labels: sortedByShortage.map(p => p.productName),
+        datasets: [
+          {
+            label: 'Available',
+            data: sortedByShortage.map(p => p.availableQuantity),
+            backgroundColor: 'rgba(59, 130, 246, 0.5)',
+            borderColor: 'rgb(59, 130, 246)',
+            borderWidth: 1,
+            stack: 'Stack 0',
+          },
+          {
+            label: 'Shortage',
+            data: sortedByShortage.map(p => p.minStockLevel - p.availableQuantity),
+            backgroundColor: 'rgba(248, 113, 113, 0.5)',
+            borderColor: 'rgb(239, 68, 68)',
+            borderWidth: 1,
+            stack: 'Stack 0',
+          }
+        ]
+      }
     };
   }, [filteredData, chartLimit]);
 
@@ -307,13 +312,12 @@ const LowStockReport = () => {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
         cell: ({ row }) => (
           <Badge
-            className={`${
-              row.original.productType === 'FG'
-                ? 'bg-green-500 hover:bg-green-600 text-white'
+            className={`${row.original.productType === 'FG'
+                ? 'bg-green-100 text-green-700 border-green-200'
                 : row.original.productType === 'RM'
-                  ? 'bg-blue-500 hover:bg-blue-600 text-white'
-                  : 'bg-yellow-500 hover:bg-yellow-600 text-white'
-            }`}
+                  ? 'bg-blue-100 text-blue-700 border-blue-200'
+                  : 'bg-yellow-100 text-yellow-700 border-yellow-200'
+              }`}
           >
             {row.original.productType}
           </Badge>
@@ -370,7 +374,7 @@ const LowStockReport = () => {
         cell: ({ row }) => (
           <Badge
             variant={row.original.isActive ? 'default' : 'secondary'}
-            className={row.original.isActive ? 'bg-green-500 hover:bg-green-600 text-white' : ''}
+            className={row.original.isActive ? 'bg-green-100 text-green-700' : ''}
           >
             {row.original.isActive ? 'Active' : 'Inactive'}
           </Badge>
@@ -420,11 +424,10 @@ const LowStockReport = () => {
                   size="sm"
                   variant={productTypeFilter === type ? 'primary' : 'secondary'}
                   onClick={() => setProductTypeFilter(type)}
-                  className={`min-w-[4rem] px-4 transition-all duration-200 ${
-                    productTypeFilter === type
-                      ? 'bg-slate-800 text-white hover:bg-slate-900 border-none shadow-md'
+                  className={`min-w-[4rem] px-4 transition-all duration-200 ${productTypeFilter === type
+                      ? 'bg-blue-600 text-white hover:bg-blue-700 border-none shadow-md'
                       : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   {type}
                 </Button>
@@ -445,34 +448,13 @@ const LowStockReport = () => {
               className="w-[300px]"
             />
           </div>
-
-          <div className="h-10 w-px bg-gray-300 mx-1 hidden lg:block" />
-
-          {/* Date Filters */}
-          <Input
-            type="date"
-            label="From"
-            value={startDate}
-            onChange={e => setStartDate(e.target.value)}
-            fullWidth={false}
-            className="w-[150px]"
-          />
-
-          <Input
-            type="date"
-            label="To"
-            value={endDate}
-            onChange={e => setEndDate(e.target.value)}
-            fullWidth={false}
-            className="w-[150px]"
-          />
         </div>
       </div>
 
       {/* Statistics Cards */}
       {!isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="card p-4 border-l-4 border-l-red-500">
+          <div className="card p-4 border-l-4 border-l-red-500 bg-white shadow-sm">
             <p className="text-sm text-[var(--text-secondary)] font-medium">
               Total Low Stock Items
             </p>
@@ -480,7 +462,7 @@ const LowStockReport = () => {
               {stats.totalLowStock}
             </p>
           </div>
-          <div className="card p-4 border-l-4 border-l-orange-500">
+          <div className="card p-4 border-l-4 border-l-orange-500 bg-white shadow-sm">
             <p className="text-sm text-[var(--text-secondary)] font-medium">
               Total Quantity Shortage
             </p>
@@ -506,11 +488,10 @@ const LowStockReport = () => {
                     <button
                       key={option}
                       onClick={() => setChartLimit(limit)}
-                      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                        isSelected
+                      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${isSelected
                           ? 'bg-blue-600 text-white'
                           : 'text-[var(--text-secondary)] hover:bg-[var(--color-neutral-100)]'
-                      }`}
+                        }`}
                     >
                       {option}
                     </button>
@@ -520,19 +501,36 @@ const LowStockReport = () => {
             </div>
           </div>
 
-          {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="card p-6">
-              <h3 className="text-center font-semibold text-[var(--text-primary)] mb-4">
-                Top Shortages (Top {chartLimit > 100 ? 'All' : chartLimit})
+            <div className="card p-6 bg-white shadow-sm border border-slate-200">
+              <h3 className="text-center font-bold text-[var(--text-primary)] mb-4">
+                Top Shortages vs Availability
               </h3>
               <div className="h-[300px]">
-                <Pie data={chartData.shortageDistribution} options={pieChartOptions} />
+                <Bar
+                  data={chartData.barChartData}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                      mode: 'index',
+                      intersect: false,
+                    },
+                    scales: {
+                      x: {
+                        stacked: true,
+                      },
+                      y: {
+                        stacked: true,
+                      }
+                    }
+                  }}
+                />
               </div>
             </div>
 
-            <div className="card p-6">
-              <h3 className="text-center font-semibold text-[var(--text-primary)] mb-4">
+            <div className="card p-6 bg-white shadow-sm border border-slate-200">
+              <h3 className="text-center font-bold text-[var(--text-primary)] mb-4">
                 Low Stock Distribution by Type
               </h3>
               <div className="h-[300px]">
