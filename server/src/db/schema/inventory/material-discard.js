@@ -13,6 +13,7 @@ export const materialDiscard = appSchema.table('material_discard', {
   productId: integer('product_id').notNull(),
   discardDate: timestamp('discard_date', { withTimezone: true }).defaultNow(),
   quantity: integer('quantity').notNull(),
+  productType: varchar('product_type', { length: 10 }).notNull().default('FG'),
   reason: varchar('reason', { length: 255 }),
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),

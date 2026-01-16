@@ -11,6 +11,7 @@ const dateOrDatetime = z.string().refine(
 
 export const createDiscardSchema = z.object({
   productId: z.number().int().positive(),
+  productType: z.enum(['FG', 'RM', 'PM']),
   discardDate: dateOrDatetime.optional(),
   unitId: z.number().int().optional(),
   quantityPerUnit: z.number().positive(),

@@ -13,6 +13,7 @@ export interface DiscardEntry {
 
 export interface CreateDiscardInput {
   productId: number;
+  productType: 'FG' | 'RM' | 'PM';
   unitId?: number;
   discardDate?: string;
   quantityPerUnit: number;

@@ -18,6 +18,7 @@ export class DiscardRepository {
       .select({
         discardId: materialDiscard.discardId,
         productId: materialDiscard.productId,
+        productType: materialDiscard.productType,
         discardDate: materialDiscard.discardDate,
         quantity: materialDiscard.quantity,
         reason: materialDiscard.reason,
@@ -30,7 +31,12 @@ export class DiscardRepository {
     // Enrich each discard with product name and stock based on type
     const enrichedDiscards = await Promise.all(
       discards.map(async discard => {
-        const { type, isMasterProduct } = await this.detectProductType(discard.productId);
+        // Use stored productType. Fallback to 'detect' only if missing (legacy data safety)
+        let type = discard.productType;
+        if (!type) {
+          const detected = await this.detectProductType(discard.productId);
+          type = detected.type;
+        }
 
         let productName = `Product #${discard.productId}`;
         let currentStock = 0;
@@ -143,10 +149,10 @@ export class DiscardRepository {
 
   async createDiscard(data) {
     // Detect if this is RM, PM, or FG
-    const { type, isMasterProduct } = await this.detectProductType(data.productId);
+    const type = data.productType;
 
     if (!type) {
-      throw new Error(`Product with ID ${data.productId} not found`);
+      throw new Error(`Product Type is required`);
     }
 
     let balanceBefore = 0;
@@ -191,7 +197,7 @@ export class DiscardRepository {
       const typeLabel =
         type === 'RM' ? 'Raw Material' : type === 'PM' ? 'Packaging Material' : 'Finished Good';
       throw new AppError(
-        `Insufficient stock. Available: ${balanceBefore.toFixed(2)}, Requested to discard: ${data.quantity.toFixed(2)}. Cannot discard more than available ${typeLabel} stock.`,
+        `Insufficient stock. Available: ${balanceBefore.toFixed(4)}, Requested to discard: ${data.quantity.toFixed(4)}. Cannot discard more than available ${typeLabel} stock.`,
         400
       );
     }
@@ -201,6 +207,7 @@ export class DiscardRepository {
       .insert(materialDiscard)
       .values({
         productId: data.productId,
+        productType: type,
         discardDate: data.discardDate ? new Date(data.discardDate) : new Date(),
         quantity: data.quantity.toString(),
         reason: data.reason,

@@ -177,6 +177,7 @@ export const DiscardForm: React.FC<DiscardFormProps> = ({
     const payload: CreateDiscardInput = {
       // For discard, we pass the appropriate ID based on type
       productId: materialType === 'FG' ? formData.productId : formData.masterProductId,
+      productType: materialType,
       unitId: formData.unitId || undefined,
       discardDate: formData.discardDate,
       quantityPerUnit: 1,
@@ -320,33 +321,30 @@ export const DiscardForm: React.FC<DiscardFormProps> = ({
           <button
             type="button"
             onClick={() => handleTabChange('RM')}
-            className={`flex-1 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${
-              materialType === 'RM'
-                ? 'bg-[var(--primary-light)] text-[var(--primary)] shadow-sm ring-1 ring-[var(--primary-light)]'
-                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
-            }`}
+            className={`flex-1 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${materialType === 'RM'
+              ? 'bg-[var(--primary-light)] text-[var(--primary)] shadow-sm ring-1 ring-[var(--primary-light)]'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+              }`}
           >
             Raw Material
           </button>
           <button
             type="button"
             onClick={() => handleTabChange('PM')}
-            className={`flex-1 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${
-              materialType === 'PM'
-                ? 'bg-[var(--primary-light)] text-[var(--primary)] shadow-sm ring-1 ring-[var(--primary-light)]'
-                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
-            }`}
+            className={`flex-1 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${materialType === 'PM'
+              ? 'bg-[var(--primary-light)] text-[var(--primary)] shadow-sm ring-1 ring-[var(--primary-light)]'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+              }`}
           >
             Packaging Material
           </button>
           <button
             type="button"
             onClick={() => handleTabChange('FG')}
-            className={`flex-1 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${
-              materialType === 'FG'
-                ? 'bg-[var(--primary-light)] text-[var(--primary)] shadow-sm ring-1 ring-[var(--primary-light)]'
-                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
-            }`}
+            className={`flex-1 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${materialType === 'FG'
+              ? 'bg-[var(--primary-light)] text-[var(--primary)] shadow-sm ring-1 ring-[var(--primary-light)]'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+              }`}
           >
             Finished Good
           </button>
@@ -416,16 +414,32 @@ export const DiscardForm: React.FC<DiscardFormProps> = ({
               <div className="flex justify-between items-center">
                 <div className="text-[var(--text-secondary)]">
                   Available Stock:{' '}
-                  <span className="font-medium text-blue-600">{availableQty.toFixed(2)}</span>
+                  <span className="font-medium text-blue-600">{availableQty.toFixed(4)}</span>
                 </div>
-                <div className="text-[var(--text-secondary)]">
-                  To Discard:{' '}
-                  <span className="font-medium text-red-600">-{discardQty.toFixed(2)}</span>
+                <div className="flex items-center gap-2">
+                  <div className="text-[var(--text-secondary)]">
+                    To Discard:{' '}
+                    <span className="font-medium text-red-600">-{discardQty.toFixed(4)}</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        numberOfUnits: String(availableQty),
+                      }));
+                    }}
+                  >
+                    Max
+                  </Button>
                 </div>
                 <div
                   className={`${remainingQty < 0 ? 'text-red-600 font-bold' : 'text-green-600'}`}
                 >
-                  Remaining: <span className="font-medium">{remainingQty.toFixed(2)}</span>
+                  Remaining: <span className="font-medium">{remainingQty.toFixed(4)}</span>
                 </div>
               </div>
             </div>

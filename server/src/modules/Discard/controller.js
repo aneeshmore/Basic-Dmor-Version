@@ -45,11 +45,13 @@ export class DiscardController {
         throw new AppError(`Validation Error: ${errorMessages}`, 400);
       }
 
-      const { quantityPerUnit, numberOfUnits, unitId, ...otherData } = validation.data;
+      const { quantityPerUnit, numberOfUnits, unitId, productType, ...others } = validation.data;
       const totalQuantity = quantityPerUnit * numberOfUnits;
 
       const discardPayload = {
-        ...otherData,
+        ...others,
+        unitId,
+        productType,
         quantity: totalQuantity,
       };
 
