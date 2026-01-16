@@ -703,6 +703,7 @@ export const routeRegistry: RouteNode[] = [
           { route: '/catalog/products', method: 'GET', label: 'Load Products' },
           { route: '/masters/units', method: 'GET', label: 'Load Units' },
           { route: '/suppliers', method: 'GET', label: 'Load Suppliers' },
+          { route: '/suppliers', method: 'POST', label: 'Create Supplier' },
           { route: '/catalog/master-products', method: 'GET', label: 'Load Raw Materials' },
           { route: '/masters/customers', method: 'GET', label: 'Load Customers' },
         ],

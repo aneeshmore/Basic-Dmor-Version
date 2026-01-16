@@ -33,6 +33,23 @@
     ]
   },
   {
+    "id": "sales-access",
+    "path": "/sales-access",
+    "label": "Sales Access",
+    "group": "Sales",
+    "showInSidebar": false,
+    "permission": {
+      "module": "sales_access"
+    },
+    "apis": [
+      {
+        "route": "view_all_sales_persons",
+        "method": "GET",
+        "label": "View All Sales Persons"
+      }
+    ]
+  },
+  {
     "id": "masters",
     "path": "/masters",
     "label": "Masters",
@@ -862,6 +879,11 @@
             "label": "Load Suppliers"
           },
           {
+            "route": "/suppliers",
+            "method": "POST",
+            "label": "Create Supplier"
+          },
+          {
             "route": "/catalog/master-products",
             "method": "GET",
             "label": "Load Raw Materials"
@@ -1022,6 +1044,21 @@
         ]
       },
       {
+        "id": "low-stock-report",
+        "path": "/reports/low-stock",
+        "label": "Low Stock Alert",
+        "permission": {
+          "module": "report-low-stock"
+        },
+        "apis": [
+          {
+            "route": "/inventory/products/low-stock",
+            "method": "GET",
+            "label": "View Low Stock"
+          }
+        ]
+      },
+      {
         "id": "customer-contact-report",
         "path": "/reports/customer-contact",
         "label": "Customer Contact Report",
@@ -1125,22 +1162,6 @@
             "label": "View FG Products"
           }
         ]
-      },
-      {
-        "id": "low-stock-report",
-        "path": "/reports/low-stock",
-        "label": "Low Stock Alert",
-        "permission": {
-          "module": "report-low-stock"
-        },
-        "apis": [
-          {
-            "route": "/inventory/products/low-stock",
-            "method": "GET",
-            "label": "View Low Stock"
-          }
-        ],
-        "showInSidebar": false
       },
       {
         "id": "daily-consumption-report",

@@ -250,102 +250,103 @@ async function syncPermissions() {
     }
 
     // ============================================
-    // STEP 3: Grant ALL to SuperAdmin
+    // STEP 3: Grant Permissions by Role
     // ============================================
-    console.log('\n👑 Granting all permissions to SuperAdmin...');
+    console.log('\n👑 Granting Role-Based Permissions...');
 
-    const [superAdmin] = await db
-      .select()
-      .from(roles)
-      .where(eq(roles.roleName, 'SuperAdmin'))
-      .limit(1);
+    const allRoles = await db.select().from(roles);
+    const allPerms = await db.select({ id: permissions.permissionId, name: permissions.permissionName, apis: permissions.availableActions }).from(permissions);
 
-    if (superAdmin) {
-      const allPerms = await db
-        .select({ id: permissions.permissionId, apis: permissions.availableActions })
-        .from(permissions);
+    // Helper to grant permissions
+    const grantToRole = async (roleName, allowedModules, isExclusion = false) => {
+      const role = allRoles.find(r => r.roleName === roleName || (roleName === 'Sales%' && r.roleName.startsWith('Sales')));
+      if (!role) {
+        console.warn(`   ⚠️ Role not found: ${roleName}`);
+        return;
+      }
 
-      const rolePermValues = allPerms.map(perm => ({
-        roleId: superAdmin.roleId,
-        permissionId: perm.id,
-        grantedActions: Array.isArray(perm.apis) ? perm.apis : [],
-      }));
+      let targetPerms = [];
+      if (isExclusion) {
+        // Grant ALL except excluded
+        targetPerms = allPerms.filter(p => !allowedModules.includes(p.name) && !allowedModules.some(m => p.name.startsWith(m))); // simple startswith for groups like 'settings' if needed, or exact match
+      } else {
+        // Grant ONLY allowed
+        targetPerms = allPerms.filter(p => allowedModules.includes(p.name));
+      }
 
-      await db.insert(rolePermissions).values(rolePermValues);
-      console.log(`   ✓ Granted ${rolePermValues.length} permissions to SuperAdmin`);
-    } else {
-      console.warn('   ⚠️ SuperAdmin role not found!');
-    }
-
-    // Also grant to Admin if exists
-    const [admin] = await db.select().from(roles).where(eq(roles.roleName, 'Admin')).limit(1);
-
-    if (admin) {
-      const allPerms = await db
-        .select({ id: permissions.permissionId, apis: permissions.availableActions })
-        .from(permissions);
-
-      const rolePermValues = allPerms.map(perm => ({
-        roleId: admin.roleId,
-        permissionId: perm.id,
-        grantedActions: Array.isArray(perm.apis) ? perm.apis : [],
-      }));
-
-      await db.insert(rolePermissions).values(rolePermValues);
-      console.log(`   ✓ Granted ${rolePermValues.length} permissions to Admin`);
-    }
-
-    // ============================================
-    // STEP 4: Grant to Sales Team
-    // ============================================
-    console.log('\n💼 Granting permissions to Sales Team...');
-
-    const salesRoles = await db
-      .select()
-      .from(roles)
-      .where(sql`${roles.roleName} ILIKE 'Sales%' OR ${roles.roleName} = 'Dealer'`);
-
-    if (salesRoles.length > 0) {
-      // Define modules that Sales should access
-      // 'orders' contains the 'Get Mixing Ratios' API
-      const salesModules = [
-        'orders',
-        'quotations',
-        'crm',
-        'sales-dashboard',
-        'Add New Customer',
-        'customers',
-        'quotation-maker',
-        'sales_access',
-      ];
-
-      const salesPerms = await db
-        .select({
-          id: permissions.permissionId,
-          name: permissions.permissionName,
-          apis: permissions.availableActions,
-        })
-        .from(permissions)
-        .where(inArray(permissions.permissionName, salesModules));
-
-      for (const role of salesRoles) {
-        const rolePermValues = salesPerms.map(perm => ({
+      if (targetPerms.length > 0) {
+        const rolePermValues = targetPerms.map(perm => ({
           roleId: role.roleId,
           permissionId: perm.id,
           grantedActions: Array.isArray(perm.apis) ? perm.apis : [],
         }));
-
-        if (rolePermValues.length > 0) {
-          await db.insert(rolePermissions).values(rolePermValues);
-          console.log(`   ✓ Granted ${rolePermValues.length} permissions to ${role.roleName}`);
-        }
+        await db.insert(rolePermissions).values(rolePermValues);
+        console.log(`   ✓ Granted ${rolePermValues.length} permissions to ${role.roleName}`);
       }
-    } else {
-      console.log('   ⚠️ No Sales roles found (Sales Manager/Executive)');
+    };
+
+    // 1. SuperAdmin (ALL)
+    await grantToRole('SuperAdmin', [], true); // Exclude nothing = Grant All
+
+    // 2. Admin
+    // Exclude: departments, notifications, employees, units, tnc, product-development, double-development, update-product, settings group
+    // Note: 'settings' group isn't a module name, so we list known settings modules if any, or rely on specific module names.
+    // Based on registry: 'roles' (Settings), 'departments', 'notifications', 'employees', 'units', 'tnc', 'product-development', 'double-development', 'update-product'
+    const adminExcluded = [
+      'departments', 'notifications', 'employees', 'units', 'tnc',
+      'product-development', 'double-development', 'update-product',
+      'roles' // Settings
+    ];
+    await grantToRole('Admin', adminExcluded, true);
+
+    // 3. Production
+    // Inclusions: admin-dashboard, accepted-orders, production-manager, dispatch-planning, delivery-complete, production, inward, split-order, report-batch, report-inward, report-stock
+    const productionIncluded = [
+      'admin-dashboard',
+      'accepted-orders',
+      'production-manager',
+      'dispatch-planning',
+      'delivery-complete',
+      'production',
+      'inward',
+      'split-order',
+      'report-batch',
+      'report-inward',
+      'report-stock'
+    ];
+    await grantToRole('Production Manager', productionIncluded); // Assuming role name is 'Production Manager' or similar.
+    // Also try 'Production' just in case
+    await grantToRole('Production', productionIncluded);
+
+    // 4. Sales
+    // Inclusions: admin-dashboard, sales_access, orders, quotations, notifications, Add New Customer, report-customer-contact, report-customer-sales
+    const salesIncluded = [
+      'admin-dashboard',
+      'sales_access',
+      'orders',
+      'quotations',
+      'notifications',
+      'Add New Customer',
+      'report-customer-contact',
+      'report-customer-sales'
+    ];
+    // Find all Sales roles
+    const salesRoleList = allRoles.filter(r => r.roleName.startsWith('Sales') && r.roleName !== 'Dealer');
+    for (const r of salesRoleList) {
+      await grantToRole(r.roleName, salesIncluded);
     }
 
+    // 5. Dealer
+    // Inclusions: admin-dashboard, orders, quotations
+    const dealerIncluded = [
+      'admin-dashboard',
+      'orders',
+      'quotations'
+    ];
+    await grantToRole('Dealer', dealerIncluded);
+
     console.log(
-      `\n✅ CLEAN SYNC complete! ${pagePermissions.length} permissions match route registry.`
+      `\n✅ CLEAN SYNC complete! Permissions matched to route registry.`
     );
   } catch (error) {
     console.error('❌ Sync failed:', error);
