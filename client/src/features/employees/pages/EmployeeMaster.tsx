@@ -257,12 +257,16 @@ const EmployeeForm = ({
 
   const isDealerDept = departments.find(d => d.value === formData.DepartmentID)?.label === 'Dealer';
 
-  // Auto-select Role for Dealer Department
+  // Auto-select Role for Dealer Department and set Joining Date
   useEffect(() => {
     if (isDealerDept && roles.length > 0) {
       const dealerRole = roles.find(r => r.label === 'Dealer');
       if (dealerRole) {
-        setFormData(prev => ({ ...prev, RoleID: dealerRole.value }));
+        setFormData(prev => ({
+          ...prev,
+          RoleID: dealerRole.value,
+          JoiningDate: new Date().toISOString().split('T')[0] // Default to today
+        }));
       }
     }
   }, [isDealerDept, roles]);
@@ -1178,14 +1182,16 @@ const EmployeeForm = ({
                 {errors.RoleID && <p className="text-red-500 text-xs">{errors.RoleID}</p>}
               </div>
             )}
-            <Input
-              label="Joining Date"
-              type="date"
-              value={formData.JoiningDate}
-              onChange={e => setFormData({ ...formData, JoiningDate: e.target.value })}
-              max={new Date().toISOString().split('T')[0]}
-              className="h-11"
-            />
+            {!isDealerDept && (
+              <Input
+                label="Joining Date"
+                type="date"
+                value={formData.JoiningDate}
+                onChange={e => setFormData({ ...formData, JoiningDate: e.target.value })}
+                max={new Date().toISOString().split('T')[0]}
+                className="h-11"
+              />
+            )}
           </div>
         </div>
 
@@ -1328,7 +1334,7 @@ const EmployeeForm = ({
             ) : isEditMode ? (
               'Save Changes'
             ) : (
-              'Add Employee'
+              'Add '
             )}
           </Button>
         </div>

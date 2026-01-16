@@ -74,6 +74,11 @@ export class ReportsService {
                   },
                 },
               },
+              order: {
+                with: {
+                  account: true,
+                },
+              },
             },
           },
         },
@@ -209,9 +214,21 @@ export class ReportsService {
 
           const calculatedPackagingMaterials = Array.from(packagingMap.values());
 
+
+          // Extract Bill Numbers
+          const billNumbers = [
+            ...new Set(
+              batch.batchProducts
+                ?.map(bp => bp.order?.account?.billNo)
+                .filter(Boolean)
+            ),
+          ].join(', ');
+
           return {
             batchId: batch.batchId,
             batchNo: batch.batchNo,
+            billNo: billNumbers || '-',
+            // ... (rest of existing fields)
             productId: referenceProductId, // Use the resolved ID
             masterProductId: batch.masterProductId,
             productName: batch.masterProduct?.masterProductName || 'Unknown Product',

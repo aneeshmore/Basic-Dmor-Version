@@ -949,6 +949,15 @@ const BatchProductionReport = () => {
         },
       },
       {
+        accessorKey: 'billNo',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Bill No" />,
+        cell: ({ row }) => (
+          <div className="font-medium text-[var(--text-secondary)]">
+            {row.original.billNo || '-'}
+          </div>
+        ),
+      },
+      {
         accessorKey: 'startedAt',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
         cell: ({ row }) => (

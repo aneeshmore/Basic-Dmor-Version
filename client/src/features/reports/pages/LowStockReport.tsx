@@ -313,10 +313,10 @@ const LowStockReport = () => {
         cell: ({ row }) => (
           <Badge
             className={`${row.original.productType === 'FG'
-                ? 'bg-green-100 text-green-700 border-green-200'
-                : row.original.productType === 'RM'
-                  ? 'bg-blue-100 text-blue-700 border-blue-200'
-                  : 'bg-yellow-100 text-yellow-700 border-yellow-200'
+              ? 'bg-green-100 text-green-700 border-green-200'
+              : row.original.productType === 'RM'
+                ? 'bg-blue-100 text-blue-700 border-blue-200'
+                : 'bg-yellow-100 text-yellow-700 border-yellow-200'
               }`}
           >
             {row.original.productType}
@@ -350,24 +350,8 @@ const LowStockReport = () => {
           return <div className="text-right text-[var(--color-error)] font-bold">-{shortage}</div>;
         },
       },
-      {
-        accessorKey: 'reservedQuantity',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Reserved Qty" />,
-        cell: ({ row }) => (
-          <div className="text-right text-[var(--text-secondary)]">
-            {row.original.reservedQuantity}
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'sellingPrice',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Selling Price" />,
-        cell: ({ row }) => (
-          <div className="text-right font-medium text-[var(--text-primary)]">
-            ₹{row.original.sellingPrice}
-          </div>
-        ),
-      },
+
+
       {
         accessorKey: 'isActive',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
@@ -425,8 +409,8 @@ const LowStockReport = () => {
                   variant={productTypeFilter === type ? 'primary' : 'secondary'}
                   onClick={() => setProductTypeFilter(type)}
                   className={`min-w-[4rem] px-4 transition-all duration-200 ${productTypeFilter === type
-                      ? 'bg-blue-600 text-white hover:bg-blue-700 border-none shadow-md'
-                      : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 border-none shadow-md'
+                    : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
                     }`}
                 >
                   {type}
@@ -489,8 +473,8 @@ const LowStockReport = () => {
                       key={option}
                       onClick={() => setChartLimit(limit)}
                       className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${isSelected
-                          ? 'bg-blue-600 text-white'
-                          : 'text-[var(--text-secondary)] hover:bg-[var(--color-neutral-100)]'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-[var(--text-secondary)] hover:bg-[var(--color-neutral-100)]'
                         }`}
                     >
                       {option}
