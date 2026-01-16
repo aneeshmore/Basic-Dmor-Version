@@ -182,6 +182,14 @@ export class MasterProductsService {
       throw new NotFoundError('Master product not found');
     }
 
+    // Check for linked active sub-products or packaging usage
+    const linkedCount = await this.repository.countLinkedProducts(masterProductId);
+    if (linkedCount > 0) {
+      throw new ValidationError(
+        `Cannot delete Master Product because it is linked to ${linkedCount} active sub-products or used as packaging.`
+      );
+    }
+
     await this.repository.deleteMasterProduct(masterProductId);
     logger.info('Master product deleted', { id: masterProductId });
   }

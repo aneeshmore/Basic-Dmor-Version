@@ -1,4 +1,4 @@
-import { eq, and, aliasedTable, ne } from 'drizzle-orm';
+import { eq, and, aliasedTable, ne, sql, or } from 'drizzle-orm';
 import db from '../../db/index.js';
 import {
   products,
@@ -271,5 +271,24 @@ export class MasterProductsRepository {
       .returning();
 
     return result[0];
+  }
+
+  async countLinkedProducts(masterProductId) {
+    // Check if this master product is used as a parent for any active SKUs
+    // OR if it is used as packaging for any active SKUs
+    const result = await db
+      .select({ count: sql`count(*)` })
+      .from(products)
+      .where(
+        and(
+          eq(products.isActive, true),
+          or(
+            eq(products.masterProductId, masterProductId),
+            eq(products.packagingId, masterProductId)
+          )
+        )
+      );
+
+    return parseInt(result[0].count);
   }
 }
