@@ -45,11 +45,11 @@ const INITIAL_DATA: QuotationData = {
   deliveryTerms: '',
 
   companyName: 'Morex Technologies',
-  companyAddress: 'Plot No. 123, Sector 45, Gurugram, India',
+  companyAddress: 'AMBEGAON VALLY A, INFRONT OF SWAMI NARAYAN MANDIR, Ambegaon Khurd, Pune',
   companyPhone: '+91 98765 43210',
   companyEmail: 'office@morex.com',
   companyGSTIN: '06AAACD7890E1Z2',
-  companyState: 'Haryana',
+  companyState: 'Maharashtra',
   companyCode: '06',
 
   items: [
@@ -186,6 +186,7 @@ const QuotationMaker = () => {
   const [shouldAutoClose, setShouldAutoClose] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editQuotationId, setEditQuotationId] = useState<number | null>(null);
+  const [isInvoice, setIsInvoice] = useState(false); // New state for Invoice mode
 
   // Quotation Modal State
   const [showQuotationModal, setShowQuotationModal] = useState(false);
@@ -240,6 +241,11 @@ const QuotationMaker = () => {
         setAutoDownloadPending(true);
       }
 
+      // Check for invoice mode
+      if (location.state.isInvoice) {
+        setIsInvoice(true);
+      }
+
       // Clear state so it doesn't re-import if user navigates back and forth
       window.history.replaceState({}, '');
     }
@@ -270,6 +276,9 @@ const QuotationMaker = () => {
             if (parsed.autoDownload) {
               setAutoDownloadPending(true);
               setShouldAutoClose(true); // Flag to close window after download
+            }
+            if (parsed.isInvoice) {
+              setIsInvoice(true);
             }
           }
           // Clean up
@@ -489,7 +498,9 @@ const QuotationMaker = () => {
 
       pdf.addImage(dataUrl, 'PNG', 0, 0, finalWidth, finalHeight);
 
-      pdf.save(`Quotation-${data.quotationNo || 'Draft'}.pdf`);
+      const prefix = isInvoice ? 'Invoice' : 'Quotation';
+      const customerName = (data.buyerName || 'Customer').replace(/[^a-z0-9]/gi, '_');
+      pdf.save(`${prefix}_${customerName}.pdf`);
 
       showToast.success('PDF Downloaded!', 'pdf-gen');
 
@@ -1043,7 +1054,7 @@ const QuotationMaker = () => {
         >
           {/* Header Title */}
           <div className="text-center font-bold text-[14pt] mb-2 uppercase text-black">
-            QUOTATION
+            {isInvoice ? 'TAX INVOICE' : 'QUOTATION'}
           </div>
           <div className="border-[0.75pt] border-black text-[8.5pt] leading-[1.2]">
             {/* Top Section: Split Columns */}
@@ -1138,7 +1149,7 @@ const QuotationMaker = () => {
                 {/* Quotation No & Date */}
                 <div className="grid grid-cols-2 divide-x divide-black h-[50px]">
                   <div className="p-1">
-                    <span className="font-bold block text-[8pt]">Quotation No.</span>
+                    <span className="font-bold block text-[8pt]">{isInvoice ? 'Bill No.' : 'Quotation No.'}</span>
                     <EditableInput
                       isPdfMode={isPdfMode}
                       readOnly={true}
@@ -1457,20 +1468,61 @@ const QuotationMaker = () => {
                 We declare that this invoice shows the actual price of the goods described and that
                 all particulars are true and correct.
               </p>
-              <p className="text-[8pt] mt-2 font-semibold text-blue-700">
-                ✓ This quotation is valid from{' '}
-                {new Date().toLocaleDateString('en-IN', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
-                })}{' '}
-                to{' '}
-                {new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
-                })}
-              </p>
+              {!isInvoice && (
+                <p className="text-[8pt] mt-2 font-semibold text-blue-700">
+                  ✓ This quotation is valid from{' '}
+                  {new Date().toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })}{' '}
+                  to{' '}
+                  {new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </p>
+              )}
+              {isInvoice && (
+                <div className="mt-2 text-[8pt] border-t border-black border-dashed pt-1">
+                  <div className="font-bold underline mb-1">Bank Details:</div>
+                  <div className="grid grid-cols-[60px_1fr] gap-x-2">
+                    <span className="font-semibold">Bank:</span>
+                    <EditableInput
+                      isPdfMode={isPdfMode}
+                      readOnly={true}
+                      value={data.bankName || ''}
+                      onChange={v => updateField('bankName', v)}
+                      className="font-bold p-0 h-auto"
+                    />
+                    <span className="font-semibold">A/c No:</span>
+                    <EditableInput
+                      isPdfMode={isPdfMode}
+                      readOnly={true}
+                      value={data.accountNo || ''}
+                      onChange={v => updateField('accountNo', v)}
+                      className="font-bold p-0 h-auto"
+                    />
+                    <span className="font-semibold">IFSC:</span>
+                    <EditableInput
+                      isPdfMode={isPdfMode}
+                      readOnly={true}
+                      value={data.ifsc || ''}
+                      onChange={v => updateField('ifsc', v)}
+                      className="font-bold p-0 h-auto"
+                    />
+                    <span className="font-semibold">Branch:</span>
+                    <EditableInput
+                      isPdfMode={isPdfMode}
+                      readOnly={true}
+                      value={data.branch || ''}
+                      onChange={v => updateField('branch', v)}
+                      className="p-0 h-auto"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             <div className="p-2 flex flex-col justify-between items-end">
               <div className="font-bold text-right w-full">For {data.companyName}</div>
@@ -1484,7 +1536,7 @@ const QuotationMaker = () => {
           This is a Computer Generated Document
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

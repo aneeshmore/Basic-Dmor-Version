@@ -182,6 +182,15 @@ export const Dashboard: React.FC = () => {
           color: 'text-green-500',
           bg: 'bg-green-500/10',
         },
+        {
+          title: 'PM Dashboard',
+          icon: Download,
+          count: 'View',
+          description: 'View PM Dashboard',
+          path: '/operations/pm-dashboard',
+          color: 'text-orange-500',
+          bg: 'bg-orange-500/10',
+        }
       ];
     }
 

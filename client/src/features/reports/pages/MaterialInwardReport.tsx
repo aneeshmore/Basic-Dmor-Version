@@ -120,7 +120,6 @@ const MaterialInwardReport = () => {
       'Type',
       'Supplier',
       'Bill No',
-      'Quantity',
       'Unit Price',
       'Total Cost',
     ];
@@ -131,9 +130,10 @@ const MaterialInwardReport = () => {
       item.productType || '-',
       item.supplierName || '-',
       item.billNo || '-',
-      item.quantity,
       item.unitPrice ? `Rs. ${Number(item.unitPrice).toFixed(2)}` : '-',
-      item.totalCost ? `Rs. ${Number(item.totalCost).toFixed(2)}` : '-',
+      item.totalQty !== undefined && item.unitPrice
+        ? `Rs. ${(item.totalQty * Number(item.unitPrice)).toFixed(2)}`
+        : '-',
     ]);
 
     autoTable(doc, {
@@ -160,7 +160,6 @@ const MaterialInwardReport = () => {
       'Type',
       'Supplier',
       'Bill No',
-      'Quantity',
       'Unit Price',
       'Total Cost',
       'Notes',
@@ -172,9 +171,10 @@ const MaterialInwardReport = () => {
       item.productType || '-',
       item.supplierName || '-',
       item.billNo || '-',
-      item.quantity,
       item.unitPrice ? Number(item.unitPrice).toFixed(2) : '-',
-      item.totalCost ? Number(item.totalCost).toFixed(2) : '-',
+      item.totalQty !== undefined && item.unitPrice
+        ? (item.totalQty * Number(item.unitPrice)).toFixed(2)
+        : '-',
       item.notes || '-',
     ]);
 
@@ -522,15 +522,7 @@ const MaterialInwardReport = () => {
           </div>
         ),
       },
-      {
-        accessorKey: 'quantity',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Quantity" />,
-        cell: ({ row }) => (
-          <div className="text-right font-semibold text-[var(--text-primary)]">
-            {row.original.quantity}
-          </div>
-        ),
-      },
+
       {
         id: 'totalQty',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Total Qty" />,
@@ -552,11 +544,17 @@ const MaterialInwardReport = () => {
       {
         accessorKey: 'totalCost',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Total Cost" />,
-        cell: ({ row }) => (
-          <div className="text-right font-semibold text-[var(--color-success)]">
-            {row.original.totalCost ? `₹${Number(row.original.totalCost).toFixed(2)}` : '-'}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const totalCost =
+            row.original.totalQty !== undefined && row.original.unitPrice
+              ? row.original.totalQty * Number(row.original.unitPrice)
+              : 0;
+          return (
+            <div className="text-right font-semibold text-[var(--color-success)]">
+              {totalCost ? `₹${totalCost.toFixed(2)}` : '-'}
+            </div>
+          );
+        },
       },
       {
         accessorKey: 'notes',

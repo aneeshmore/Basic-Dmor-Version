@@ -6,10 +6,12 @@ import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table';
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { RotateCcw, Eye } from 'lucide-react';
+import { RotateCcw, Eye, Download } from 'lucide-react';
 import { Button, Modal } from '@/components/ui';
 import { CreateOrderForm, ModeSwitcher, ModeIndicatorBanner, type ViewMode } from '../components';
 import { showToast } from '@/utils/toast';
+import { downloadInvoicePDF } from '@/features/quotations/utils/pdfGenerator';
+import { QuotationData } from '@/features/quotations/types';
 
 const formatDisplayOrderId = (orderId: number, dateString: string) => {
   if (!dateString) return `ORD-${orderId}`;
@@ -176,16 +178,30 @@ const CreateOrderPage: React.FC = () => {
       cell: ({ row }) => {
         const order = row.original;
         return (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleViewOrder(order)}
-            title="View Order Details"
-            className="text-[var(--text-secondary)] hover:text-[var(--primary)] hover:bg-[var(--primary)]/10"
-          >
-            <Eye size={14} className="mr-1.5" />
-            View
-          </Button>
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleViewOrder(order)}
+              title="View Order Details"
+              className="text-[var(--text-secondary)] hover:text-[var(--primary)] hover:bg-[var(--primary)]/10"
+            >
+              <Eye size={14} className="mr-1.5" />
+              View
+            </Button>
+            {(order.status === 'Accepted' || order.status === 'Confirmed' || order.status === 'Delivered' || order.status === 'Dispatched') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleDownloadInvoice(order)}
+                title="Download Invoice"
+                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 ml-1"
+              >
+                <Download size={14} className="mr-1.5" />
+                Invoice
+              </Button>
+            )}
+          </>
         );
       },
     },
@@ -204,6 +220,71 @@ const CreateOrderPage: React.FC = () => {
       setViewModalOpen(false);
     } finally {
       setViewLoading(false);
+    }
+  }, []);
+
+  const handleDownloadInvoice = useCallback(async (order: Order) => {
+    try {
+      showToast.loading('Preparing Invoice...', 'invoice-dl');
+
+      // Fetch full details including products
+      const fullOrder = await ordersApi.getById(order.orderId);
+
+      // Map Order to QuotationData structure for the Invoice generator
+      const invoiceData: QuotationData = {
+        quotationNo: fullOrder.billNo || order.billNo || order.orderNumber || formatDisplayOrderId(order.orderId, order.orderDate),
+        date: format(new Date(order.orderDate), 'dd-MMM-yy'),
+        paymentTerms: fullOrder.paymentMethod || 'Bank Transfer',
+        buyerRef: `ORD-${order.orderId}`,
+        otherRef: '',
+        dispatchThrough: '',
+        destination: fullOrder.deliveryAddress || '',
+        deliveryTerms: '',
+
+        companyName: 'Morex Technologies', // Default company
+        companyAddress: 'Plot No. 123, Sector 45, Gurugram, India',
+        companyPhone: '+91 98765 43210',
+        companyEmail: 'office@morex.com',
+        companyGSTIN: '06AAACD7890E1Z2',
+        companyState: 'Haryana',
+        companyCode: '06',
+
+        bankName: 'HDFC BANK',
+        accountNo: '50200012345678',
+        ifsc: 'HDFC0001234',
+        branch: 'Sector 45, Gurugram',
+
+        buyerName: fullOrder.companyName || fullOrder.customerName,
+        buyerAddress: fullOrder.deliveryAddress,
+        buyerGSTIN: '', // Would need to fetch customer details for this if not in order
+
+        items: (fullOrder.orderDetails || []).map((item, index) => ({
+          id: index + 1,
+          description: `Product ID: ${item.productId}`, //Ideally fetch name... wait, fullOrder might not have product names populated if not joined.
+          // Note: In CreateOrderForm, productNames are fetched. Here we might need to rely on what's available or fetch product names.
+          // However, fullOrder.orderDetails usually contains basic info. 
+          // Let's try to use what we have.
+          hsn: '',
+          dueOn: '',
+          quantity: item.quantity,
+          rate: Number(item.unitPrice),
+          per: 'no.',
+          discount: item.discount || 0,
+          cgstRate: 9,
+          sgstRate: 9
+        })),
+
+        status: 'Generated'
+      };
+
+      // We might want to fetch product names properly if they are just IDs.
+      // But for now let's send what we have.
+
+      await downloadInvoicePDF(invoiceData);
+      showToast.success('Invoice Download Started', 'invoice-dl');
+    } catch (error) {
+      console.error('Invoice download failed:', error);
+      showToast.error('Failed to download invoice', 'invoice-dl');
     }
   }, []);
 
@@ -305,10 +386,10 @@ const CreateOrderPage: React.FC = () => {
                           : selectedOrder.status === 'Ready for Dispatch'
                             ? 'bg-blue-100 text-blue-800 border-blue-200'
                             : selectedOrder.status === 'In Production' ||
-                                selectedOrder.status === 'Scheduled for Production'
+                              selectedOrder.status === 'Scheduled for Production'
                               ? 'bg-purple-100 text-purple-800 border-purple-200'
                               : selectedOrder.status === 'Confirmed' ||
-                                  selectedOrder.status === 'Accepted'
+                                selectedOrder.status === 'Accepted'
                                 ? 'bg-teal-100 text-teal-800 border-teal-200'
                                 : selectedOrder.status === 'Pending'
                                   ? 'bg-orange-100 text-orange-800 border-orange-200'

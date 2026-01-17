@@ -144,6 +144,7 @@ export class OrdersRepository {
         companyName: customers.companyName,
         contactPerson: customers.contactPerson,
         billNo: accounts.billNo,
+        paymentMethod: accounts.paymentMethod,
       })
       .from(orders)
       .leftJoin(customers, eq(orders.customerId, customers.customerId))

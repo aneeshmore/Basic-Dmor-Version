@@ -11,18 +11,18 @@ export interface Order {
   deliveryAddress?: string;
   remarks?: string;
   status:
-    | 'Pending'
-    | 'On Hold'
-    | 'Accepted'
-    | 'Rejected'
-    | 'Confirmed'
-    | 'Scheduled for Production'
-    | 'In Production'
-    | 'Ready for Dispatch'
-    | 'Started'
-    | 'Dispatched'
-    | 'Delivered'
-    | 'Cancelled';
+  | 'Pending'
+  | 'On Hold'
+  | 'Accepted'
+  | 'Rejected'
+  | 'Confirmed'
+  | 'Scheduled for Production'
+  | 'In Production'
+  | 'Ready for Dispatch'
+  | 'Started'
+  | 'Dispatched'
+  | 'Delivered'
+  | 'Cancelled';
   priority?: 'Low' | 'Normal' | 'High' | 'Urgent';
   totalAmount: number;
   expectedDeliveryDate?: string; // Production manager field
@@ -33,6 +33,7 @@ export interface Order {
   productNames?: string;
   totalQuantity?: number;
   billNo?: string; // Added for split order and account management
+  paymentMethod?: string; // Added for Invoice generation
 }
 
 export interface OrderDetail {

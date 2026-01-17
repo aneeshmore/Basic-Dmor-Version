@@ -43,3 +43,24 @@ export async function downloadQuotationPDF(quotationData: QuotationData): Promis
   const url = `/quotation-maker?download=${dataKey}`;
   window.open(url, '_blank');
 }
+
+/**
+ * For inline download of Invoice - opens in new tab with Invoice mode
+ */
+export async function downloadInvoicePDF(quotationData: QuotationData): Promise<void> {
+  // Store data in sessionStorage for the new window to access
+  const dataKey = `invoice_download_${Date.now()}`;
+  sessionStorage.setItem(
+    dataKey,
+    JSON.stringify({
+      importedData: quotationData,
+      startInPreview: true,
+      autoDownload: true,
+      isInvoice: true, // Flag to trigger Invoice mode
+    })
+  );
+
+  // Open QuotationMaker in new window
+  const url = `/quotation-maker?download=${dataKey}`;
+  window.open(url, '_blank');
+}
