@@ -2,6 +2,8 @@ import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import logger from '@/utils/logger';
+import { routeRegistry } from '@/config/routeRegistry';
+import { getFirstAccessibleRoute } from '@/utils/navigationUtils';
 import { Eye, EyeOff, Lock, User, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -28,7 +30,14 @@ export default function LoginPage() {
       const result = await login({ username, password });
 
       if (result.success) {
-        navigate('/dashboard/admin');
+        // Redirection Logic:
+        // 1. Try to find the first accessible route from the sidebar
+        // 2. Fallback to '/dashboard/admin' if something goes wrong
+        const targetPath = result.user
+          ? getFirstAccessibleRoute(result.user, routeRegistry)
+          : '/dashboard/admin';
+
+        navigate(targetPath);
       } else {
         setError(result.message || 'Invalid credentials');
       }

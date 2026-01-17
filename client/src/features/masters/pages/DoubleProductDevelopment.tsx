@@ -1395,8 +1395,10 @@ const DoubleProductDevelopment = () => {
               placeholder="Search RM..."
               className="w-full"
               onEnter={() => {
-                handleAddItem(false);
-                setSelectedRmId('');
+                if (selectedRmId) {
+                  handleAddItem(false);
+                  setSelectedRmId('');
+                }
               }}
             />
           </div>

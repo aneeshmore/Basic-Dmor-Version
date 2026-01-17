@@ -10,7 +10,7 @@ interface AuthContextType {
   loading: boolean;
   login: (
     credentials: LoginCredentials
-  ) => Promise<{ success: boolean; message?: string; landingPage?: string }>;
+  ) => Promise<{ success: boolean; message?: string; landingPage?: string; user?: AuthUser }>;
   logout: () => void;
   hasPermission: (
     moduleName: string,
@@ -105,7 +105,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Set token in axios headers
         apiClient.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
 
-        return { success: true, landingPage: data.user.landingPage || '/dashboard' };
+        return {
+          success: true,
+          landingPage: data.user.landingPage || '/dashboard',
+          user: data.user,
+        };
       } else {
         return { success: false, message: data.message || 'Login failed' };
       }
