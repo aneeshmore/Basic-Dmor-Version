@@ -361,6 +361,7 @@ export class MastersService {
         customerTypeId: customerData.CustomerTypeID || null,
         isActive: true, // Default to true on creation
         createdBy: customerData.CreatedBy || null, // Track who created this customer
+        currentBalance: customerData.OpeningBalance || 0, // Set initial balance
       };
       console.log('Service - Transformed to DB format:', JSON.stringify(dbData, null, 2));
       const customer = await this.repository.createCustomer(dbData);

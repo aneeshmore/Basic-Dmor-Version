@@ -5,7 +5,7 @@
  * business information, and assigned sales personnel.
  */
 
-import { serial, uuid, varchar, text, boolean, integer, timestamp } from 'drizzle-orm/pg-core';
+import { serial, uuid, varchar, text, boolean, integer, timestamp, numeric } from 'drizzle-orm/pg-core';
 import { appSchema } from '../core/app-schema.js';
 
 export const customers = appSchema.table('customers', {
@@ -21,6 +21,8 @@ export const customers = appSchema.table('customers', {
   address: text('address'),
   gstNumber: varchar('gst_number', { length: 50 }),
   pinCode: varchar('pin_code', { length: 10 }),
+  // Balance: Tracks the current outstanding amount (Positive = Due, Negative = Advance)
+  currentBalance: numeric('current_balance', { precision: 14, scale: 2 }).default('0'),
   isActive: boolean('is_active').notNull().default(true),
   salesPersonId: integer('sales_person_id'),
   customerTypeId: integer('customer_type_id'),

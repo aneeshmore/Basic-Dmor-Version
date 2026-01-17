@@ -272,6 +272,7 @@ const CustomerForm = ({
             : undefined,
         CustomerTypeID: undefined,
         IsActive: true,
+        OpeningBalance: 0,
       });
 
       // Hide additional mobile fields
@@ -606,6 +607,7 @@ const CustomerForm = ({
       SalesPersonID: formData.SalesPersonID,
       CustomerTypeID: formData.CustomerTypeID,
       IsActive: formData.IsActive ?? true,
+      OpeningBalance: formData.OpeningBalance,
     } as Customer;
 
     setPendingData(customerData);
@@ -1043,6 +1045,27 @@ const CustomerForm = ({
                 </p>
               )}
             </div>
+
+            {!item && (
+              <div className="mt-4 border-t border-[var(--border)] pt-4">
+                <h4 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+                  Initial Setup
+                </h4>
+                <div className="space-y-1">
+                  <Input
+                    label="Opening Balance (Rs.)"
+                    type="number"
+                    value={formData.OpeningBalance || ''}
+                    onChange={e => setFormData({ ...formData, OpeningBalance: Number(e.target.value) })}
+                    placeholder="0.00"
+                    className="h-10 font-medium"
+                  />
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">
+                    Initial balance for the customer. Positive for Debit (Due), Negative for Credit (Advance).
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Column - Additional Details */}
@@ -1185,7 +1208,7 @@ const CustomerForm = ({
             )}
           </Button>
         </div>
-      </div>
+      </div >
     </>
   );
 };
@@ -1207,6 +1230,11 @@ export default function CustomerMaster() {
       setLoading(true);
       const response = await customerApi.getAll();
       if (response.success && response.data) {
+        if (response.data.length > 0) {
+          console.log('DEBUG: Customer Keys:', Object.keys(response.data[0]));
+          // Log raw balance values to check if they are string or number
+          console.log('DEBUG: Balance Value Sample:', response.data[0].currentBalance, (response.data[0] as any).CurrentBalance);
+        }
         setCustomers(response.data);
       }
     } catch (error) {
@@ -1334,11 +1362,14 @@ export default function CustomerMaster() {
           { number: row.original.MobileNo3, code: row.original.CountryCode3 || '+91' },
         ].filter(m => m.number);
 
-        if (mobiles.length === 0) return '-';
+        // Deduplicate mobile numbers to prevent key errors
+        const uniqueMobiles = Array.from(new Set(mobiles.map(m => JSON.stringify(m)))).map(s => JSON.parse(s));
+
+        if (uniqueMobiles.length === 0) return '-';
 
         return (
           <div className="flex flex-col gap-0.5 py-1">
-            {mobiles.map((m, i) => (
+            {uniqueMobiles.map((m: any, i: number) => (
               <span key={i} className="text-xs whitespace-nowrap">
                 <span className="text-[var(--text-secondary)] font-medium">{m.code}</span>{' '}
                 {m.number}
@@ -1372,6 +1403,20 @@ export default function CustomerMaster() {
       accessorKey: 'EmailID',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Email" />,
       cell: ({ row }) => <span>{row.original.EmailID || '-'}</span>,
+    },
+    {
+      accessorKey: 'currentBalance',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Balance" />,
+      cell: ({ row }) => {
+        // Handle both camelCase and PascalCase
+        const val = row.original.currentBalance !== undefined ? row.original.currentBalance : (row.original as any).CurrentBalance;
+        const balance = Number(val || 0);
+        return (
+          <span className={`font-medium ${balance > 0 ? 'text-red-600' : balance < 0 ? 'text-green-600' : ''}`}>
+            Rs. {Math.abs(balance).toFixed(2)} {balance > 0 ? ' (Dr)' : balance < 0 ? ' (Cr)' : ''}
+          </span>
+        );
+      },
     },
     {
       accessorKey: 'IsActive',

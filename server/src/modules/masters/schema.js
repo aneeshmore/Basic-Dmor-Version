@@ -64,6 +64,7 @@ export const createCustomerSchema = z.object({
   SalesPersonID: z.number().int().positive().nullable().optional(),
   CustomerTypeID: z.number().int().positive().nullable().optional(),
   IsActive: z.boolean().optional().default(true),
+  OpeningBalance: z.number().optional(),
 });
 
 export const updateCustomerSchema = z.object({

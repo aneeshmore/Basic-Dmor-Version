@@ -164,7 +164,7 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
                     showPagination={true}
                     defaultPageSize={10}
                     searchPlaceholder="Search history..."
-                    sorting={[{ id: 'date', desc: false }]}
+                    sorting={[{ id: 'date', desc: true }]}
                     toolbarActions={
                         <div className="flex items-center gap-2">
                             <Input

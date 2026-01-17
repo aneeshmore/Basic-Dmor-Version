@@ -63,6 +63,7 @@ interface DataTableProps<TData, TValue> {
   toolbarActions?: React.ReactNode;
   enableColumnResizing?: boolean;
   getRowClassName?: (row: Row<TData>) => string;
+  initialSorting?: SortingState;
 }
 
 const getCommonPinningStyles = (column: Column<any>): React.CSSProperties => {
@@ -110,6 +111,7 @@ export function DataTable<TData, TValue>({
   toolbarActions,
   enableColumnResizing = true,
   getRowClassName,
+  initialSorting,
 }: DataTableProps<TData, TValue>) {
   const [internalRowSelection, setInternalRowSelection] = React.useState({});
 
@@ -118,7 +120,7 @@ export function DataTable<TData, TValue>({
 
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [internalSorting, setInternalSorting] = React.useState<SortingState>([]);
+  const [internalSorting, setInternalSorting] = React.useState<SortingState>(initialSorting || []);
   const [globalFilter, setGlobalFilter] = React.useState<string>('');
   const [grouping, setGrouping] = React.useState<GroupingState>([]);
 
@@ -218,10 +220,10 @@ export function DataTable<TData, TValue>({
   // Use inline style for z-index to ensure maximum specificity in fullscreen mode
   const containerStyle: React.CSSProperties = isFullScreen
     ? {
-        zIndex: 999999,
-        isolation: 'isolate',
-        backgroundColor: 'var(--surface)',
-      }
+      zIndex: 999999,
+      isolation: 'isolate',
+      backgroundColor: 'var(--surface)',
+    }
     : { zIndex: 10 };
 
   const tableContent = (
@@ -289,9 +291,8 @@ export function DataTable<TData, TValue>({
                         <div
                           onMouseDown={header.getResizeHandler()}
                           onTouchStart={header.getResizeHandler()}
-                          className={`absolute right-0 top-0 h-full w-1 cursor-col-resize touch-none select-none hover:bg-[var(--primary)] ${
-                            header.column.getIsResizing() ? 'bg-[var(--primary)]' : 'bg-transparent'
-                          }`}
+                          className={`absolute right-0 top-0 h-full w-1 cursor-col-resize touch-none select-none hover:bg-[var(--primary)] ${header.column.getIsResizing() ? 'bg-[var(--primary)]' : 'bg-transparent'
+                            }`}
                           style={{
                             transform: header.column.getIsResizing()
                               ? `translateX(${table.getState().columnSizingInfo.deltaOffset}px)`
@@ -385,7 +386,7 @@ export function DataTable<TData, TValue>({
                               ) : cell.getIsAggregated() ? (
                                 flexRender(
                                   cell.column.columnDef.aggregatedCell ??
-                                    cell.column.columnDef.cell,
+                                  cell.column.columnDef.cell,
                                   cell.getContext()
                                 )
                               ) : cell.getIsPlaceholder() ? null : (
@@ -394,8 +395,8 @@ export function DataTable<TData, TValue>({
                                     <span style={{ paddingLeft: `${row.depth * 2}rem` }} />
                                   )}
                                   {cell.column.id === row.getVisibleCells()[0].column.id &&
-                                  row.getCanExpand() &&
-                                  !row.getIsGrouped() ? (
+                                    row.getCanExpand() &&
+                                    !row.getIsGrouped() ? (
                                     <div className="mr-2 inline-flex">
                                       {row.getIsExpanded() ? (
                                         <ChevronDown className="h-4 w-4" />
@@ -494,7 +495,7 @@ export function DataTable<TData, TValue>({
                               ) : cell.getIsAggregated() ? (
                                 flexRender(
                                   cell.column.columnDef.aggregatedCell ??
-                                    cell.column.columnDef.cell,
+                                  cell.column.columnDef.cell,
                                   cell.getContext()
                                 )
                               ) : cell.getIsPlaceholder() ? null : (
@@ -503,8 +504,8 @@ export function DataTable<TData, TValue>({
                                     <span style={{ paddingLeft: `${row.depth * 2}rem` }} />
                                   )}
                                   {cell.column.id === row.getVisibleCells()[0].column.id &&
-                                  row.getCanExpand() &&
-                                  !row.getIsGrouped() ? (
+                                    row.getCanExpand() &&
+                                    !row.getIsGrouped() ? (
                                     <div className="mr-2 inline-flex">
                                       {row.getIsExpanded() ? (
                                         <ChevronDown className="h-4 w-4" />

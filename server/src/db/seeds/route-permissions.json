@@ -404,7 +404,6 @@
         "id": "quotation-maker",
         "path": "/quotation-maker",
         "label": "Quotation Maker",
-        "showInSidebar": false,
         "permission": {
           "module": "quotation-maker"
         },
@@ -434,6 +433,31 @@
     "label": "Operations",
     "group": "Main",
     "children": [
+      {
+        "id": "payment-entry",
+        "path": "/operations/payment-entry",
+        "label": "Payment Entry",
+        "permission": {
+          "module": "payments"
+        },
+        "apis": [
+          {
+            "route": "/payments",
+            "method": "POST",
+            "label": "Create Payment"
+          },
+          {
+            "route": "/payments",
+            "method": "GET",
+            "label": "View Payments"
+          },
+          {
+            "route": "/masters/customers",
+            "method": "GET",
+            "label": "Load Customers"
+          }
+        ]
+      },
       {
         "id": "create-order",
         "path": "/operations/create-order",
@@ -998,6 +1022,26 @@
     "label": "Reports",
     "group": "Main",
     "children": [
+      {
+        "id": "customer-ledger",
+        "path": "/reports/customer-ledger",
+        "label": "Customer Ledger",
+        "permission": {
+          "module": "payments"
+        },
+        "apis": [
+          {
+            "route": "/payments",
+            "method": "GET",
+            "label": "View Ledger"
+          },
+          {
+            "route": "/masters/customers",
+            "method": "GET",
+            "label": "Load Customers"
+          }
+        ]
+      },
       {
         "id": "batch-report",
         "path": "/reports/batch-production",

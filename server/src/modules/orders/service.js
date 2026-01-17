@@ -1,4 +1,5 @@
 import { OrdersRepository } from './repository.js';
+import { PaymentRepository } from '../payments/repository.js';
 import { NotificationsService } from '../notifications/service.js';
 import { OrderDTO, OrderWithDetailsDTO } from './dto.js';
 import { AppError } from '../../utils/AppError.js';
@@ -10,6 +11,7 @@ import { eq } from 'drizzle-orm';
 export class OrdersService {
   constructor() {
     this.repository = new OrdersRepository();
+    this.paymentRepository = new PaymentRepository();
     this.notificationsService = new NotificationsService();
   }
 
@@ -246,6 +248,33 @@ export class OrdersService {
     } catch (accountError) {
       logger.error('Failed to create account record:', accountError);
       // Continue even if account creation fails
+    }
+
+    // [NEW] Update Customer Balance & Create Ledger Entry (Debit)
+    try {
+      logger.info(`Updating customer balance for Order #${order.orderNumber}`);
+      const updatedCustomer = await this.paymentRepository.updateCustomerBalance(
+        order.customerId,
+        order.totalAmount
+      );
+
+      if (updatedCustomer) {
+        await this.paymentRepository.createTransaction({
+          customerId: order.customerId,
+          type: 'INVOICE',
+          referenceId: order.orderId,
+          referenceType: 'orders',
+          description: `Order #${order.orderNumber}`,
+          debit: order.totalAmount,
+          credit: 0,
+          balance: updatedCustomer.currentBalance,
+        });
+        logger.info('Ledger updated for new order');
+      }
+    } catch (ledgerError) {
+      logger.error('Failed to update ledger for new order:', ledgerError);
+      // We don't throw here to avoid failing the order creation, but in a strict financial system we should.
+      // For now, logging error.
     }
 
     // Send Notification

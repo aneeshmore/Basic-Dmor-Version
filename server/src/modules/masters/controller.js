@@ -224,7 +224,7 @@ export class MastersController {
       const userContext = {
         employeeId: req.user?.employeeId,
         role: req.user?.role,
-        isAdmin: ['Admin', 'SuperAdmin', 'Accounts Manager', 'Production Manager'].includes(
+        isAdmin: ['SuperAdmin'].includes(
           req.user?.role
         ),
         companyName: req.user?.companyName,
@@ -253,7 +253,7 @@ export class MastersController {
       const userContext = {
         employeeId: req.user?.employeeId,
         role: req.user?.role,
-        isAdmin: ['Admin', 'SuperAdmin', 'Accounts Manager', 'Production Manager'].includes(
+        isAdmin: ['SuperAdmin'].includes(
           req.user?.role
         ),
         companyName: req.user?.companyName,
@@ -274,7 +274,7 @@ export class MastersController {
       const userContext = {
         employeeId: req.user?.employeeId,
         role: req.user?.role,
-        isAdmin: ['Admin', 'SuperAdmin', 'Accounts Manager', 'Production Manager'].includes(
+        isAdmin: ['SuperAdmin'].includes(
           req.user?.role
         ),
         companyName: req.user?.companyName,

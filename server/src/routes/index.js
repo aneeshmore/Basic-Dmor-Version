@@ -30,6 +30,7 @@ import { tncRoutes } from '../modules/tnc/index.js';
 import { quotationsRoutes } from '../modules/quotations/index.js';
 import { crmRoutes } from '../modules/crm/index.js';
 import { cancelOrderRoutes } from '../modules/cancel-order/index.js';
+import { paymentRoutes } from '../modules/payments/index.js';
 
 const router = Router();
 
@@ -84,5 +85,6 @@ router.use('/tnc', tncRoutes);
 router.use('/crm', crmRoutes);
 router.use('/cancel-order', cancelOrderRoutes);
 router.use('/quotations', quotationsRoutes);
+router.use('/payments', paymentRoutes);
 
 export default router;

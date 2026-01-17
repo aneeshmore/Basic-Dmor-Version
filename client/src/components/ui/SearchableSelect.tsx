@@ -22,6 +22,7 @@ interface SearchableSelectProps<T = any> {
   onCreateNew?: (inputValue: string) => void; // Callback when creating new value
   allowCustomValue?: boolean; // If true, preserve custom values that don't match options (useful with creatable)
   onEnter?: () => void; // Callback when Enter is pressed and an option is selected
+  error?: string;
 }
 
 const SearchableSelect = <T = any,>({
@@ -37,6 +38,7 @@ const SearchableSelect = <T = any,>({
   onCreateNew,
   allowCustomValue = false,
   onEnter,
+  error,
 }: SearchableSelectProps<T>) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -204,12 +206,11 @@ const SearchableSelect = <T = any,>({
                 onClick={() => handleSelect(option)}
                 className={`
                   px-4 py-2 text-sm cursor-pointer flex items-center justify-between
-                  ${
-                    index === highlightedIndex
-                      ? 'bg-[var(--primary)]/10 text-[var(--primary)]'
-                      : value === option.value
-                        ? 'bg-[var(--surface-hover)] text-[var(--text-primary)]'
-                        : 'text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+                  ${index === highlightedIndex
+                    ? 'bg-[var(--primary)]/10 text-[var(--primary)]'
+                    : value === option.value
+                      ? 'bg-[var(--surface-hover)] text-[var(--text-primary)]'
+                      : 'text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
                   }
                 `}
                 onMouseEnter={() => setHighlightedIndex(index)}
@@ -237,6 +238,7 @@ const SearchableSelect = <T = any,>({
           )}
         </div>
       )}
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   );
 };

@@ -30,14 +30,7 @@ export default function LoginPage() {
       const result = await login({ username, password });
 
       if (result.success) {
-        // Redirection Logic:
-        // 1. Try to find the first accessible route from the sidebar
-        // 2. Fallback to '/dashboard/admin' if something goes wrong
-        const targetPath = result.user
-          ? getFirstAccessibleRoute(result.user, routeRegistry)
-          : '/dashboard/admin';
-
-        navigate(targetPath);
+        navigate('/dashboard/admin');
       } else {
         setError(result.message || 'Invalid credentials');
       }

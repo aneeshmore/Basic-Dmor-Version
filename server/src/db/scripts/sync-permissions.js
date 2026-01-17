@@ -328,7 +328,8 @@ async function syncPermissions() {
       'notifications',
       'Add New Customer',
       'report-customer-contact',
-      'report-customer-sales'
+      'report-customer-sales',
+      'quotation-maker'
     ];
     // Find all Sales roles
     const salesRoleList = allRoles.filter(r => r.roleName.startsWith('Sales') && r.roleName !== 'Dealer');
@@ -341,7 +342,8 @@ async function syncPermissions() {
     const dealerIncluded = [
       'admin-dashboard',
       'orders',
-      'quotations'
+      'quotations',
+      'quotation-maker'
     ];
     await grantToRole('Dealer', dealerIncluded);
 

@@ -4,7 +4,7 @@ import { FileDown } from 'lucide-react';
 import { showToast } from '@/utils/toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { ColumnDef } from '@tanstack/react-table';
+import { ColumnDef, SortingState } from '@tanstack/react-table';
 import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table';
 import { Button, Input, SearchableSelect } from '@/components/ui';
 import { reportsApi } from '../api/reportsApi';
@@ -38,6 +38,7 @@ ChartJS.register(
 const ProductWiseReport = () => {
   const chartRef = useRef<ChartJS<'bar'> | null>(null);
   const [chartKey, setChartKey] = useState(0);
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'updatedAt', desc: true }]);
   const [data, setData] = useState<StockReportItem[]>([]);
   // const [summaryData, setSummaryData] = useState<StockReportItem[]>([]); // Using 'data' for summary list now
   const [productInfo, setProductInfo] = useState<ProductInfo | null>(null);
@@ -293,6 +294,18 @@ const ProductWiseReport = () => {
           </div>
         ),
       },
+      {
+        accessorKey: 'updatedAt',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Last Updated" />,
+        cell: ({ row }) => {
+          const date = row.original.updatedAt ? new Date(row.original.updatedAt) : null;
+          return (
+            <div className="text-center text-xs text-gray-500">
+              {date ? date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+            </div>
+          );
+        },
+      },
     ];
   }, []);
 
@@ -462,6 +475,8 @@ const ProductWiseReport = () => {
         <DataTable
           columns={columns}
           data={data} // Now explicitly data is StockReportItem[]
+          sorting={sorting}
+          onSortingChange={setSorting}
           searchPlaceholder="Search products..."
           defaultPageSize={15}
           showToolbar={true}

@@ -81,6 +81,15 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
     }, [activeTab]);
 
     useEffect(() => {
+      if (units.length > 0 && currentItem.unitId === 0) {
+        const defaultId = getDefaultUnitId(activeTab);
+        if (defaultId) {
+          setCurrentItem(prev => ({ ...prev, unitId: defaultId }));
+        }
+      }
+    }, [units, activeTab]);
+
+    useEffect(() => {
       if (initialData && initialData.length > 0) {
         const firstItem = initialData[0];
 
@@ -148,11 +157,16 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
       }
     };
 
+    const getDefaultUnitId = (type: 'RM' | 'PM') => {
+      const targetName = type === 'RM' ? 'KG' : 'NO';
+      return units.find(u => u.UnitName === targetName)?.UnitID || 0;
+    };
+
     const resetCurrentItem = () => {
       setCurrentItem({
         productId: 0,
         quantity: '',
-        unitId: activeTab === 'RM' ? 1 : 7, // KG for RM, NOS for PM
+        unitId: getDefaultUnitId(activeTab),
         unitPrice: '',
         totalPrice: 0,
       });
@@ -168,7 +182,7 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
       setCurrentItem({
         productId: 0,
         quantity: '',
-        unitId: tab === 'RM' ? 1 : 7, // KG for RM, NOS for PM
+        unitId: getDefaultUnitId(tab),
         unitPrice: '',
         totalPrice: 0,
       });
@@ -242,7 +256,7 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
 
         const finalUnitId =
           currentItem.unitId ||
-          products.find(p => p.masterProductId === currentItem.productId)?.unitId;
+          products.find(p => p.masterProductId === currentItem.productId)?.unitId || getDefaultUnitId(activeTab);
 
         if (!finalUnitId) {
           alert('Please select a unit');
@@ -439,13 +453,12 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
               type="button"
               onClick={() => handleTabChange('RM')}
               disabled={(!!initialData || items.length > 0) && activeTab !== 'RM'}
-              className={`flex-1 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${
-                activeTab === 'RM'
-                  ? 'bg-[var(--primary-light)] text-[var(--primary)] shadow-sm ring-1 ring-[var(--primary-light)]'
-                  : !!initialData || items.length > 0
-                    ? 'text-[var(--text-disabled)] cursor-not-allowed opacity-50'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
-              }`}
+              className={`flex-1 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${activeTab === 'RM'
+                ? 'bg-[var(--primary-light)] text-[var(--primary)] shadow-sm ring-1 ring-[var(--primary-light)]'
+                : !!initialData || items.length > 0
+                  ? 'text-[var(--text-disabled)] cursor-not-allowed opacity-50'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+                }`}
               title={
                 (!!initialData || items.length > 0) && activeTab !== 'RM'
                   ? 'Cannot change product type after adding products'
@@ -458,13 +471,12 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
               type="button"
               onClick={() => handleTabChange('PM')}
               disabled={(!!initialData || items.length > 0) && activeTab !== 'PM'}
-              className={`flex-1 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${
-                activeTab === 'PM'
-                  ? 'bg-[var(--primary-light)] text-[var(--primary)] shadow-sm ring-1 ring-[var(--primary-light)]'
-                  : !!initialData || items.length > 0
-                    ? 'text-[var(--text-disabled)] cursor-not-allowed opacity-50'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
-              }`}
+              className={`flex-1 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${activeTab === 'PM'
+                ? 'bg-[var(--primary-light)] text-[var(--primary)] shadow-sm ring-1 ring-[var(--primary-light)]'
+                : !!initialData || items.length > 0
+                  ? 'text-[var(--text-disabled)] cursor-not-allowed opacity-50'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+                }`}
               title={
                 (!!initialData || items.length > 0) && activeTab !== 'PM'
                   ? 'Cannot change product type after adding products'
@@ -682,11 +694,10 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
                   {items.map((item, idx) => (
                     <tr
                       key={idx}
-                      className={`transition-colors duration-150 ${
-                        editingItemIndex === idx
-                          ? 'bg-[var(--primary-light)] border-l-4 border-l-[var(--primary)]'
-                          : 'hover:bg-[var(--surface-hover)]'
-                      }`}
+                      className={`transition-colors duration-150 ${editingItemIndex === idx
+                        ? 'bg-[var(--primary-light)] border-l-4 border-l-[var(--primary)]'
+                        : 'hover:bg-[var(--surface-hover)]'
+                        }`}
                     >
                       <td className="px-4 py-3 text-[var(--text-primary)] font-medium whitespace-nowrap">
                         {getProductName(item.masterProductId)}

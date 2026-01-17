@@ -60,6 +60,8 @@ export interface Customer {
   GSTNumber?: string;
   Pincode?: string;
   IsActive: boolean;
+  OpeningBalance?: number;
+  currentBalance?: number;
   SalesPersonID?: number;
   SalesPersonName?: string;
   CustomerTypeID?: number;

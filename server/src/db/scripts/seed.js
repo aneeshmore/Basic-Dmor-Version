@@ -123,7 +123,7 @@ async function seedDatabase() {
         { unitName: 'BOXES' },
         { unitName: 'BAGS' },
         { unitName: 'MTR' },
-        { unitName: 'NOS' },
+        { unitName: 'NO' },
         { unitName: 'DRUM' },
       ])
       .returning();

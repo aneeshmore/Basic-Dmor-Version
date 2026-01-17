@@ -207,6 +207,11 @@ const LockUserPage = lazy(() => import('@/features/settings/pages/LockUserPage')
 const ResetPasswordPage = lazy(() => import('@/features/settings/pages/ResetPasswordPage'));
 const CustomerTransferPage = lazy(() => import('@/features/settings/pages/CustomerTransferPage'));
 
+// Payments
+const PaymentEntry = lazy(() => import('@/features/operations/pages/PaymentEntry'));
+
+const PaymentReport = lazy(() => import('@/features/reports/pages/PaymentReport'));
+
 // ============================================
 // ROUTE REGISTRY
 // ============================================
@@ -220,7 +225,6 @@ export const routeRegistry: RouteNode[] = [
     icon: LayoutDashboard,
     component: Dashboard,
     group: 'Main',
-    permission: { module: 'admin-dashboard' },
     apis: [{ route: '/dashboard/stats', method: 'GET', label: 'Load Dashboard Stats' }],
   },
   {
@@ -448,7 +452,7 @@ export const routeRegistry: RouteNode[] = [
         label: 'Quotation Maker',
         icon: FileText,
         component: QuotationMaker,
-        showInSidebar: false,
+        // showInSidebar: true, // Default is true
         permission: { module: 'quotation-maker' },
         apis: [
           { route: '/masters/customers', method: 'GET', label: 'Load Customers' },
@@ -468,6 +472,7 @@ export const routeRegistry: RouteNode[] = [
     component: OperationsDashboard,
     group: 'Main',
     children: [
+
       {
         id: 'create-order',
         path: '/operations/create-order',
@@ -537,6 +542,19 @@ export const routeRegistry: RouteNode[] = [
           { route: '/admin-accounts/:id/reject', method: 'PUT', label: 'Reject Order' },
           { route: '/admin-accounts/:id/bill-no', method: 'PUT', label: 'Update Bill No' },
           { route: '/admin-accounts/:id/resume', method: 'PUT', label: 'Resume Order' },
+        ],
+      },
+      {
+        id: 'payment-entry',
+        path: '/operations/payment-entry',
+        label: 'Payment Entry',
+        icon: DollarSign,
+        component: PaymentEntry,
+        permission: { module: 'payments' },
+        apis: [
+          { route: '/payments', method: 'POST', label: 'Create Payment' },
+          { route: '/payments', method: 'GET', label: 'View Payments' },
+          { route: '/masters/customers', method: 'GET', label: 'Load Customers' },
         ],
       },
       {
@@ -779,6 +797,18 @@ export const routeRegistry: RouteNode[] = [
         component: BatchProductionReport,
         permission: { module: 'report-batch' },
         apis: [{ route: '/reports/batch-production', method: 'GET', label: 'View Batch Report' }],
+      },
+      {
+        id: 'payment-report',
+        path: '/reports/payments',
+        label: 'Payment Report',
+        icon: DollarSign,
+        component: PaymentReport,
+        permission: { module: 'payments' },
+        apis: [
+          { route: '/reports/payments', method: 'GET', label: 'View Payment Report' },
+          { route: '/masters/customers', method: 'GET', label: 'Load Customers' },
+        ],
       },
       {
         id: 'material-inward-report',
