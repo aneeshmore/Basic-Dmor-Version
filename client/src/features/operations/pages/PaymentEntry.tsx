@@ -75,7 +75,11 @@ export default function PaymentEntry() {
     const fetchBalance = async (id: number) => {
         try {
             const res = await paymentApi.getBalance(id);
-            setCurrentBalance(Number(res.data.balance));
+            // API returns { success: true, data: { balance: ... } }
+            // Axios response is res, body is res.data
+            // So we need res.data.data.balance
+            const balanceData = res.data?.data?.balance ?? res.data?.balance ?? 0;
+            setCurrentBalance(Number(balanceData));
         } catch (error) {
             console.error('Failed to load balance', error);
         }
@@ -85,10 +89,9 @@ export default function PaymentEntry() {
         try {
             const res = await paymentApi.getLedger(id);
             if (res.data && res.data.data) {
-                // Filter for PAYMENTS and take top 5
+                // Show all recent transactions
                 const payments = res.data.data
-                    .filter((t: any) => t.type === 'PAYMENT')
-                    .slice(0, 5);
+                    .slice(0, 10); // Show top 10 recent
                 setRecentPayments(payments);
             }
         } catch (error) {
@@ -200,7 +203,7 @@ export default function PaymentEntry() {
 
                 <div className="bg-[var(--surface)] rounded-lg shadow-md border border-[var(--border)] overflow-hidden">
                     <div className="p-4 border-b border-[var(--border)] bg-[var(--surface-highlight)]/30">
-                        <h3 className="font-semibold text-[var(--text-primary)]">Recent Payments</h3>
+                        <h3 className="font-semibold text-[var(--text-primary)]">Recent Transactions</h3>
                     </div>
 
                     {selectedCustomerId ? (
@@ -211,29 +214,34 @@ export default function PaymentEntry() {
                                     <p>No payment history found</p>
                                 </div>
                             ) : (
-                                recentPayments.map((payment, index) => (
-                                    <div key={index} className="p-4 hover:bg-[var(--surface-highlight)]/20 transition-colors">
-                                        <div className="flex justify-between items-start mb-1">
-                                            <span className="font-medium text-[var(--text-primary)]">
-                                                Rs. {Number(payment.credit).toFixed(2)}
-                                            </span>
-                                            <span className="text-xs text-[var(--text-secondary)]">
-                                                {new Date(payment.transactionDate).toLocaleDateString()}
-                                            </span>
+                                recentPayments.map((payment, index) => {
+                                    const isCredit = payment.type === 'PAYMENT';
+                                    const amount = isCredit ? payment.credit : payment.debit;
+
+                                    return (
+                                        <div key={index} className="p-4 hover:bg-[var(--surface-highlight)]/20 transition-colors">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className={`font-medium ${isCredit ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {isCredit ? '-' : '+'} Rs. {Number(amount).toFixed(2)}
+                                                </span>
+                                                <span className="text-xs text-[var(--text-secondary)]">
+                                                    {new Date(payment.transactionDate).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-[var(--text-secondary)]">
+                                                {payment.description}
+                                            </p>
+                                            <div className="flex justify-between items-center mt-2">
+                                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isCredit ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                    {payment.type}
+                                                </span>
+                                                <span className="text-xs text-[var(--text-secondary)]">
+                                                    Bal: {Number(payment.balance).toFixed(2)}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <p className="text-sm text-[var(--text-secondary)]">
-                                            {payment.description}
-                                        </p>
-                                        <div className="flex justify-between items-center mt-2">
-                                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-                                                {payment.type}
-                                            </span>
-                                            <span className="text-xs text-[var(--text-secondary)]">
-                                                Bal: {Number(payment.balance).toFixed(2)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                             )}
                         </div>
                     ) : (
