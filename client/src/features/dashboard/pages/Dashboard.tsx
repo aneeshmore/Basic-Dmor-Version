@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -8,6 +9,10 @@ import {
   BarChart3,
   ShoppingCart,
   UserPlus,
+  PlusCircle,
+  FileText,
+  Download,
+  CheckCircle,
 } from 'lucide-react';
 import { productionManagerApi } from '@/features/production-manager/api/productionManagerApi';
 import { reportsApi } from '@/features/reports/api/reportsApi';
@@ -18,15 +23,30 @@ import { AlertsTicker } from '@/features/notifications/components/AlertsTicker';
 
 import { useAuth } from '@/contexts/AuthContext';
 
+// Define Card Interface
+interface DashboardCard {
+  title: string;
+  icon: any;
+  count: number | string;
+  path: string;
+  color: string;
+  bg: string;
+  description?: string;
+  permission?: { module: string; action: string };
+}
+
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const [activeProductionCount, setActiveProductionCount] = useState<number>(0);
   const [lowStockCount, setLowStockCount] = useState<number>(0);
   const [employeeCount, setEmployeeCount] = useState<number>(0);
   const [customerCount, setCustomerCount] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(0);
 
+  // Fallback / Admin Dashboard Logic (Data Fetching)
+  // We can fetch this for everyone for now, OR conditionally fetch based on role if optimization is needed.
+  // Keeping it as is for simplicity, maybe wrap in permission checks which it already is.
   useEffect(() => {
     const fetchData = async () => {
       // Production Data
@@ -95,91 +115,216 @@ export const Dashboard: React.FC = () => {
     fetchData();
   }, [hasPermission]);
 
-  const cards = [
-    {
-      title: 'Create Order',
-      icon: ShoppingCart,
-      count: 'New',
-      path: '/operations/create-order',
-      color: 'text-green-500',
-      bg: 'bg-green-500/10',
-      permission: { module: 'create-order', action: 'create' },
-    },
-    {
-      title: 'Employees',
-      icon: Users,
-      count: employeeCount,
-      path: '/masters/employees',
-      color: 'text-emerald-500',
-      bg: 'bg-emerald-500/10',
-      permission: { module: 'employees', action: 'view' },
-    },
-    {
-      title: 'Customers',
-      icon: UserPlus,
-      count: customerCount,
-      path: '/masters/customers',
-      color: 'text-cyan-500',
-      bg: 'bg-cyan-500/10',
-      permission: { module: 'Add New Customer', action: 'view' },
-    },
-    {
-      title: 'Products',
-      icon: Package,
-      count: productCount,
-      path: '/masters/product-sub-master',
-      color: 'text-violet-500',
-      bg: 'bg-violet-500/10',
-      permission: { module: 'products', action: 'view' },
-    },
-    {
-      title: 'Production',
-      icon: Factory,
-      count: `${activeProductionCount} Active`,
-      path: '/operations/pm-dashboard',
-      color: 'text-orange-500',
-      bg: 'bg-orange-500/10',
-      permission: { module: 'pm-orders', action: 'view' },
-    },
-    {
-      title: 'Stock Report',
-      icon: ClipboardList,
-      count: `Low Stock: ${lowStockCount}`,
-      path: '/reports/low-stock',
-      color: 'text-rose-500',
-      bg: 'bg-rose-500/10',
-      permission: { module: 'report-stock', action: 'view' },
-    },
-    {
-      title: 'Reports',
-      icon: BarChart3,
-      count: 'View All',
-      path: '/reports',
-      color: 'text-amber-500',
-      bg: 'bg-amber-500/10',
-      permission: { module: 'reports', action: 'view' },
-    },
-  ];
+  // Define Cards for different Roles
+  const getCards = (): DashboardCard[] => {
+    const role = user?.Role?.toLowerCase() || '';
 
-  // Filter cards based on permissions
-  const visibleCards = cards.filter(
-    card => !card.permission || hasPermission(card.permission.module, card.permission.action as any)
-  );
+    // --- SALES DASHBOARD ---
+    if (role.includes('sales')) {
+      return [
+        {
+          title: 'Add New Customer',
+          icon: UserPlus,
+          count: 'New',
+          description: 'Register a new customer',
+          path: '/masters/customers',
+          color: 'text-cyan-500',
+          bg: 'bg-cyan-500/10',
+        },
+        {
+          title: 'Create & Manage Orders/Quotations',
+          icon: PlusCircle,
+          count: 'Create',
+          description: 'Create and manage orders/quotations',
+          path: '/operations/create-order',
+          color: 'text-green-500',
+          bg: 'bg-green-500/10',
+        },
+        {
+          title: 'Quotation Requests',
+          icon: ClipboardList,
+          count: 'View',
+          description: 'View and manage quotation requests',
+          path: '/operations/quotation-requests',
+          color: 'text-amber-500',
+          bg: 'bg-amber-500/10',
+        },
+      ];
+    }
+
+    // --- PRODUCTION DASHBOARD ---
+    if (role.includes('production') || role.includes('factory')) {
+      return [
+        {
+          title: 'Batch Report',
+          icon: BarChart3,
+          count: 'View',
+          description: 'View batch production reports',
+          path: '/reports/batch-production',
+          color: 'text-blue-500',
+          bg: 'bg-blue-500/10',
+        },
+        {
+          title: 'Material Inward',
+          icon: Download,
+          count: 'Inward',
+          description: 'Manage material inward records',
+          path: '/operations/pm-inward',
+          color: 'text-orange-500',
+          bg: 'bg-orange-500/10',
+        },
+        {
+          title: 'Create & Manage Batch',
+          icon: ShoppingCart,
+          count: 'Orders',
+          description: 'Create and view batches',
+          path: '/operations/create-batch',
+          color: 'text-green-500',
+          bg: 'bg-green-500/10',
+        },
+      ];
+    }
+
+    // --- ACCOUNTS DASHBOARD ---
+    if (role.includes('account')) {
+      return [
+        {
+          title: 'Order Approval',
+          icon: CheckCircle,
+          count: 'Approve',
+          description: 'Approve pending orders',
+          path: '/operations/admin-accounts',
+          color: 'text-rose-500',
+          bg: 'bg-rose-500/10',
+        },
+        {
+          title: 'Create & Manage Orders/Quotations',
+          icon: ShoppingCart,
+          count: 'Orders',
+          description: 'Create and view orders/quotations',
+          path: '/operations/create-order',
+          color: 'text-green-500',
+          bg: 'bg-green-500/10',
+        },
+        {
+          title: 'Quotation Requests',
+          icon: ClipboardList,
+          count: 'Requests',
+          description: 'Manage quotation requests',
+          path: '/operations/quotation-requests',
+          color: 'text-amber-500',
+          bg: 'bg-amber-500/10',
+        },
+      ];
+    }
+
+    // --- DEFAULT / ADMIN DASHBOARD ---
+    // Keep existing admin keys and filter by permission
+    const defaultCards = [
+      {
+        title: 'Create Order',
+        icon: ShoppingCart,
+        count: 'New',
+        path: '/operations/create-order',
+        color: 'text-green-500',
+        bg: 'bg-green-500/10',
+        permission: { module: 'create-order', action: 'create' },
+      },
+      {
+        title: 'Employees',
+        icon: Users,
+        count: employeeCount,
+        path: '/masters/employees',
+        color: 'text-emerald-500',
+        bg: 'bg-emerald-500/10',
+        permission: { module: 'employees', action: 'view' },
+      },
+      {
+        title: 'Customers',
+        icon: UserPlus,
+        count: customerCount,
+        path: '/masters/customers',
+        color: 'text-cyan-500',
+        bg: 'bg-cyan-500/10',
+        permission: { module: 'Add New Customer', action: 'view' },
+      },
+      {
+        title: 'Products',
+        icon: Package,
+        count: productCount,
+        path: '/masters/product-sub-master',
+        color: 'text-violet-500',
+        bg: 'bg-violet-500/10',
+        permission: { module: 'products', action: 'view' },
+      },
+      {
+        title: 'Production',
+        icon: Factory,
+        count: `${activeProductionCount} Active`,
+        path: '/operations/pm-dashboard',
+        color: 'text-orange-500',
+        bg: 'bg-orange-500/10',
+        permission: { module: 'pm-orders', action: 'view' },
+      },
+      {
+        title: 'Stock Report',
+        icon: ClipboardList,
+        count: `Low Stock: ${lowStockCount}`,
+        path: '/reports/low-stock',
+        color: 'text-rose-500',
+        bg: 'bg-rose-500/10',
+        permission: { module: 'report-stock', action: 'view' },
+      },
+      {
+        title: 'Reports',
+        icon: BarChart3,
+        count: 'View All',
+        path: '/reports',
+        color: 'text-amber-500',
+        bg: 'bg-amber-500/10',
+        permission: { module: 'reports', action: 'view' },
+      },
+    ];
+
+    // Filter default cards based on permissions
+    return defaultCards.filter(
+      card => !card.permission || hasPermission(card.permission.module, card.permission.action as any)
+    );
+  };
+
+  const visibleCards = getCards();
+
+  // Dynamic Header Text based on Role
+  const getHeaderText = () => {
+    const role = user?.Role?.toLowerCase() || '';
+    if (role.includes('sales')) return 'Sales Dashboard';
+    if (role.includes('production') || role.includes('factory')) return 'Production Dashboard';
+    if (role.includes('account')) return 'Accounts Dashboard';
+    return 'Welcome to Morex Technologies';
+  };
+
+  const getSubHeaderText = () => {
+    const role = user?.Role?.toLowerCase() || '';
+    if (role.includes('sales')) return 'Manage your sales, orders, and customers';
+    if (role.includes('production') || role.includes('factory')) return 'Manage production, reports, and batches';
+    if (role.includes('account')) return 'Manage approvals, orders, and quotations';
+    return 'Enterprise Resource Planning System';
+  };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold text-[var(--text-primary)]">
-          Welcome to Morex Technologies
+          {getHeaderText()}
         </h1>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-          Enterprise Resource Planning System
+          {getSubHeaderText()}
         </p>
       </div>
 
       <AlertsTicker />
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {visibleCards.map(card => {
           const Icon = card.icon;
           return (
@@ -196,11 +341,16 @@ export const Dashboard: React.FC = () => {
                   <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1">
                     {card.title}
                   </h3>
-                  <p className="text-2xl font-bold text-[var(--text-primary)]">{card.count}</p>
+                  {/* Conditionally render description if available, otherwise existing count logic */}
+                  {card.description ? (
+                    <p className="text-sm text-[var(--text-secondary)]">{card.description}</p>
+                  ) : (
+                    <p className="text-2xl font-bold text-[var(--text-primary)]">{card.count}</p>
+                  )}
                 </div>
               </div>
               <div className="mt-4 flex items-center text-sm font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]">
-                View details
+                {card.description ? 'Access' : 'View details'}
                 <svg
                   className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1"
                   fill="none"

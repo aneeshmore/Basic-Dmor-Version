@@ -491,7 +491,7 @@ export class ReportsService {
         .select({
           inwardId: materialInward.inwardId,
           inwardDate: materialInward.inwardDate,
-          productName: masterProducts.masterProductName,
+          productName: sql`COALESCE(${products.productName}, ${masterProducts.masterProductName})`,
           supplierName: suppliers.supplierName,
           billNo: materialInward.billNo,
           quantity: materialInward.quantity,
@@ -505,6 +505,7 @@ export class ReportsService {
           masterProducts,
           eq(materialInward.masterProductId, masterProducts.masterProductId)
         )
+        .leftJoin(products, eq(materialInward.productId, products.productId))
         .leftJoin(suppliers, eq(materialInward.supplierId, suppliers.supplierId))
         .where(and(...conditions))
         .orderBy(desc(materialInward.inwardDate));

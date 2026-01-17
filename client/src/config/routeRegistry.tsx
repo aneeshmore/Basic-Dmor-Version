@@ -221,7 +221,7 @@ export const routeRegistry: RouteNode[] = [
   {
     id: 'admin-dashboard',
     path: '/dashboard/admin',
-    label: 'Admin Dashboard',
+    label: 'Dashboard',
     icon: LayoutDashboard,
     component: Dashboard,
     group: 'Main',

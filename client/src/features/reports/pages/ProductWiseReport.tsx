@@ -248,7 +248,8 @@ const ProductWiseReport = () => {
                 {row.original.productName || row.original.masterProductName}
               </span>
               {row.original.masterProductName &&
-                row.original.productName !== row.original.masterProductName && (
+                row.original.productName !== row.original.masterProductName &&
+                row.original.productType !== 'FG' && (
                   <span className="text-xs text-[var(--text-tertiary)]">
                     {row.original.masterProductName}
                   </span>
@@ -312,15 +313,14 @@ const ProductWiseReport = () => {
   // Prepare chart data
   const chartData = useMemo(() => {
     // Get top 10 products by name
-    const topProducts = Array.from(
-      new Set(data.filter(i => i.productName || i.masterProductName).map(i => i.productName || i.masterProductName))
-    ).slice(0, 10);
+    // Get top 10 products by available stock
+    const sortedData = [...data]
+      .filter(i => i.productName || i.masterProductName)
+      .sort((a, b) => b.availableQuantity - a.availableQuantity)
+      .slice(0, 10);
 
-    const chartLabels = topProducts as string[];
-    const chartValues = chartLabels.map(p => {
-      const item = data.find(i => (i.productName || i.masterProductName) === p);
-      return item ? item.availableQuantity : 0;
-    });
+    const chartLabels = sortedData.map(i => i.productName || i.masterProductName || 'Unknown');
+    const chartValues = sortedData.map(i => i.availableQuantity);
 
     return {
       labels: chartLabels,

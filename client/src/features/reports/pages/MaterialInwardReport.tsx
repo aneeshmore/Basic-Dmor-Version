@@ -268,7 +268,17 @@ const MaterialInwardReport = () => {
   const chartData = useMemo(() => {
     if (filteredData.length === 0) return null;
 
-    if (filteredData.length === 0) return null;
+    // Helper to process Top N and Others
+    const processTopN = (map: Map<string, number>, topN: number = 10) => {
+      const sorted = Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+
+      if (sorted.length <= topN) return sorted;
+
+      const top = sorted.slice(0, topN);
+      const others = sorted.slice(topN).reduce((sum, item) => sum + item[1], 0);
+
+      return [...top, ['Others', others] as [string, number]];
+    };
 
     // Quantity Distribution by Product
     const quantityMap = new Map<string, number>();
@@ -277,8 +287,7 @@ const MaterialInwardReport = () => {
       quantityMap.set(item.productName, (quantityMap.get(item.productName) || 0) + qty);
     });
 
-    const topQuantityProducts = Array.from(quantityMap.entries()).sort((a, b) => b[1] - a[1]);
-
+    const topQuantityProducts = processTopN(quantityMap);
     const quantityColors = generateColors(topQuantityProducts.length);
 
     // Cost Distribution by Product
@@ -288,8 +297,7 @@ const MaterialInwardReport = () => {
       costMap.set(item.productName, (costMap.get(item.productName) || 0) + cost);
     });
 
-    const topCostProducts = Array.from(costMap.entries()).sort((a, b) => b[1] - a[1]);
-
+    const topCostProducts = processTopN(costMap);
     const costColors = generateColors(topCostProducts.length);
 
     // Inward Transactions Timeline - Dual Axis with detailed data
@@ -298,7 +306,8 @@ const MaterialInwardReport = () => {
       { quantity: number; cost: number; items: MaterialInwardReportItem[] }
     >();
     filteredData.forEach(item => {
-      const date = new Date(item.inwardDate).toLocaleDateString();
+      // Use YYYY-MM-DD for reliable sorting and grouping
+      const date = new Date(item.inwardDate).toISOString().split('T')[0];
       const existing = dateMap.get(date) || { quantity: 0, cost: 0, items: [] };
       dateMap.set(date, {
         quantity: existing.quantity + Number(item.quantity || 0),
@@ -388,14 +397,15 @@ const MaterialInwardReport = () => {
         callbacks: {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           title: (context: any) => {
-            return `Date: ${context[0].label}`;
+            // context[0].label is the ISO Date string (e.g. 2026-01-17)
+            return new Date(context[0].label).toLocaleDateString();
           },
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           afterBody: (context: any) => {
             if (!chartData?.timelineDetails) return [];
 
-            const date = context[0].label;
-            const details = chartData.timelineDetails.get(date);
+            const dateKey = context[0].label; // ISO Key
+            const details = chartData.timelineDetails.get(dateKey);
 
             if (!details || !details.items.length) return [];
 
@@ -427,6 +437,16 @@ const MaterialInwardReport = () => {
       },
     },
     scales: {
+      x: {
+        ticks: {
+          // Format X-axis labels to be readable
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          callback: function (this: any, value: any) {
+            const label = this.getLabelForValue(value);
+            return new Date(label).toLocaleDateString();
+          }
+        }
+      },
       y: {
         type: 'linear' as const,
         display: true,
@@ -475,13 +495,12 @@ const MaterialInwardReport = () => {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
         cell: ({ row }) => (
           <Badge
-            className={`${
-              row.original.productType === 'FG'
-                ? 'bg-green-500 hover:bg-green-600 text-white'
-                : row.original.productType === 'RM'
-                  ? 'bg-blue-500 hover:bg-blue-600 text-white'
-                  : 'bg-yellow-500 hover:bg-yellow-600 text-white'
-            }`}
+            className={`${row.original.productType === 'FG'
+              ? 'bg-green-500 hover:bg-green-600 text-white'
+              : row.original.productType === 'RM'
+                ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                : 'bg-yellow-500 hover:bg-yellow-600 text-white'
+              }`}
           >
             {row.original.productType || '-'}
           </Badge>
@@ -595,11 +614,10 @@ const MaterialInwardReport = () => {
                   size="sm"
                   variant={productTypeFilter === type ? 'primary' : 'secondary'}
                   onClick={() => setProductTypeFilter(type)}
-                  className={`min-w-[4rem] px-4 transition-all duration-200 ${
-                    productTypeFilter === type
-                      ? 'bg-slate-800 text-white hover:bg-slate-900 border-none shadow-md'
-                      : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-                  }`}
+                  className={`min-w-[4rem] px-4 transition-all duration-200 ${productTypeFilter === type
+                    ? 'bg-slate-800 text-white hover:bg-slate-900 border-none shadow-md'
+                    : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                    }`}
                 >
                   {type}
                 </Button>
