@@ -102,7 +102,7 @@ export default function PaymentEntry() {
     const onSubmit = async (data: FormData) => {
         setIsLoading(true);
         try {
-            await paymentApi.createPayment({
+            await paymentApi.create({
                 ...data,
                 amount: Number(data.amount),
                 customerId: Number(data.customerId), // Note: backend expects camelCase 'customerId'
