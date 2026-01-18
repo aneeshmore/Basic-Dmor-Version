@@ -11,7 +11,8 @@ export interface PaymentInput {
 }
 
 export const paymentApi = {
-    createPayment: (data: PaymentInput) => apiClient.post('/payments', data),
+    create: (data: any) => apiClient.post('/payments', data),
+    update: (id: number, data: any) => apiClient.put(`/payments/${id}`, data),
     getLedger: (customerId: number) => apiClient.get(`/payments/ledger/${customerId}`),
     getBalance: (customerId: number) => apiClient.get(`/payments/balance/${customerId}`),
     getReport: (params: any) => apiClient.get('/payments/reports/payments', { params }),

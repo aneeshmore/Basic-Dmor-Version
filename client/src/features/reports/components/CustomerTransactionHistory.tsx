@@ -2,8 +2,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table';
-import { Button, Input } from '@/components/ui';
-import { FileDown, Search } from 'lucide-react';
+import { Button, Input, Modal, Select } from '@/components/ui';
+import { FileDown, Pencil } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { paymentApi } from '@/features/operations/api/paymentApi';
@@ -23,6 +23,7 @@ interface LedgerItem {
     debit: string;
     credit: string;
     balance: string;
+    referenceId: number; // Needed for update
     referenceNo?: string;
     paymentMode?: string;
 }
@@ -36,35 +37,78 @@ const CustomerTransactionHistory: React.FC<CustomerTransactionHistoryProps> = ({
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
 
-    useEffect(() => {
-        const fetchHistory = async () => {
-            try {
-                setIsLoading(true);
-                const res = await paymentApi.getLedger(customerId);
-                // Axios returns data in res.data. If backend sends { success: true, data: [...] }, we need res.data.data
-                let ledgerData: LedgerItem[] = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+    // Edit State
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<LedgerItem | null>(null);
+    const [editAmount, setEditAmount] = useState('');
+    const [editPaymentMode, setEditPaymentMode] = useState('');
+    const [isUpdating, setIsUpdating] = useState(false);
 
-                // Client-side date filtering (since getLedger API currently returns all or we might update it later)
-                // If API supports filtering, pass params there. For now assuming client-side or all data.
-                if (fromDate) {
-                    ledgerData = ledgerData.filter(item => new Date(item.transactionDate) >= new Date(fromDate));
-                }
-                if (toDate) {
-                    ledgerData = ledgerData.filter(item => new Date(item.transactionDate) <= new Date(toDate));
-                }
+    const fetchHistory = async () => {
+        try {
+            setIsLoading(true);
+            const res = await paymentApi.getLedger(customerId);
+            let ledgerData: LedgerItem[] = Array.isArray(res.data) ? res.data : (res.data?.data || []);
 
-                setData(ledgerData);
-            } catch (error) {
-                console.error('Error fetching customer ledger:', error);
-            } finally {
-                setIsLoading(false);
+            if (fromDate) {
+                ledgerData = ledgerData.filter(item => new Date(item.transactionDate) >= new Date(fromDate));
             }
-        };
+            if (toDate) {
+                ledgerData = ledgerData.filter(item => new Date(item.transactionDate) <= new Date(toDate));
+            }
 
+            setData(ledgerData);
+        } catch (error) {
+            console.error('Error fetching customer ledger:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
         if (customerId) {
             fetchHistory();
         }
     }, [customerId, fromDate, toDate]);
+
+    const handleEditClick = (item: LedgerItem) => {
+        setEditingItem(item);
+        setEditAmount(item.credit || '');
+        // Extract payment mode from description if possible, or assume 'CASH' if not found/available
+        const modeMatch = item.description.match(/\((.*?)\)/);
+        setEditPaymentMode(modeMatch ? modeMatch[1] : 'CASH');
+        setIsEditModalOpen(true);
+    };
+
+    const handleUpdatePayment = async () => {
+        if (!editingItem) return;
+
+        try {
+            setIsUpdating(true);
+            // Construct payload - keeping date same for simplicity or add date picker if needed
+            const payload = {
+                customerId,
+                amount: parseFloat(editAmount),
+                paymentMode: editPaymentMode,
+                // paymentDate: editingItem.transactionDate // Optional: Allow date edit? Plan said amount/mode.
+            };
+
+            const res = await paymentApi.update(editingItem.referenceId, payload);
+            if (res.data && res.data.success) {
+                showToast.success('Payment updated successfully');
+                setIsEditModalOpen(false);
+                fetchHistory(); // Refresh list
+                window.location.reload(); // Hard reload to refresh parent balance - easier than lifting state up right now
+            } else {
+                showToast.error('Failed to update payment');
+            }
+        } catch (error) {
+            console.error('Update failed', error);
+            showToast.error('Failed to update payment');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
 
     const handleExportPdf = () => {
         if (data.length === 0) {
@@ -162,6 +206,26 @@ const CustomerTransactionHistory: React.FC<CustomerTransactionHistoryProps> = ({
                     </div>
                 ),
             },
+            {
+                id: 'actions',
+                cell: ({ row }) => {
+                    const item = row.original;
+                    // Only allow editing payments for now
+                    if (item.type === 'PAYMENT' && item.referenceId) {
+                        return (
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEditClick(item)}
+                                title="Edit Payment"
+                            >
+                                <Pencil size={14} className="text-gray-500 hover:text-blue-600" />
+                            </Button>
+                        );
+                    }
+                    return null;
+                },
+            },
         ],
         []
     );
@@ -175,55 +239,95 @@ const CustomerTransactionHistory: React.FC<CustomerTransactionHistoryProps> = ({
     }
 
     return (
-        <div className="rounded-md border border-gray-200 bg-gray-50 p-4 m-2 shadow-inner animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center mb-4">
-                <h4 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                    Transaction History - {customerName}
-                </h4>
+        <>
+            <div className="rounded-md border border-gray-200 bg-gray-50 p-4 m-2 shadow-inner animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                        Transaction History - {customerName}
+                    </h4>
+                </div>
+
+                <div className="rounded-md border border-gray-200 bg-white">
+                    <DataTable
+                        columns={columns}
+                        data={data}
+                        showToolbar={true}
+                        showPagination={true}
+                        defaultPageSize={10}
+                        searchPlaceholder="Search ledger..."
+                        initialSorting={[{ id: 'transactionDate', desc: true }]}
+                        toolbarActions={
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    type="date"
+                                    value={fromDate}
+                                    onChange={e => setFromDate(e.target.value)}
+                                    inputSize="sm"
+                                    className="w-[130px]"
+                                    placeholder="From Date"
+                                />
+                                <Input
+                                    type="date"
+                                    value={toDate}
+                                    onChange={e => setToDate(e.target.value)}
+                                    inputSize="sm"
+                                    className="w-[130px]"
+                                    placeholder="To Date"
+                                />
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={handleExportPdf}
+                                    leftIcon={<FileDown size={14} />}
+                                    title="Download Ledger PDF"
+                                >
+                                    Export
+                                </Button>
+                            </div>
+                        }
+                    />
+                </div>
             </div>
 
-            <div className="rounded-md border border-gray-200 bg-white">
-                <DataTable
-                    columns={columns}
-                    data={data}
-                    showToolbar={true}
-                    showPagination={true}
-                    defaultPageSize={10}
-                    searchPlaceholder="Search ledger..."
-                    initialSorting={[{ id: 'transactionDate', desc: true }]}
-                    toolbarActions={
-                        <div className="flex items-center gap-2">
-                            <Input
-                                type="date"
-                                value={fromDate}
-                                onChange={e => setFromDate(e.target.value)}
-                                inputSize="sm"
-                                className="w-[130px]"
-                                placeholder="From Date"
-                            />
-                            <Input
-                                type="date"
-                                value={toDate}
-                                onChange={e => setToDate(e.target.value)}
-                                inputSize="sm"
-                                className="w-[130px]"
-                                placeholder="To Date"
-                            />
-                            <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={handleExportPdf}
-                                leftIcon={<FileDown size={14} />}
-                                title="Download Ledger PDF"
-                            >
-                                Export
-                            </Button>
-                        </div>
-                    }
-                />
-            </div>
-        </div>
+            <Modal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                title="Edit Payment"
+            >
+                <div className="space-y-4">
+                    <Input
+                        label="Amount"
+                        type="number"
+                        value={editAmount}
+                        onChange={e => setEditAmount(e.target.value)}
+                    />
+                    <Select
+                        label="Payment Mode"
+                        value={editPaymentMode}
+                        onChange={e => setEditPaymentMode(e.target.value)}
+                        options={[
+                            { label: 'Cash', value: 'CASH' },
+                            { label: 'UPI', value: 'UPI' },
+                            { label: 'Bank Transfer', value: 'BANK' },
+                            { label: 'Cheque', value: 'CHEQUE' },
+                        ]}
+                    />
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="primary"
+                            onClick={handleUpdatePayment}
+                            isLoading={isUpdating}
+                        >
+                            Update
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+        </>
     );
 };
 

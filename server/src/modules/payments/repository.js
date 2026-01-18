@@ -82,4 +82,65 @@ export class PaymentRepository {
 
         return await query;
     }
+    async getPaymentById(paymentId) {
+        const [payment] = await db
+            .select()
+            .from(payments)
+            .where(eq(payments.paymentId, paymentId));
+        return payment;
+    }
+
+    async updatePayment(paymentId, paymentData, transaction) {
+        const tx = transaction || db;
+        const [updatedPayment] = await tx
+            .update(payments)
+            .set({ ...paymentData, updatedAt: new Date() })
+            .where(eq(payments.paymentId, paymentId))
+            .returning();
+        return updatedPayment;
+    }
+
+    async updateTransaction(referenceId, referenceType, transactionData, transaction) {
+        const tx = transaction || db;
+        const [updatedTx] = await tx
+            .update(customerTransactions)
+            .set(transactionData)
+            .where(
+                sql`${customerTransactions.referenceId} = ${referenceId} AND ${customerTransactions.referenceType} = ${referenceType}`
+            )
+            .returning();
+        return updatedTx;
+    }
+
+    async findAllPayments({ fromDate, toDate, customerId, paymentMode }) {
+        const conditions = [];
+
+        if (customerId) conditions.push(eq(payments.customerId, customerId));
+        if (paymentMode) conditions.push(eq(payments.paymentMode, paymentMode));
+        if (fromDate) conditions.push(sql`${payments.paymentDate} >= ${new Date(fromDate)}`);
+        if (toDate) conditions.push(sql`${payments.paymentDate} <= ${new Date(toDate)}`);
+
+        // Using raw SQL for date comparison might be safer or use between() if available/imported
+        // But sql template string is standard in Drizzle.
+
+        const query = db
+            .select({
+                paymentId: payments.paymentId,
+                amount: payments.amount,
+                paymentDate: payments.paymentDate,
+                paymentMode: payments.paymentMode,
+                referenceNo: payments.referenceNo,
+                notes: payments.notes,
+                customer: {
+                    id: customers.customerId,
+                    name: customers.companyName,
+                },
+            })
+            .from(payments)
+            .leftJoin(customers, eq(payments.customerId, customers.customerId))
+            .where(conditions.length > 0 ? sql.join(conditions, sql` AND `) : undefined)
+            .orderBy(desc(payments.paymentDate));
+
+        return await query;
+    }
 }

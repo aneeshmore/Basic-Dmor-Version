@@ -20,6 +20,24 @@ export const createPayment = async (req, res, next) => {
     }
 };
 
+export const updatePayment = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        // reuse create schema or partial? standard create schema is fine for now as we want full validation
+        // or just pick fields allowed to edit.
+        // For simplicity, using same schema but typically we might want partial.
+        const validation = createPaymentSchema.safeParse(req.body);
+        if (!validation.success) {
+            throw new AppError(validation.error.errors[0].message, 400);
+        }
+
+        const payment = await paymentService.updatePayment(id, validation.data);
+        res.json({ success: true, data: payment });
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const getCustomerLedger = async (req, res, next) => {
     try {
         const { customerId } = req.params;

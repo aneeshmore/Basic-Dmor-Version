@@ -328,8 +328,11 @@ async function syncPermissions() {
       'notifications',
       'Add New Customer',
       'report-customer-contact',
+      'report-customer-contact',
       'report-customer-sales',
-      'quotation-maker'
+      'quotation-maker',
+      'payment-entry',
+      'payment-report'
     ];
     // Find all Sales roles
     const salesRoleList = allRoles.filter(r => r.roleName.startsWith('Sales') && r.roleName !== 'Dealer');

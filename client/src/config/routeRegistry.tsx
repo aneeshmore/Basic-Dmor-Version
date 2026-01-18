@@ -550,7 +550,7 @@ export const routeRegistry: RouteNode[] = [
         label: 'Payment Entry',
         icon: DollarSign,
         component: PaymentEntry,
-        permission: { module: 'payments' },
+        permission: { module: 'payment-entry' },
         apis: [
           { route: '/payments', method: 'POST', label: 'Create Payment' },
           { route: '/payments', method: 'GET', label: 'View Payments' },
@@ -804,7 +804,7 @@ export const routeRegistry: RouteNode[] = [
         label: 'Payment Report',
         icon: DollarSign,
         component: PaymentReport,
-        permission: { module: 'payments' },
+        permission: { module: 'payment-report' },
         apis: [
           { route: '/reports/payments', method: 'GET', label: 'View Payment Report' },
           { route: '/masters/customers', method: 'GET', label: 'Load Customers' },
