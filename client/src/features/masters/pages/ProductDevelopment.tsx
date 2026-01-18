@@ -784,7 +784,12 @@ const ProductDevelopment = () => {
                 options={rmProductOptions}
                 value={selectedRmId}
                 onChange={val => handleAddItem(val ?? '')}
-                placeholder="Search and add..."
+                placeholder={
+                  !selectedMasterProductId
+                    ? 'Select Master Product first...'
+                    : 'Search and add...'
+                }
+                disabled={!selectedMasterProductId}
                 className="w-full"
               />
             </div>
