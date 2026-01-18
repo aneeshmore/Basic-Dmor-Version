@@ -164,50 +164,57 @@ const ProductDevelopment = () => {
     loadData();
   }, []);
 
-  // Auto-calculate Density and Production Cost based on formulation
-  useEffect(() => {
-    if (addedItems.length === 0) return;
-
-    // Formula: Paint Density = Total Mass / Total Volume
-    // Total Mass = Sum of percentages (usually 100)
-    // Total Volume = Sum of (Mass / Density) for each component
+  // Calculate Theoretical Density (Memoized)
+  const theoreticalDensity = useMemo(() => {
+    if (addedItems.length === 0) return 0;
 
     let totalMass = 0;
     let totalVolume = 0;
-    let totalCostInvested = 0;
 
     for (const item of addedItems) {
-      const mass = Number(item.percentage) || 0; // percentage is treated as mass in the formulation
+      const mass = Number(item.percentage) || 0;
       totalMass += mass;
 
       const rmProduct = rmMasterProducts.find(rm => rm.masterProductId === item.productId);
-      // Default density to 1 if missing to avoid division by zero/infinity issues, but ideally it should be set
       const rmDensity = rmProduct?.RMDensity ? parseFloat(rmProduct.RMDensity.toString()) : 1;
-      const purchaseCost = rmProduct?.PurchaseCost ? Number(rmProduct.PurchaseCost) : 0;
 
       if (rmDensity > 0) {
         totalVolume += mass / rmDensity;
       }
-
-      // Calculate component cost: (Percentage/Mass) * Purchase Cost
-      totalCostInvested += mass * purchaseCost;
     }
 
-    let currentDensity = 0;
-
     if (totalVolume > 0) {
-      currentDensity = totalMass / totalVolume;
-      setDensity(currentDensity.toFixed(3));
+      return totalMass / totalVolume;
+    }
+    return 0;
+  }, [addedItems, rmMasterProducts]);
+
+  // Auto-fill Density and Production Cost based on formulation
+  useEffect(() => {
+    if (addedItems.length === 0) return;
+
+    // Update form density from theoretical density
+    if (theoreticalDensity > 0) {
+      setDensity(theoreticalDensity.toFixed(3));
+    }
+
+    // Calculate Production Cost
+    let totalCostInvested = 0;
+    for (const item of addedItems) {
+      const mass = Number(item.percentage) || 0;
+      const rmProduct = rmMasterProducts.find(rm => rm.masterProductId === item.productId);
+      const purchaseCost = rmProduct?.PurchaseCost ? Number(rmProduct.PurchaseCost) : 0;
+      totalCostInvested += mass * purchaseCost;
     }
 
     // Calculate Production Cost / Ltr
     // Formula: (Total Cost Invested / 100) * FG Density
     // Using 100 as base divider for percentage sum normalization
-    if (currentDensity > 0) {
-      const costPerLtr = (totalCostInvested / 100) * currentDensity;
+    if (theoreticalDensity > 0) {
+      const costPerLtr = (totalCostInvested / 100) * theoreticalDensity;
       setProductionCost(costPerLtr.toFixed(2));
     }
-  }, [addedItems, rmMasterProducts]);
+  }, [theoreticalDensity, addedItems, rmMasterProducts]);
 
   const loadData = async () => {
     try {
@@ -1109,6 +1116,12 @@ const ProductDevelopment = () => {
             Σ sv:{' '}
             <span className="text-[var(--text-primary)]">
               {addedItems.length > 0 ? calculateSolidVolume().toFixed(4) : '--'}
+            </span>
+          </div>
+          <div>
+            Theoretical Density:{' '}
+            <span className="text-[var(--text-primary)]">
+              {theoreticalDensity ? theoreticalDensity.toFixed(3) : '--'}
             </span>
           </div>
         </div>

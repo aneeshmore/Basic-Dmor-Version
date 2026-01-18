@@ -534,11 +534,10 @@ export default function DispatchPlanning() {
           <div className="h-full">
             {selectedVehicle ? (
               <div
-                className={`h-full p-6 rounded-xl border transition-all duration-300 ${
-                  isOverloaded
+                className={`h-full p-6 rounded-xl border transition-all duration-300 ${isOverloaded
                     ? 'bg-[var(--danger)]/5 border-[var(--danger)]/20'
                     : 'bg-[var(--success)]/5 border-[var(--success)]/20'
-                }`}
+                  }`}
               >
                 <div className="flex flex-col h-full justify-between space-y-4">
                   <div className="flex items-start justify-between">
@@ -583,9 +582,8 @@ export default function DispatchPlanning() {
                     )}
                     <div className="w-full bg-[var(--border)] rounded-full h-3 overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          isOverloaded ? 'bg-[var(--danger)] animate-pulse' : 'bg-[var(--success)]'
-                        }`}
+                        className={`h-full rounded-full transition-all duration-500 ${isOverloaded ? 'bg-[var(--danger)] animate-pulse' : 'bg-[var(--success)]'
+                          }`}
                         style={{
                           width: `${Math.min((totalWeightKg / capacityKg) * 100, 100)}%`,
                         }}
@@ -594,11 +592,10 @@ export default function DispatchPlanning() {
                   </div>
 
                   <div
-                    className={`p-3 rounded-lg border text-center font-bold text-lg ${
-                      isOverloaded
+                    className={`p-3 rounded-lg border text-center font-bold text-lg ${isOverloaded
                         ? 'bg-[var(--surface)] border-[var(--danger)]/30 text-[var(--danger)]'
                         : 'bg-[var(--surface)] border-[var(--success)]/30 text-[var(--success)]'
-                    }`}
+                      }`}
                   >
                     {isOverloaded ? (
                       <span className="flex items-center justify-center gap-2">
@@ -732,43 +729,39 @@ export default function DispatchPlanning() {
           <div className="flex items-center gap-1 p-1 bg-[var(--surface-secondary)] rounded-lg">
             <button
               onClick={() => setOrderFilter('all')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                orderFilter === 'all'
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${orderFilter === 'all'
                   ? 'bg-[var(--surface)] text-[var(--text-primary)] shadow-sm'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
+                }`}
             >
               All ({orderStats.totalOrders})
             </button>
             <button
               onClick={() => setOrderFilter('ready')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                orderFilter === 'ready'
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${orderFilter === 'ready'
                   ? 'bg-[var(--success)]/20 text-[var(--success)] shadow-sm'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
+                }`}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               Ready ({orderStats.readyOrders})
             </button>
             <button
               onClick={() => setOrderFilter('partial')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                orderFilter === 'partial'
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${orderFilter === 'partial'
                   ? 'bg-[var(--warning)]/20 text-[var(--warning)] shadow-sm'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
+                }`}
             >
               <AlertTriangle className="w-3.5 h-3.5" />
               Partial ({orderStats.partialOrders})
             </button>
             <button
               onClick={() => setOrderFilter('pending')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                orderFilter === 'pending'
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${orderFilter === 'pending'
                   ? 'bg-[var(--danger)]/20 text-[var(--danger)] shadow-sm'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
+                }`}
             >
               <XCircle className="w-3.5 h-3.5" />
               Pending ({orderStats.pendingOrders})
@@ -969,13 +962,12 @@ function OrderViewCard({
 
   return (
     <div
-      className={`bg-[var(--surface)] rounded-xl border-2 transition-all overflow-hidden ${
-        isSelected
+      className={`bg-[var(--surface)] rounded-xl border-2 transition-all overflow-hidden ${isSelected
           ? 'border-[var(--primary)] shadow-lg ring-2 ring-[var(--primary)]/20'
           : isExpanded
             ? `${borderColors[statusColor]} shadow-lg`
             : 'border-[var(--border)] hover:border-[var(--border-hover)]'
-      }`}
+        }`}
     >
       {/* Header Row */}
       <div
@@ -1016,7 +1008,9 @@ function OrderViewCard({
         {/* Order Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h3 className="font-semibold text-[var(--text-primary)]">{order.orderNumber}</h3>
+            <h3 className="font-semibold text-[var(--text-primary)]">
+              {order.billNo || order.orderNumber}
+            </h3>
             {order.isFullyReady ? (
               <span className="px-2 py-0.5 text-xs font-medium bg-[var(--success)]/10 text-[var(--success)] rounded-full flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3" /> Ready For Dispatch
@@ -1037,7 +1031,7 @@ function OrderViewCard({
             )}
             {order.billNo && (
               <span className="px-2 py-0.5 text-xs font-medium bg-[var(--primary)]/10 text-[var(--primary)] rounded-full flex items-center gap-1">
-                <FileText className="w-3 h-3" /> {order.billNo}
+                <FileText className="w-3 h-3" /> Order: {order.orderNumber}
               </span>
             )}
           </div>
@@ -1058,13 +1052,12 @@ function OrderViewCard({
             </span>
             {daysUntilDelivery !== null && (
               <span
-                className={`flex items-center gap-1 ${
-                  daysUntilDelivery < 0
+                className={`flex items-center gap-1 ${daysUntilDelivery < 0
                     ? 'text-[var(--danger)]'
                     : daysUntilDelivery <= 2
                       ? 'text-[var(--warning)]'
                       : 'text-[var(--text-secondary)]'
-                }`}
+                  }`}
               >
                 <Clock className="w-3.5 h-3.5" />
                 {daysUntilDelivery < 0
@@ -1141,9 +1134,8 @@ function OrderViewCard({
               return (
                 <div
                   key={product.productId}
-                  className={`grid grid-cols-12 gap-3 items-center px-3 py-3 ${
-                    idx % 2 === 0 ? 'bg-[var(--surface)]' : 'bg-[var(--surface-secondary)]/50'
-                  } ${idx !== order.products.length - 1 ? 'border-b border-[var(--border)]' : ''}`}
+                  className={`grid grid-cols-12 gap-3 items-center px-3 py-3 ${idx % 2 === 0 ? 'bg-[var(--surface)]' : 'bg-[var(--surface-secondary)]/50'
+                    } ${idx !== order.products.length - 1 ? 'border-b border-[var(--border)]' : ''}`}
                 >
                   <div className="col-span-5 font-medium text-sm text-[var(--text-primary)] truncate">
                     {product.productName}
@@ -1152,9 +1144,8 @@ function OrderViewCard({
                     {product.orderedQty}
                   </div>
                   <div
-                    className={`col-span-2 text-right text-sm font-medium ${
-                      product.isReady ? 'text-[var(--success)]' : 'text-[var(--danger)]'
-                    }`}
+                    className={`col-span-2 text-right text-sm font-medium ${product.isReady ? 'text-[var(--success)]' : 'text-[var(--danger)]'
+                      }`}
                   >
                     {product.availableQty.toFixed(2)}
                   </div>

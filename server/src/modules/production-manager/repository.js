@@ -283,9 +283,11 @@ export class ProductionManagerRepository {
       .select({
         order: orders,
         customer: customers,
+        account: accounts,
       })
       .from(orders)
       .leftJoin(customers, eq(orders.customerId, customers.customerId))
+      .leftJoin(accounts, eq(orders.orderId, accounts.orderId))
       .where(eq(orders.orderId, orderId))
       .limit(1);
 
@@ -310,6 +312,7 @@ export class ProductionManagerRepository {
     return {
       order: orderResult[0]?.order,
       customer: orderResult[0]?.customer,
+      account: orderResult[0]?.account,
       details,
     };
   }
