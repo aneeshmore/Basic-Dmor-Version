@@ -8,6 +8,7 @@ import autoTable from 'jspdf-autotable';
 import { reportsApi } from '../api/reportsApi';
 import { ProductWiseReportItem } from '../types';
 import { showToast } from '@/utils/toast';
+import { addPdfFooter } from '@/utils/pdfUtils';
 
 interface ProductTransactionHistoryProps {
     productId: string;
@@ -81,6 +82,7 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
             headStyles: { fillColor: [71, 85, 105] },
         });
 
+        addPdfFooter(doc);
         doc.save(`history_${productId}_${new Date().toISOString().split('T')[0]}.pdf`);
         showToast.success('History exported successfully');
     };

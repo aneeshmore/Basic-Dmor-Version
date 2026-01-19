@@ -8,6 +8,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import CustomerTransactionHistory from '../components/CustomerTransactionHistory';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { addPdfFooter } from '@/utils/pdfUtils';
 import { showToast } from '@/utils/toast';
 import {
     Chart as ChartJS,
@@ -96,6 +97,8 @@ export default function PaymentReport() {
             styles: { fontSize: 9 },
             headStyles: { fillColor: [63, 81, 181] },
         });
+
+        addPdfFooter(doc);
 
         doc.save(`customer_balances_${new Date().toISOString().split('T')[0]}.pdf`);
         showToast.success('Summary exported successfully');

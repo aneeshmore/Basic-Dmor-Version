@@ -23,6 +23,7 @@ export interface QuotationData {
   destination: string;
 
   companyName: string;
+  companyLogo?: string;
   companyAddress: string;
   companyGSTIN: string;
   companyState: string;
@@ -30,6 +31,8 @@ export interface QuotationData {
   companyEmail: string;
   companyPhone?: string;
   companyWeb?: string;
+  companyPAN?: string;
+  termsAndConditions?: string;
 
   // Buyer/Customer Information
   buyerName?: string;

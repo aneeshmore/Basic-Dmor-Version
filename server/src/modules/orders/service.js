@@ -141,7 +141,13 @@ export class OrdersService {
     const details = await this.repository.getOrderDetails(orderId);
     return new OrderWithDetailsDTO(
       order,
-      details.map(d => d.order_details || d) // Handle if details query also changed, but usually details query returns raw join result?
+      details.map(d => {
+        const detail = d.order_details || d;
+        return {
+          ...detail,
+          productName: d.products?.productName,
+        };
+      }) // Handle if details query also changed, but usually details query returns raw join result?
     );
   }
 

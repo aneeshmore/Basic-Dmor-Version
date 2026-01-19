@@ -9,6 +9,7 @@ import { FileDown } from 'lucide-react';
 import { showToast } from '@/utils/toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { addPdfFooter } from '@/utils/pdfUtils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -143,6 +144,8 @@ const MaterialInwardReport = () => {
       styles: { fontSize: 8 },
       headStyles: { fillColor: [59, 130, 246] },
     });
+
+    addPdfFooter(doc);
 
     doc.save(`material_inward_report_${new Date().toISOString().split('T')[0]}.pdf`);
     showToast.success('Report exported successfully');

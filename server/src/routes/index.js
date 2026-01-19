@@ -31,6 +31,7 @@ import { quotationsRoutes } from '../modules/quotations/index.js';
 import { crmRoutes } from '../modules/crm/index.js';
 import { cancelOrderRoutes } from '../modules/cancel-order/index.js';
 import { paymentRoutes } from '../modules/payments/index.js';
+import { companyRoutes } from '../modules/company/index.js';
 
 const router = Router();
 
@@ -86,5 +87,6 @@ router.use('/crm', crmRoutes);
 router.use('/cancel-order', cancelOrderRoutes);
 router.use('/quotations', quotationsRoutes);
 router.use('/payments', paymentRoutes);
+router.use('/company', companyRoutes);
 
 export default router;

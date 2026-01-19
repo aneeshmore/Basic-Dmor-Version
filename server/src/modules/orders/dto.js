@@ -42,6 +42,7 @@ export class OrderDetailDTO {
     this.totalPrice = detail.totalPrice || detail.total_price;
     this.createdAt = detail.createdAt || detail.created_at;
     this.updatedAt = detail.updatedAt || detail.updated_at;
+    this.productName = detail.productName;
   }
 }
 

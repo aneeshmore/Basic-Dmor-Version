@@ -25,6 +25,7 @@ import {
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import { reportsApi } from '@/features/reports/api/reportsApi';
+import { addPdfFooter } from '@/utils/pdfUtils';
 
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
@@ -517,6 +518,8 @@ const CustomerContactReport: React.FC = () => {
         pdf.text(`Downloaded: ${downloadDate} | ${downloadTime}`, margin, pageHeight - 5);
       }
 
+      addPdfFooter(pdf);
+
       const fileName = `Customer_Contact_Report_${new Date().toISOString().split('T')[0]}.pdf`;
       console.log('Saving PDF as:', fileName);
       pdf.save(fileName);
@@ -981,8 +984,8 @@ const CustomerContactReport: React.FC = () => {
                         <td className="px-6 py-4 text-sm">
                           <span
                             className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${customer.isActive
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
                               }`}
                           >
                             {customer.isActive ? 'Active' : 'Inactive'}

@@ -15,6 +15,7 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend, Colors } from 'chart.js'
 import { Pie } from 'react-chartjs-2';
 import { reportsApi } from '@/features/reports/api/reportsApi';
 import { useAuth } from '@/contexts/AuthContext';
+import { addPdfFooter } from '@/utils/pdfUtils';
 
 ChartJS.register(ArcElement, Tooltip, Legend, Colors);
 
@@ -437,6 +438,8 @@ const ProfitLossReport = () => {
           align: 'right',
         });
       }
+
+      addPdfFooter(pdf);
 
       const fileName = `Profit_Loss_Report_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);

@@ -9,6 +9,7 @@ import { FileDown, AlertTriangle } from 'lucide-react';
 import { showToast } from '@/utils/toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { addPdfFooter } from '@/utils/pdfUtils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -145,6 +146,8 @@ const LowStockReport = () => {
       styles: { fontSize: 8 },
       headStyles: { fillColor: [239, 68, 68] }, // Red for low stock report
     });
+
+    addPdfFooter(doc);
 
     doc.save(`low_stock_report_${new Date().toISOString().split('T')[0]}.pdf`);
     showToast.success('Report exported successfully');

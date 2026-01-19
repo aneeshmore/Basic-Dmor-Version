@@ -46,6 +46,7 @@ export interface OrderDetail {
   totalPrice: number;
   createdAt: string;
   updatedAt: string;
+  productName?: string;
 }
 
 export interface OrderWithDetails extends Order {

@@ -29,6 +29,7 @@ import {
 import { Bar, Pie } from 'react-chartjs-2';
 import { reportsApi } from '@/features/reports/api/reportsApi';
 import { useAuth } from '@/contexts/AuthContext';
+import { addPdfFooter } from '@/utils/pdfUtils';
 
 ChartJS.register(
   CategoryScale,
@@ -539,6 +540,8 @@ const CancelledOrdersReport: React.FC = () => {
         });
         pdf.text(`Downloaded: ${downloadDate} | ${downloadTime}`, margin, pageHeight - 5);
       }
+
+      addPdfFooter(pdf);
 
       const fileName = `Cancelled_Orders_Report_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
@@ -1065,10 +1068,10 @@ const CancelledOrdersReport: React.FC = () => {
                       <td className="px-6 py-4 text-center">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.Status?.toLowerCase().includes('reject')
-                              ? 'bg-amber-100 text-amber-700'
-                              : order.Status?.toLowerCase().includes('return')
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-red-100 text-red-700'
+                            ? 'bg-amber-100 text-amber-700'
+                            : order.Status?.toLowerCase().includes('return')
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-red-100 text-red-700'
                             }`}
                         >
                           {order.Status}

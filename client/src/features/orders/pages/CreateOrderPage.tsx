@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/common';
 import { ordersApi } from '../api/ordersApi';
-import { Order, OrderWithDetails } from '../types';
+import { Order, OrderWithDetails, OrderDetail } from '../types';
 import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table';
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { CreateOrderForm, ModeSwitcher, ModeIndicatorBanner, type ViewMode } fro
 import { showToast } from '@/utils/toast';
 import { downloadInvoicePDF } from '@/features/quotations/utils/pdfGenerator';
 import { QuotationData } from '@/features/quotations/types';
+import { companyApi } from '@/features/company/api/companyApi';
 
 const formatDisplayOrderId = (orderId: number, dateString: string) => {
   if (!dateString) return `ORD-${orderId}`;
@@ -227,8 +228,13 @@ const CreateOrderPage: React.FC = () => {
     try {
       showToast.loading('Preparing Invoice...', 'invoice-dl');
 
-      // Fetch full details including products
-      const fullOrder = await ordersApi.getById(order.orderId);
+      // Fetch full details including products and company info
+      const [fullOrder, companyRes] = await Promise.all([
+        ordersApi.getById(order.orderId),
+        companyApi.get().catch(() => ({ data: null })),
+      ]);
+
+      const c: any = companyRes.data || {};
 
       // Map Order to QuotationData structure for the Invoice generator
       const invoiceData: QuotationData = {
@@ -241,26 +247,26 @@ const CreateOrderPage: React.FC = () => {
         destination: fullOrder.deliveryAddress || '',
         deliveryTerms: '',
 
-        companyName: 'Morex Technologies', // Default company
-        companyAddress: 'Plot No. 123, Sector 45, Gurugram, India',
-        companyPhone: '+91 98765 43210',
-        companyEmail: 'office@morex.com',
-        companyGSTIN: '06AAACD7890E1Z2',
-        companyState: 'Haryana',
-        companyCode: '06',
+        companyName: c.companyName || '',
+        companyAddress: c.address || '',
+        companyPhone: c.contactNumber || '',
+        companyEmail: c.email || '',
+        companyGSTIN: c.gstNumber || '',
+        companyState: '', // Need to add to company info
+        companyCode: '', // Need to add to company info
 
-        bankName: 'HDFC BANK',
-        accountNo: '50200012345678',
-        ifsc: 'HDFC0001234',
-        branch: 'Sector 45, Gurugram',
+        bankName: c.bankName || '',
+        accountNo: c.accountNumber || '',
+        ifsc: c.ifscCode || '',
+        branch: c.branch || '',
 
         buyerName: fullOrder.companyName || fullOrder.customerName,
         buyerAddress: fullOrder.deliveryAddress,
         buyerGSTIN: '', // Would need to fetch customer details for this if not in order
 
-        items: (fullOrder.orderDetails || []).map((item, index) => ({
+        items: (fullOrder.orderDetails || []).map((item: OrderDetail, index: number) => ({
           id: index + 1,
-          description: `Product ID: ${item.productId}`, //Ideally fetch name... wait, fullOrder might not have product names populated if not joined.
+          description: item.productName || `Product ID: ${item.productId}`,
           // Note: In CreateOrderForm, productNames are fetched. Here we might need to rely on what's available or fetch product names.
           // However, fullOrder.orderDetails usually contains basic info. 
           // Let's try to use what we have.
@@ -446,7 +452,7 @@ const CreateOrderPage: React.FC = () => {
                         return (
                           <tr key={item.orderDetailId} className="border-t border-[var(--border)]">
                             <td className="p-3">{idx + 1}</td>
-                            <td className="p-3 font-medium">Product ID: {item.productId}</td>
+                            <td className="p-3 font-medium">{item.productName || `Product ID: ${item.productId}`}</td>
                             <td className="p-3 text-right">{item.quantity}</td>
                             <td className="p-3 text-right">₹{unitPrice.toFixed(2)}</td>
                             <td className="p-3 text-right">{item.discount || 0}%</td>

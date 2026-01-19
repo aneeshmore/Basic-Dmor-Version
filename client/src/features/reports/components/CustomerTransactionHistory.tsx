@@ -8,6 +8,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { paymentApi } from '@/features/operations/api/paymentApi';
 import { showToast } from '@/utils/toast';
+import { addPdfFooter } from '@/utils/pdfUtils';
 import { format } from 'date-fns';
 
 interface CustomerTransactionHistoryProps {
@@ -144,6 +145,7 @@ const CustomerTransactionHistory: React.FC<CustomerTransactionHistoryProps> = ({
             alternateRowStyles: { fillColor: [245, 247, 250] },
         });
 
+        addPdfFooter(doc);
         doc.save(`ledger_${customerName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
         showToast.success('Ledger exported successfully');
     };

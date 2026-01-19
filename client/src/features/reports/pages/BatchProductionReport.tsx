@@ -32,6 +32,7 @@ import { Bar, Pie, Line } from 'react-chartjs-2';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table';
 import { Button, Badge, Input, Modal } from '@/components/ui';
+import { addPdfFooter } from '@/utils/pdfUtils';
 
 ChartJS.register(
   CategoryScale,
@@ -553,6 +554,7 @@ const BatchProductionReport = () => {
     doc.text(batch.supervisor || '', 140, currentY);
 
     // Save PDF
+    addPdfFooter(doc);
     doc.save(`Batch_Report_${batch.batchNo}.pdf`);
     showToast.success(`Downloaded report for batch ${batch.batchNo}`);
   }, []);
@@ -619,6 +621,7 @@ const BatchProductionReport = () => {
     });
 
     // Save PDF
+    addPdfFooter(doc);
     doc.save(`batch_production_report_${new Date().toISOString().split('T')[0]}.pdf`);
     showToast.success('Report exported successfully');
   };

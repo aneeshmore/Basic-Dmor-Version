@@ -8,3 +8,4 @@ export * from './branches.js';
 export * from './departments.js';
 export * from './employees.js';
 export * from './relations.js';
+export * from './company.js';

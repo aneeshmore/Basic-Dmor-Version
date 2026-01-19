@@ -30,6 +30,7 @@ import { showToast } from '@/utils/toast';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { addPdfFooter } from '@/utils/pdfUtils';
 import BatchReportModal from '../components/BatchReportModal';
 import {
   DndContext,
@@ -1773,8 +1774,10 @@ export default function ScheduleBatchPage() {
       doc.text('Superviser Sign :-', 150, finalY + 40);
       doc.text(`Mr. ${batch.supervisorName || ''}`, 150, finalY + 46);
 
-      doc.save(`Batch_${batch.batchNo}.pdf`);
-      showToast.success('PDF Generated successfully!');
+      const fileName = `Batch_${batch.batchNo}.pdf`;
+      addPdfFooter(doc);
+      doc.save(fileName);
+      showToast.success('PDF Downloaded!');
     } catch (error) {
       console.error('PDF Generation Error:', error);
       showToast.error('Failed to generate PDF');

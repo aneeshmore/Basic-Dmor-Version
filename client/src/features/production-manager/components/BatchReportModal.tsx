@@ -5,6 +5,7 @@ import { showToast } from '@/utils/toast';
 import { Button, Modal } from '@/components/ui';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { addPdfFooter } from '@/utils/pdfUtils';
 
 interface BatchReportModalProps {
   isOpen: boolean;
@@ -575,6 +576,8 @@ export default function BatchReportModal({
       reportType === 'batch-chart'
         ? `Batch_${batch.batchNo}.pdf`
         : `Completion_${batch.batchNo}.pdf`;
+
+    addPdfFooter(doc);
 
     doc.save(fileName);
     showToast.success('PDF Downloaded!');

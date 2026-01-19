@@ -24,6 +24,7 @@ import {
   BarChart3,
   Users,
   Briefcase,
+  Building,
   Package,
   FileText,
   UserPlus,
@@ -206,6 +207,7 @@ const SettingsDashboard = lazy(() => import('@/features/settings/pages/SettingsD
 const LockUserPage = lazy(() => import('@/features/settings/pages/LockUserPage'));
 const ResetPasswordPage = lazy(() => import('@/features/settings/pages/ResetPasswordPage'));
 const CustomerTransferPage = lazy(() => import('@/features/settings/pages/CustomerTransferPage'));
+const CompanySettingsPage = lazy(() => import('@/features/company/pages/CompanySettingsPage'));
 
 // Payments
 const PaymentEntry = lazy(() => import('@/features/operations/pages/PaymentEntry'));
@@ -987,6 +989,18 @@ export const routeRegistry: RouteNode[] = [
           { route: '/notification-rules', method: 'POST', label: 'Create Rule' },
           { route: '/notification-rules/:id', method: 'PUT', label: 'Update Rule' },
           { route: '/notification-rules/:id', method: 'DELETE', label: 'Delete Rule' },
+        ],
+      },
+      {
+        id: 'company-settings',
+        path: '/settings/company',
+        label: 'Company Information',
+        icon: Building,
+        component: CompanySettingsPage,
+        permission: { module: 'company-settings' },
+        apis: [
+          { route: '/company', method: 'GET', label: 'View Company Info' },
+          { route: '/company', method: 'PUT', label: 'Update Company Info' },
         ],
       },
     ],

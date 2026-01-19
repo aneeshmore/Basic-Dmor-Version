@@ -9,6 +9,7 @@ import { FileDown, PieChart as PieChartIcon, BarChart3, TrendingUp, Package } fr
 import { showToast } from '@/utils/toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { addPdfFooter } from '@/utils/pdfUtils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -128,389 +129,383 @@ const DailyConsumptionReport: React.FC = () => {
       headStyles: { fillColor: [34, 197, 94] },
     });
 
-    doc.save(`daily_consumption_report_${date}.pdf`);
-    showToast.success('Report exported successfully');
-  };
+    showToast.error('No data to export');
+    return;
+  }
 
-  const handleExportCsv = () => {
-    if (filteredData.length === 0) {
-      showToast.error('No data to export');
-      return;
-    }
+  const csvHeaders = [
+    'Material Name',
+    'Product Type',
+    'Opening Qty',
+    'Consumption',
+    'Closing Qty',
+  ];
 
-    const csvHeaders = [
-      'Material Name',
-      'Product Type',
-      'Opening Qty',
-      'Consumption',
-      'Closing Qty',
-    ];
+  const csvRows = filteredData.map(item => [
+    item.masterProductName,
+    item.productType,
+    item.openingQty.toFixed(2),
+    item.consumption.toFixed(2),
+    item.closingQty.toFixed(2),
+  ]);
 
-    const csvRows = filteredData.map(item => [
-      item.masterProductName,
-      item.productType,
-      item.openingQty.toFixed(2),
-      item.consumption.toFixed(2),
-      item.closingQty.toFixed(2),
-    ]);
+  const csvContent = [
+    csvHeaders.join(','),
+    ...csvRows.map(row => row.map(cell => `"${cell}"`).join(',')),
+  ].join('\n');
 
-    const csvContent = [
-      csvHeaders.join(','),
-      ...csvRows.map(row => row.map(cell => `"${cell}"`).join(',')),
-    ].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `daily_consumption_report_${date}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast.success('CSV exported successfully');
+};
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `daily_consumption_report_${date}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast.success('CSV exported successfully');
-  };
+// Calculate statistics
+const stats = useMemo(() => {
+  const totalMaterials = filteredData.length;
+  const totalConsumption = filteredData.reduce((sum, item) => sum + item.consumption, 0);
+  const totalOpening = filteredData.reduce((sum, item) => sum + item.openingQty, 0);
+  const totalClosing = filteredData.reduce((sum, item) => sum + item.closingQty, 0);
 
-  // Calculate statistics
-  const stats = useMemo(() => {
-    const totalMaterials = filteredData.length;
-    const totalConsumption = filteredData.reduce((sum, item) => sum + item.consumption, 0);
-    const totalOpening = filteredData.reduce((sum, item) => sum + item.openingQty, 0);
-    const totalClosing = filteredData.reduce((sum, item) => sum + item.closingQty, 0);
+  return { totalMaterials, totalConsumption, totalOpening, totalClosing };
+}, [filteredData]);
 
-    return { totalMaterials, totalConsumption, totalOpening, totalClosing };
-  }, [filteredData]);
+// Chart Data
+const chartData = useMemo(() => {
+  if (filteredData.length === 0) return null;
 
-  // Chart Data
-  const chartData = useMemo(() => {
-    if (filteredData.length === 0) return null;
+  // 1. Consumption by Type (Pie)
+  const typeDistribution = filteredData.reduce((acc, item) => {
+    acc[item.productType] = (acc[item.productType] || 0) + item.consumption;
+    return acc;
+  }, {} as Record<string, number>);
 
-    // 1. Consumption by Type (Pie)
-    const typeDistribution = filteredData.reduce((acc, item) => {
-      acc[item.productType] = (acc[item.productType] || 0) + item.consumption;
-      return acc;
-    }, {} as Record<string, number>);
+  const typeLabels = Object.keys(typeDistribution);
+  const typeValues = Object.values(typeDistribution);
+  const typeColors = generateColors(typeLabels.length);
 
-    const typeLabels = Object.keys(typeDistribution);
-    const typeValues = Object.values(typeDistribution);
-    const typeColors = generateColors(typeLabels.length);
+  // 2. Top 10 Consumed Materials (Bar)
+  const sortedByConsumption = [...filteredData]
+    .sort((a, b) => b.consumption - a.consumption)
+    .slice(0, 10);
 
-    // 2. Top 10 Consumed Materials (Bar)
-    const sortedByConsumption = [...filteredData]
-      .sort((a, b) => b.consumption - a.consumption)
-      .slice(0, 10);
+  // Generate colors
+  const topBarColors = generateColors(sortedByConsumption.length);
 
-    // Generate colors
-    const topBarColors = generateColors(sortedByConsumption.length);
-
-    return {
-      typeDistribution: {
-        labels: typeLabels,
-        datasets: [
-          {
-            label: 'Consumption by Type',
-            data: typeValues,
-            backgroundColor: typeColors.map(c => c.bg),
-            borderColor: typeColors.map(c => c.border),
-            borderWidth: 1,
-          },
-        ],
-      },
-      topConsumed: {
-        labels: sortedByConsumption.map(item => item.masterProductName),
-        datasets: [
-          {
-            label: 'Consumption Qty',
-            data: sortedByConsumption.map(item => item.consumption),
-            backgroundColor: topBarColors.map(c => c.bg),
-            borderColor: topBarColors.map(c => c.border),
-            borderWidth: 1,
-          },
-        ],
-      },
-    };
-  }, [filteredData]);
-
-  const pieChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'right' as const,
-      },
+  return {
+    typeDistribution: {
+      labels: typeLabels,
+      datasets: [
+        {
+          label: 'Consumption by Type',
+          data: typeValues,
+          backgroundColor: typeColors.map(c => c.bg),
+          borderColor: typeColors.map(c => c.border),
+          borderWidth: 1,
+        },
+      ],
+    },
+    topConsumed: {
+      labels: sortedByConsumption.map(item => item.masterProductName),
+      datasets: [
+        {
+          label: 'Consumption Qty',
+          data: sortedByConsumption.map(item => item.consumption),
+          backgroundColor: topBarColors.map(c => c.bg),
+          borderColor: topBarColors.map(c => c.border),
+          borderWidth: 1,
+        },
+      ],
     },
   };
+}, [filteredData]);
 
-  const barChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
+const pieChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'right' as const,
+    },
+  },
+};
+
+const barChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: false,
+    },
+    title: {
+      display: false,
+    },
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
       title: {
-        display: false,
+        display: true,
+        text: 'Quantity',
       },
     },
-    scales: {
-      y: {
-        beginAtZero: true,
-        title: {
-          display: true,
-          text: 'Quantity',
-        },
-      },
-      x: {
-        ticks: {
-          maxRotation: 45,
-          minRotation: 45,
-        },
+    x: {
+      ticks: {
+        maxRotation: 45,
+        minRotation: 45,
       },
     },
-  };
+  },
+};
 
-  const columns = useMemo<ColumnDef<DailyConsumptionReportItem>[]>(
-    () => [
-      {
-        accessorKey: 'masterProductName',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Material Name" />,
-        cell: ({ row }) => (
-          <div className="font-medium text-[var(--text-primary)]">{row.original.masterProductName}</div>
-        ),
-      },
-      {
-        accessorKey: 'productType',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
-        cell: ({ row }) => (
-          <Badge
-            className={`${row.original.productType === 'RM'
-                ? 'bg-blue-500 hover:bg-blue-600 text-white'
-                : row.original.productType === 'PM'
-                  ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                  : 'bg-gray-500 text-white'
-              }`}
-          >
-            {row.original.productType}
-          </Badge>
-        ),
-      },
-      {
-        accessorKey: 'openingQty',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Opening Qty" />,
-        cell: ({ getValue }) => (
-          <div className="text-right text-[var(--text-primary)]">
-            {(getValue() as number).toFixed(2)}
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'consumption',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Consumption" />,
-        cell: ({ getValue }) => (
-          <div className="text-right font-semibold text-[var(--color-primary-600)]">
-            {(getValue() as number).toFixed(2)}
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'closingQty',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Closing Qty" />,
-        cell: ({ getValue }) => (
-          <div className="text-right font-medium text-[var(--color-info)]">
-            {(getValue() as number).toFixed(2)}
-          </div>
-        ),
-      },
-    ],
-    []
-  );
-
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Daily Consumption Report"
-        description="Track daily material consumption and inventory levels"
-        actions={
-          <div className="flex gap-2">
-            <Button
-              variant="primary"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={handleExportCsv}
-              leftIcon={<FileDown size={20} />}
-            >
-              Export CSV
-            </Button>
-            <Button
-              variant="primary"
-              className="bg-green-600 hover:bg-green-700 text-white"
-              onClick={handleExport}
-              leftIcon={<FileDown size={20} />}
-            >
-              Export PDF
-            </Button>
-          </div>
-        }
-      />
-
-      {/* Filters */}
-      <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 rounded-lg border">
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-700">Date:</label>
-          <Input
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            fullWidth={false}
-            className="w-auto shadow-sm border-gray-300"
-          />
+const columns = useMemo<ColumnDef<DailyConsumptionReportItem>[]>(
+  () => [
+    {
+      accessorKey: 'masterProductName',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Material Name" />,
+      cell: ({ row }) => (
+        <div className="font-medium text-[var(--text-primary)]">{row.original.masterProductName}</div>
+      ),
+    },
+    {
+      accessorKey: 'productType',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
+      cell: ({ row }) => (
+        <Badge
+          className={`${row.original.productType === 'RM'
+            ? 'bg-blue-500 hover:bg-blue-600 text-white'
+            : row.original.productType === 'PM'
+              ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+              : 'bg-gray-500 text-white'
+            }`}
+        >
+          {row.original.productType}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: 'openingQty',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Opening Qty" />,
+      cell: ({ getValue }) => (
+        <div className="text-right text-[var(--text-primary)]">
+          {(getValue() as number).toFixed(2)}
         </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-700">Type:</label>
-          <select
-            value={productTypeFilter}
-            onChange={e => setProductTypeFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      ),
+    },
+    {
+      accessorKey: 'consumption',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Consumption" />,
+      cell: ({ getValue }) => (
+        <div className="text-right font-semibold text-[var(--color-primary-600)]">
+          {(getValue() as number).toFixed(2)}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'closingQty',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Closing Qty" />,
+      cell: ({ getValue }) => (
+        <div className="text-right font-medium text-[var(--color-info)]">
+          {(getValue() as number).toFixed(2)}
+        </div>
+      ),
+    },
+  ],
+  []
+);
+
+return (
+  <div className="space-y-6">
+    <PageHeader
+      title="Daily Consumption Report"
+      description="Track daily material consumption and inventory levels"
+      actions={
+        <div className="flex gap-2">
+          <Button
+            variant="primary"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={handleExportCsv}
+            leftIcon={<FileDown size={20} />}
           >
-            <option value="All">All</option>
-            <option value="RM">RM</option>
-            <option value="PM">PM</option>
-          </select>
+            Export CSV
+          </Button>
+          <Button
+            variant="primary"
+            className="bg-green-600 hover:bg-green-700 text-white"
+            onClick={handleExport}
+            leftIcon={<FileDown size={20} />}
+          >
+            Export PDF
+          </Button>
+        </div>
+      }
+    />
+
+    {/* Filters */}
+    <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 rounded-lg border">
+      <div className="flex items-center gap-2">
+        <label className="text-sm font-medium text-gray-700">Date:</label>
+        <Input
+          type="date"
+          value={date}
+          onChange={e => setDate(e.target.value)}
+          fullWidth={false}
+          className="w-auto shadow-sm border-gray-300"
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="text-sm font-medium text-gray-700">Type:</label>
+        <select
+          value={productTypeFilter}
+          onChange={e => setProductTypeFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        >
+          <option value="All">All</option>
+          <option value="RM">RM</option>
+          <option value="PM">PM</option>
+        </select>
+      </div>
+    </div>
+
+    {/* Statistics Cards */}
+    {!isLoading && filteredData.length > 0 && (
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="card p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+              <Package size={20} />
+            </div>
+            <p className="text-sm text-[var(--text-secondary)] font-medium">Total Materials</p>
+          </div>
+          <p className="text-2xl font-bold text-[var(--text-primary)] pl-1">
+            {stats.totalMaterials}
+          </p>
+        </div>
+        <div className="card p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
+              <TrendingUp size={20} />
+            </div>
+            <p className="text-sm text-[var(--text-secondary)] font-medium">Total Consumption</p>
+          </div>
+          <p className="text-2xl font-bold text-[var(--text-primary)] pl-1">
+            {stats.totalConsumption.toFixed(2)}
+          </p>
+        </div>
+        <div className="card p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-green-50 text-green-600 rounded-lg">
+              <BarChart3 size={20} />
+            </div>
+            <p className="text-sm text-[var(--text-secondary)] font-medium">Total Opening</p>
+          </div>
+          <p className="text-2xl font-bold text-[var(--text-primary)] pl-1">
+            {stats.totalOpening.toFixed(2)}
+          </p>
+        </div>
+        <div className="card p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
+              <PieChartIcon size={20} />
+            </div>
+            <p className="text-sm text-[var(--text-secondary)] font-medium">Total Closing</p>
+          </div>
+          <p className="text-2xl font-bold text-[var(--text-primary)] pl-1">
+            {stats.totalClosing.toFixed(2)}
+          </p>
         </div>
       </div>
+    )}
 
-      {/* Statistics Cards */}
-      {!isLoading && filteredData.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="card p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                <Package size={20} />
-              </div>
-              <p className="text-sm text-[var(--text-secondary)] font-medium">Total Materials</p>
-            </div>
-            <p className="text-2xl font-bold text-[var(--text-primary)] pl-1">
-              {stats.totalMaterials}
-            </p>
-          </div>
-          <div className="card p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
-                <TrendingUp size={20} />
-              </div>
-              <p className="text-sm text-[var(--text-secondary)] font-medium">Total Consumption</p>
-            </div>
-            <p className="text-2xl font-bold text-[var(--text-primary)] pl-1">
-              {stats.totalConsumption.toFixed(2)}
-            </p>
-          </div>
-          <div className="card p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-green-50 text-green-600 rounded-lg">
-                <BarChart3 size={20} />
-              </div>
-              <p className="text-sm text-[var(--text-secondary)] font-medium">Total Opening</p>
-            </div>
-            <p className="text-2xl font-bold text-[var(--text-primary)] pl-1">
-              {stats.totalOpening.toFixed(2)}
-            </p>
-          </div>
-          <div className="card p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
-                <PieChartIcon size={20} />
-              </div>
-              <p className="text-sm text-[var(--text-secondary)] font-medium">Total Closing</p>
-            </div>
-            <p className="text-2xl font-bold text-[var(--text-primary)] pl-1">
-              {stats.totalClosing.toFixed(2)}
-            </p>
+    {/* Visualizations */}
+    {!isLoading && chartData && filteredData.length > 0 && (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Consumed Bar Chart */}
+        <div className="card p-6 border border-gray-100 shadow-sm">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+            <TrendingUp size={18} className="text-gray-400" />
+            Top 10 Consumed Materials
+          </h3>
+          <div className="h-[300px]">
+            <Bar data={chartData.topConsumed} options={barChartOptions} />
           </div>
         </div>
-      )}
 
-      {/* Visualizations */}
-      {!isLoading && chartData && filteredData.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top Consumed Bar Chart */}
-          <div className="card p-6 border border-gray-100 shadow-sm">
-            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-              <TrendingUp size={18} className="text-gray-400" />
-              Top 10 Consumed Materials
-            </h3>
-            <div className="h-[300px]">
-              <Bar data={chartData.topConsumed} options={barChartOptions} />
-            </div>
-          </div>
-
-          {/* Consumption by Type Pie Chart */}
-          <div className="card p-6 border border-gray-100 shadow-sm">
-            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-              <PieChartIcon size={18} className="text-gray-400" />
-              Consumption Share by Type
-            </h3>
-            <div className="h-[300px]">
-              <Pie data={chartData.typeDistribution} options={pieChartOptions} />
-            </div>
+        {/* Consumption by Type Pie Chart */}
+        <div className="card p-6 border border-gray-100 shadow-sm">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+            <PieChartIcon size={18} className="text-gray-400" />
+            Consumption Share by Type
+          </h3>
+          <div className="h-[300px]">
+            <Pie data={chartData.typeDistribution} options={pieChartOptions} />
           </div>
         </div>
-      )}
+      </div>
+    )}
 
-      {/* DataTable */}
-      {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="flex flex-col items-center gap-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <div className="text-[var(--text-secondary)]">Loading daily consumption data...</div>
-          </div>
+    {/* DataTable */}
+    {isLoading ? (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <div className="text-[var(--text-secondary)]">Loading daily consumption data...</div>
         </div>
-      ) : filteredData.length > 0 ? (
-        <DataTable
-          columns={columns}
-          data={filteredData}
-          searchPlaceholder="Search materials..."
-          defaultPageSize={20}
-          showToolbar={true}
-          toolbarActions={
-            <div className="flex items-center gap-2 ml-2">
-              {/* Product Type Tabs */}
-              <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-1 bg-white">
-                {(['All', 'RM', 'PM'] as const).map(type => (
-                  <button
-                    key={type}
-                    onClick={() => setProductTypeFilter(type)}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${productTypeFilter === type
-                        ? 'bg-slate-800 text-white shadow-sm'
-                        : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-
-              <div className="h-6 w-px bg-gray-200 mx-2" />
-
-              {/* Date Filter */}
-              <Input
-                type="date"
-                value={date}
-                onChange={e => setDate(e.target.value)}
-                fullWidth={false}
-                className="w-auto shadow-sm border-gray-200 h-8 text-xs"
-              />
+      </div>
+    ) : filteredData.length > 0 ? (
+      <DataTable
+        columns={columns}
+        data={filteredData}
+        searchPlaceholder="Search materials..."
+        defaultPageSize={20}
+        showToolbar={true}
+        toolbarActions={
+          <div className="flex items-center gap-2 ml-2">
+            {/* Product Type Tabs */}
+            <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-1 bg-white">
+              {(['All', 'RM', 'PM'] as const).map(type => (
+                <button
+                  key={type}
+                  onClick={() => setProductTypeFilter(type)}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${productTypeFilter === type
+                    ? 'bg-slate-800 text-white shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                >
+                  {type}
+                </button>
+              ))}
             </div>
-          }
-          showPagination={true}
-          autoResetPageIndex={false}
-        />
-      ) : (
-        <div className="flex flex-col items-center justify-center h-64 text-[var(--text-secondary)] border bg-gray-50/30 rounded-lg">
-          <PieChartIcon size={48} className="text-gray-300 mb-2" />
-          <p>No data available for the selected date.</p>
-        </div>
-      )}
-    </div>
-  );
+
+            <div className="h-6 w-px bg-gray-200 mx-2" />
+
+            {/* Date Filter */}
+            <Input
+              type="date"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              fullWidth={false}
+              className="w-auto shadow-sm border-gray-200 h-8 text-xs"
+            />
+          </div>
+        }
+        showPagination={true}
+        autoResetPageIndex={false}
+      />
+    ) : (
+      <div className="flex flex-col items-center justify-center h-64 text-[var(--text-secondary)] border bg-gray-50/30 rounded-lg">
+        <PieChartIcon size={48} className="text-gray-300 mb-2" />
+        <p>No data available for the selected date.</p>
+      </div>
+    )}
+  </div>
+);
 };
 
 export default DailyConsumptionReport;

@@ -32,6 +32,7 @@ import { Doughnut, Line, Bar } from 'react-chartjs-2';
 import { reportsApi } from '@/features/reports/api/reportsApi';
 import apiClient from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { addPdfFooter } from '@/utils/pdfUtils';
 
 // Register ChartJS components
 ChartJS.register(
@@ -771,6 +772,8 @@ const CustomerReport: React.FC = () => {
         // Add download date and time at bottom left
         pdf.text(`Downloaded: ${downloadDate} | ${downloadTime}`, margin, pageHeight - 5);
       }
+
+      addPdfFooter(pdf);
 
       const fileName = `Customer_Report_${new Date().toISOString().split('T')[0]}.pdf`;
       console.log('Saving PDF as:', fileName);

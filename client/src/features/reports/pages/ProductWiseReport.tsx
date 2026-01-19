@@ -4,6 +4,7 @@ import { FileDown } from 'lucide-react';
 import { showToast } from '@/utils/toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { addPdfFooter } from '@/utils/pdfUtils';
 import { ColumnDef, SortingState } from '@tanstack/react-table';
 import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table';
 import { Button, Input, SearchableSelect } from '@/components/ui';
@@ -223,6 +224,8 @@ const ProductWiseReport = () => {
       styles: { fontSize: 8 },
       headStyles: { fillColor: [71, 85, 105] },
     });
+
+    addPdfFooter(doc);
 
     // Save PDF
     const fileName = `product_stock_report_${productTypeFilter}_${new Date().toISOString().split('T')[0]

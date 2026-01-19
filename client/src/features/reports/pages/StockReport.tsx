@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePermission } from '@/hooks/usePermission';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { addPdfFooter } from '@/utils/pdfUtils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -145,6 +146,8 @@ const StockReport = () => {
       styles: { fontSize: 8 },
       headStyles: { fillColor: [34, 197, 94] },
     });
+
+    addPdfFooter(doc);
 
     doc.save(`stock_report_${new Date().toISOString().split('T')[0]}.pdf`);
     showToast.success('Report exported successfully');
@@ -479,13 +482,12 @@ const StockReport = () => {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
         cell: ({ row }) => (
           <Badge
-            className={`${
-              row.original.productType === 'FG'
-                ? 'bg-green-500 hover:bg-green-600 text-white'
-                : row.original.productType === 'RM'
-                  ? 'bg-blue-500 hover:bg-blue-600 text-white'
-                  : 'bg-yellow-500 hover:bg-yellow-600 text-white'
-            }`}
+            className={`${row.original.productType === 'FG'
+              ? 'bg-green-500 hover:bg-green-600 text-white'
+              : row.original.productType === 'RM'
+                ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                : 'bg-yellow-500 hover:bg-yellow-600 text-white'
+              }`}
           >
             {row.original.productType}
           </Badge>
@@ -496,11 +498,10 @@ const StockReport = () => {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Available Qty" />,
         cell: ({ row }) => (
           <div
-            className={`text-right ${
-              row.original.availableQuantity < row.original.minStockLevel
-                ? 'text-[var(--color-error)] font-semibold'
-                : 'text-[var(--text-primary)]'
-            }`}
+            className={`text-right ${row.original.availableQuantity < row.original.minStockLevel
+              ? 'text-[var(--color-error)] font-semibold'
+              : 'text-[var(--text-primary)]'
+              }`}
           >
             {Number(row.original.availableQuantity).toFixed(2)}
             {row.original.availableQuantity < row.original.minStockLevel && (
@@ -601,11 +602,10 @@ const StockReport = () => {
                   size="sm"
                   variant={productTypeFilter === type ? 'primary' : 'secondary'}
                   onClick={() => setProductTypeFilter(type)}
-                  className={`min-w-[4rem] px-4 transition-all duration-200 ${
-                    productTypeFilter === type
-                      ? 'bg-slate-800 text-white hover:bg-slate-900 border-none shadow-md'
-                      : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-                  }`}
+                  className={`min-w-[4rem] px-4 transition-all duration-200 ${productTypeFilter === type
+                    ? 'bg-slate-800 text-white hover:bg-slate-900 border-none shadow-md'
+                    : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                    }`}
                 >
                   {type}
                 </Button>

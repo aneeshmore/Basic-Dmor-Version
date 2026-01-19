@@ -9,6 +9,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { showToast } from '@/utils/toast';
 import { numberToWords } from '@/utils/formatters';
 import { QuotationData, QuotationItem } from '../types';
+import { addPdfFooter } from '@/utils/pdfUtils';
 import { productApi } from '@/features/master-products/api/productApi';
 
 import { Product } from '@/features/inventory/types';
@@ -23,6 +24,7 @@ import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { quotationApi, QuotationRecord } from '../api/quotationApi';
+import { companyApi } from '@/features/company/api/companyApi';
 
 // Additional imports for Create Quotation functionality
 import { customerApi } from '@/features/masters/api/customerApi';
@@ -35,22 +37,24 @@ import UpdateConfirmModal from '@/features/orders/components/UpdateConfirmModal'
 import { Save } from 'lucide-react';
 
 const INITIAL_DATA: QuotationData = {
-  quotationNo: 'SO/23-24/1228',
-  date: '15-Dec-25',
+  quotationNo: '',
+  date: format(new Date(), 'dd-MMM-yy'),
   paymentTerms: '30 Days',
-  buyerRef: 'SO/23-24/1228',
+  buyerRef: '',
   otherRef: '',
   dispatchThrough: '',
   destination: '',
   deliveryTerms: '',
 
-  companyName: 'Morex Technologies',
-  companyAddress: 'AMBEGAON VALLY A, INFRONT OF SWAMI NARAYAN MANDIR, Ambegaon Khurd, Pune',
-  companyPhone: '+91 98765 43210',
-  companyEmail: 'office@morex.com',
-  companyGSTIN: '06AAACD7890E1Z2',
-  companyState: 'Maharashtra',
-  companyCode: '06',
+  companyName: '',
+  companyAddress: '',
+  companyPhone: '',
+  companyEmail: '',
+  companyGSTIN: '',
+  companyState: '',
+  companyCode: '',
+  companyPAN: '',
+  termsAndConditions: '',
 
   items: [
     {
@@ -307,16 +311,43 @@ const QuotationMaker = () => {
     const fetchData = async () => {
       setDataLoading(true);
       try {
-        const [customersRes, employeesRes, productsRes] = await Promise.all([
+        const [customersRes, employeesRes, productsRes, companyRes] = await Promise.all([
           customerApi.getAll(),
           employeeApi.getAll(),
           inventoryApi.getAllProducts(),
+          companyApi.get().catch(() => ({ data: null })),
         ]);
 
         setCustomers(customersRes.data || []);
         setEmployees(employeesRes.data || []);
         setSalesPersonEmployees(employeesRes.data || []);
         setProducts(productsRes || []);
+
+        // Update company info if available
+        if (companyRes?.data) {
+          // Response structure is { success: true, data: CompanyInfo }
+          const c = (companyRes.data as any).data;
+
+          if (c) {
+            setData(prev => ({
+              ...prev,
+              companyName: c.companyName || prev.companyName,
+              companyLogo: c.logoUrl || prev.companyLogo,
+              companyAddress: c.address || prev.companyAddress,
+              companyGSTIN: c.gstNumber || prev.companyGSTIN,
+              companyEmail: c.email || prev.companyEmail,
+              companyPhone: c.contactNumber || prev.companyPhone,
+              companyPAN: c.panNumber || prev.companyPAN,
+              termsAndConditions: c.termsAndConditions || prev.termsAndConditions,
+              // Bank Details
+              bankName: c.bankName || prev.bankName,
+              accountNo: c.accountNumber || prev.accountNo,
+              ifsc: c.ifscCode || prev.ifsc,
+              branch: c.branch || prev.branch,
+            }));
+          }
+        }
+
       } catch (error) {
         console.error('Failed to fetch data:', error);
         showToast.error('Failed to load data');
@@ -500,6 +531,8 @@ const QuotationMaker = () => {
 
       const prefix = isInvoice ? 'Invoice' : 'Quotation';
       const customerName = (data.buyerName || 'Customer').replace(/[^a-z0-9]/gi, '_');
+
+      addPdfFooter(pdf);
       pdf.save(`${prefix}_${customerName}.pdf`);
 
       showToast.success('PDF Downloaded!', 'pdf-gen');
@@ -518,6 +551,32 @@ const QuotationMaker = () => {
     } finally {
       setIsPdfMode(false); // Revert back to editable mode
       setIsGenerating(false);
+    }
+  };
+
+  const handleSaveCompanyInfo = async () => {
+    try {
+      setLoading(true);
+      await companyApi.update({
+        companyName: data.companyName,
+        logoUrl: data.companyLogo,
+        address: data.companyAddress,
+        gstNumber: data.companyGSTIN,
+        email: data.companyEmail,
+        contactNumber: data.companyPhone,
+        panNumber: data.companyPAN,
+        termsAndConditions: data.termsAndConditions,
+        bankName: data.bankName,
+        accountNumber: data.accountNo,
+        ifscCode: data.ifsc,
+        branch: data.branch,
+      });
+      showToast.success('Company details saved successfully');
+    } catch (err) {
+      console.error(err);
+      showToast.error('Failed to save company details');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -802,16 +861,15 @@ const QuotationMaker = () => {
 
           {/* Horizontal Layout: Company Info (Left - Narrower) + Quotation Items (Right - Wider) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* LEFT SIDE: Company Information - Takes 1 column */}
+            {/* LEFT SIDE: Quotation Information - Takes 1 column */}
             <div className="bg-[var(--surface)] p-6 rounded-lg h-fit lg:sticky lg:top-4 lg:col-span-1">
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
                 Company Information
               </h3>
 
               <div className="space-y-4">
-                {/* Company Name and Address - Stacked */}
+                {/* Company Name and Address */}
                 <div className="space-y-4">
-                  {/* Company Name */}
                   <div>
                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                       Company Name
@@ -821,8 +879,59 @@ const QuotationMaker = () => {
                       onChange={e => updateField('companyName', e.target.value)}
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                      Company Logo
+                    </label>
+                    <div className="flex items-center gap-4">
+                      {/* Preview */}
+                      <div className="h-12 w-12 border border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden bg-gray-50">
+                        {data.companyLogo ? (
+                          <img src={data.companyLogo} alt="Logo" className="w-full h-full object-contain" />
+                        ) : (
+                          <span className="text-xs text-gray-400">No Logo</span>
+                        )}
+                      </div>
 
-                  {/* Address */}
+                      {/* Upload Button */}
+                      <div className="relative">
+                        <input
+                          type="file"
+                          id="logo-upload"
+                          className="hidden"
+                          accept="image/png, image/jpeg, image/jpg"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 500 * 1024) { // 500KB limit
+                                alert("File too large. Please upload an image under 500KB.");
+                                return;
+                              }
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                updateField('companyLogo', reader.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor="logo-upload"
+                          className="cursor-pointer px-3 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded hover:bg-blue-100 border border-blue-200"
+                        >
+                          Upload Logo
+                        </label>
+                      </div>
+                      {data.companyLogo && (
+                        <button
+                          onClick={() => updateField('companyLogo', '')}
+                          className="text-sm text-red-500 hover:text-red-700 underline"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                       Address
@@ -836,7 +945,7 @@ const QuotationMaker = () => {
                   </div>
                 </div>
 
-                {/* GSTIN and Email */}
+                {/* GSTIN, PAN and Email */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
@@ -849,6 +958,15 @@ const QuotationMaker = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                      PAN Number
+                    </label>
+                    <Input
+                      value={data.companyPAN || ''}
+                      onChange={e => updateField('companyPAN', e.target.value)}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                       Email
                     </label>
                     <Input
@@ -858,75 +976,74 @@ const QuotationMaker = () => {
                   </div>
                 </div>
 
-                {/* Quotation Metadata - Full Width Below */}
-                <div className="border-t border-[var(--border)] pt-4">
+                {/* Bank Details */}
+                <div className="border-t border-[var(--border)] pt-4 mt-4">
                   <h4 className="text-md font-semibold text-[var(--text-primary)] mb-4">
-                    Quotation Details
+                    Bank Details
                   </h4>
-
                   <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                        Bank Name
+                      </label>
+                      <Input
+                        value={data.bankName}
+                        onChange={e => updateField('bankName', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                        Account Number
+                      </label>
+                      <Input
+                        value={data.accountNo}
+                        onChange={e => updateField('accountNo', e.target.value)}
+                      />
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                          Quotation No
+                          IFSC Code
                         </label>
                         <Input
-                          value={data.quotationNo}
-                          onChange={e => updateField('quotationNo', e.target.value)}
+                          value={data.ifsc}
+                          onChange={e => updateField('ifsc', e.target.value)}
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                          Date
+                          Branch
                         </label>
                         <Input
-                          value={data.date}
-                          onChange={e => updateField('date', e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Payment Terms
-                      </label>
-                      <Input
-                        value={data.paymentTerms}
-                        onChange={e => updateField('paymentTerms', e.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Buyer Ref / Order No
-                      </label>
-                      <Input
-                        value={data.buyerRef}
-                        onChange={e => updateField('buyerRef', e.target.value)}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                          Dispatch Through
-                        </label>
-                        <Input
-                          value={data.dispatchThrough}
-                          onChange={e => updateField('dispatchThrough', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                          Destination
-                        </label>
-                        <Input
-                          value={data.destination}
-                          onChange={e => updateField('destination', e.target.value)}
+                          value={data.branch}
+                          onChange={e => updateField('branch', e.target.value)}
                         />
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Terms & Conditions */}
+                <div className="border-t border-[var(--border)] pt-4 mt-4">
+                  <h4 className="text-md font-semibold text-[var(--text-primary)] mb-4">
+                    Terms & Conditions
+                  </h4>
+                  <textarea
+                    value={data.termsAndConditions || ''}
+                    onChange={e => updateField('termsAndConditions', e.target.value)}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--text-primary)] rounded-lg focus:outline-none focus:border-[var(--primary)] resize-none"
+                  />
+                </div>
+
+                {/* Save Company Details Button */}
+                <div className="pt-4 mt-4 border-t border-[var(--border)]">
+                  <Button
+                    onClick={handleSaveCompanyInfo}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white flex justify-center items-center gap-2"
+                  >
+                    <Save size={16} /> Save Company Details
+                  </Button>
                 </div>
               </div>
             </div>
@@ -964,6 +1081,12 @@ const QuotationMaker = () => {
                   </Button>
                 </div>
               </div>
+            </div>
+            {/* Footer Branding */}
+            <div className="mt-4 text-center">
+              <p className="text-[7pt] text-gray-400 italic">
+                Generated with Morex Technologies&apos;s OMS
+              </p>
             </div>
           </div>
         </div>
@@ -1064,12 +1187,32 @@ const QuotationMaker = () => {
                 {/* Company Details */}
                 <div className="p-1 flex gap-2">
                   <div className="w-[100px] flex-shrink-0 flex items-start justify-center pt-1">
-                    <img
-                      src="/morex-logo.png"
-                      alt="Logo"
-                      className="w-auto max-h-[35px] object-contain"
-                      crossOrigin="anonymous"
-                    />
+                    {/* Helper to process Google Drive links */}
+                    {(() => {
+                      const getLogoUrl = (url?: string) => {
+                        if (!url) return '/morex-logo.png';
+                        // Handle Google Drive links
+                        if (url.includes('drive.google.com')) {
+                          const idMatch = url.match(/\/d\/([^/]+)/);
+                          if (idMatch && idMatch[1]) {
+                            // Try View export link which works for most public files
+                            return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
+                          }
+                        }
+                        return url;
+                      };
+                      return (
+                        <img
+                          src={getLogoUrl(data.companyLogo)}
+                          alt="Logo"
+                          className="w-auto max-h-[50px] object-contain"
+                          crossOrigin="anonymous"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/morex-logo.png';
+                          }}
+                        />
+                      );
+                    })()}
                   </div>
                   <div className="flex-grow">
                     <EditableInput
@@ -1170,16 +1313,7 @@ const QuotationMaker = () => {
                   </div>
                 </div>
 
-                {/* Payment Terms */}
-                <div className="p-1 h-[45px]">
-                  <span className="font-bold block text-[8pt]">Mode/Terms of Payment</span>
-                  <EditableInput
-                    isPdfMode={isPdfMode}
-                    readOnly={true}
-                    value={data.paymentTerms}
-                    onChange={v => updateField('paymentTerms', v)}
-                  />
-                </div>
+
 
                 {/* Buyer Ref / Other Ref */}
                 <div className="grid grid-cols-2 divide-x divide-black h-[50px]">
@@ -1461,7 +1595,15 @@ const QuotationMaker = () => {
             <div className="p-2 border-r border-black">
               <div className="mb-4">
                 <span className="font-bold">Company&apos;s PAN</span> :{' '}
-                <span className="font-bold">AAGCD5732R</span>
+                <span className="font-bold">
+                  <EditableInput
+                    isPdfMode={isPdfMode}
+                    readOnly={true}
+                    value={data.companyPAN || ''}
+                    onChange={v => updateField('companyPAN', v)}
+                    className="font-bold inline-block w-auto min-w-[100px]"
+                  />
+                </span>
               </div>
               <div className="underline mb-1 font-bold">Declaration</div>
               <p className="text-[7.5pt] leading-tight text-gray-600">
