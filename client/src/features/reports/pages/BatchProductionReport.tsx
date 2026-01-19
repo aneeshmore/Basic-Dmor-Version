@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { PageHeader } from '@/components/common';
 import { reportsApi } from '../api/reportsApi';
 import { BatchProductionReportItem } from '../types';
-import { formatDateIST, formatDateTimeIST } from '@/utils/formatters';
+import { formatDate, formatDateTime } from '@/utils/dateUtils';
 import {
   FileDown,
   Warehouse,
@@ -121,10 +121,7 @@ const BatchProductionReport = () => {
     return parseFloat(num.toFixed(3)).toString();
   };
 
-  const formatDateTime = (dateString: string | null) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString();
-  };
+
 
   type RGBColor = [number, number, number];
 
@@ -154,14 +151,14 @@ const BatchProductionReport = () => {
       [`Batch No:`, `${batch.batchNo}${batch.productName ? ' / ' + batch.productName : ''}`],
       [`Supervisor:`, batch.supervisor || '-'],
       [`Labours:`, batch.labourNames || '-'],
-      [`Date:`, formatDateIST(new Date().toISOString())],
+      [`Date:`, formatDate(new Date().toISOString())],
       [
         `Start Date-Time:`,
-        formatDateTimeIST(batch.startedAt),
+        formatDateTime(batch.startedAt),
       ],
       [
         `End Date-Time:`,
-        formatDateTimeIST(batch.completedAt),
+        formatDateTime(batch.completedAt),
       ],
       [
         `Total Time:`,
@@ -573,7 +570,7 @@ const BatchProductionReport = () => {
 
     // Add Filters Info
     doc.setFontSize(10);
-    let subtitle = `Generated on: ${new Date().toLocaleString()}`;
+    let subtitle = `Generated on: ${formatDateTime(new Date())}`;
     if (statusFilter !== 'All') subtitle += ` | Status: ${statusFilter}`;
     if (startDate) subtitle += ` | From: ${startDate}`;
     if (endDate) subtitle += ` | To: ${endDate}`;
@@ -671,12 +668,8 @@ const BatchProductionReport = () => {
     return {
       labels: allDates.map(dateStr => {
         const date = new Date(dateStr);
-        // Format: "Tuesday, Dec 23"
-        return date.toLocaleDateString('en-US', {
-          weekday: 'long',
-          month: 'short',
-          day: 'numeric',
-        });
+        // Format: "DD/MM/YY"
+        return formatDate(date);
       }),
       datasets: [
         {
@@ -965,7 +958,7 @@ const BatchProductionReport = () => {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
         cell: ({ row }) => (
           <div className="text-[var(--text-secondary)] whitespace-nowrap">
-            {formatDateIST(row.original.startedAt)}
+            {formatDate(row.original.startedAt)}
           </div>
         ),
       },
@@ -1467,18 +1460,18 @@ const BatchProductionReport = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-gray-600">Date:</span>
-                  <span className="text-gray-900">{formatDateIST(new Date().toISOString())}</span>
+                  <span className="text-gray-900">{formatDate(new Date().toISOString())}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-gray-600">Start Date-Time:</span>
                   <span className="text-gray-900">
-                    {formatDateTimeIST(previewBatch.startedAt)}
+                    {formatDateTime(previewBatch.startedAt)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-gray-600">End Date-Time:</span>
                   <span className="text-gray-900">
-                    {formatDateTimeIST(previewBatch.completedAt)}
+                    {formatDateTime(previewBatch.completedAt)}
                   </span>
                 </div>
                 <div className="flex justify-between">

@@ -13,6 +13,7 @@ import {
   ArrowDown,
 } from 'lucide-react';
 import { PageHeader } from '@/components/common';
+import { formatDate, formatDateTime } from '@/utils/dateUtils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -600,7 +601,7 @@ const CustomerReport: React.FC = () => {
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
       pdf.text(
-        `Generated on: ${new Date().toLocaleDateString('en-IN')} | Total Records: ${processedCustomers.length}`,
+        `Generated on: ${formatDateTime(new Date())} | Total Records: ${processedCustomers.length}`,
         14,
         28
       );
@@ -761,7 +762,7 @@ const CustomerReport: React.FC = () => {
       // Add page numbers and download timestamp
       const totalPages = (pdf.internal as any).getNumberOfPages();
       const now = new Date();
-      const downloadDate = now.toLocaleDateString('en-IN');
+      const downloadDate = formatDate(now)?.replace(/\//g, '-');
       const downloadTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
       for (let i = 1; i <= totalPages; i++) {

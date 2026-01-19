@@ -12,6 +12,7 @@ import { usePermission } from '@/hooks/usePermission';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { addPdfFooter } from '@/utils/pdfUtils';
+import { formatDate, formatDateTime } from '@/utils/dateUtils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -114,7 +115,7 @@ const StockReport = () => {
     doc.text('Stock Report', 14, 20);
 
     doc.setFontSize(10);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+    doc.text(`Generated on: ${formatDateTime(new Date())}`, 14, 28);
     if (productTypeFilter !== 'All') {
       doc.text(`Product Type: ${productTypeFilter}`, 14, 34);
     }
@@ -493,23 +494,23 @@ const StockReport = () => {
           </Badge>
         ),
       },
-      {
-        accessorKey: 'availableQuantity',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Available Qty" />,
-        cell: ({ row }) => (
-          <div
-            className={`text-right ${row.original.availableQuantity < row.original.minStockLevel
-              ? 'text-[var(--color-error)] font-semibold'
-              : 'text-[var(--text-primary)]'
-              }`}
-          >
-            {Number(row.original.availableQuantity).toFixed(2)}
-            {row.original.availableQuantity < row.original.minStockLevel && (
-              <AlertTriangle className="inline ml-1 h-4 w-4" />
-            )}
-          </div>
-        ),
-      },
+      // {
+      //   accessorKey: 'availableQuantity',
+      //   header: ({ column }) => <DataTableColumnHeader column={column} title="Available Qty" />,
+      //   cell: ({ row }) => (
+      //     <div
+      //       className={`text-right ${row.original.availableQuantity < row.original.minStockLevel
+      //         ? 'text-[var(--color-error)] font-semibold'
+      //         : 'text-[var(--text-primary)]'
+      //         }`}
+      //     >
+      //       {Number(row.original.availableQuantity).toFixed(2)}
+      //       {row.original.availableQuantity < row.original.minStockLevel && (
+      //         <AlertTriangle className="inline ml-1 h-4 w-4" />
+      //       )}
+      //     </div>
+      //   ),
+      // },
       {
         accessorKey: 'availableWeightKg',
         header: ({ column }) => (
@@ -533,7 +534,7 @@ const StockReport = () => {
       },
       {
         accessorKey: 'sellingPrice',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Selling Price" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Price" />,
         cell: ({ row }) => (
           <div className="text-right font-medium text-[var(--text-primary)]">
             ₹{Number(row.original.sellingPrice).toFixed(2)}

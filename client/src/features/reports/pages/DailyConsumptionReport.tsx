@@ -10,6 +10,7 @@ import { showToast } from '@/utils/toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { addPdfFooter } from '@/utils/pdfUtils';
+import { formatDate, formatDateTime } from '@/utils/dateUtils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -99,7 +100,7 @@ const DailyConsumptionReport: React.FC = () => {
     doc.text('Daily Consumption Report', 14, 20);
 
     doc.setFontSize(10);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+    doc.text(`Generated on: ${formatDateTime(new Date())}`, 14, 28);
     doc.text(`Date: ${date}`, 14, 34);
     if (productTypeFilter !== 'All') {
       doc.text(`Type: ${productTypeFilter}`, 14, 40);
