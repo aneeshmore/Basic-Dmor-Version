@@ -965,14 +965,25 @@ const QuotationMaker = () => {
                       onChange={e => updateField('companyPAN', e.target.value)}
                     />
                   </div>
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      Email
-                    </label>
-                    <Input
-                      value={data.companyEmail}
-                      onChange={e => updateField('companyEmail', e.target.value)}
-                    />
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                        Email
+                      </label>
+                      <Input
+                        value={data.companyEmail}
+                        onChange={e => updateField('companyEmail', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                        Contact Number
+                      </label>
+                      <Input
+                        value={data.companyPhone}
+                        onChange={e => updateField('companyPhone', e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1229,7 +1240,7 @@ const QuotationMaker = () => {
                       onChange={v => updateField('companyAddress', v)}
                       className="text-[8.5pt] h-[60px]"
                     />
-                    <div className="mt-1">
+                    <div className="mt-1 text-[8.5pt]">
                       <span className="font-bold">GSTIN/UIN:</span>
                       <EditableInput
                         isPdfMode={isPdfMode}
@@ -1239,13 +1250,23 @@ const QuotationMaker = () => {
                         className="w-40 inline-block ml-1"
                       />
                     </div>
-                    <div>
+                    <div className="text-[8.5pt]">
                       <span className="font-bold">Email:</span>
                       <EditableInput
                         isPdfMode={isPdfMode}
                         readOnly={true}
                         value={data.companyEmail}
                         onChange={v => updateField('companyEmail', v)}
+                        className="w-40 inline-block ml-1"
+                      />
+                    </div>
+                    <div className="text-[8.5pt]">
+                      <span className="font-bold">Contact:</span>
+                      <EditableInput
+                        isPdfMode={isPdfMode}
+                        readOnly={true}
+                        value={data.companyPhone || ''}
+                        onChange={v => updateField('companyPhone', v)}
                         className="w-40 inline-block ml-1"
                       />
                     </div>
