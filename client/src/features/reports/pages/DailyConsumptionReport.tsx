@@ -128,10 +128,10 @@ const DailyConsumptionReport: React.FC = () => {
       styles: { fontSize: 8 },
       headStyles: { fillColor: [34, 197, 94] },
     });
-
-    showToast.error('No data to export');
-    return;
-  }
+    addPdfFooter(doc);
+    doc.save(`Daily_Consumption_Report_${date}.pdf`);
+    showToast.success('PDF Downloaded!');
+  };
 
   const handleExportCsv = () => {
     const csvHeaders = [
