@@ -94,7 +94,7 @@ const DailyConsumptionReport: React.FC = () => {
       return;
     }
 
-    const doc = new jsPDF('landscape');
+    const doc = new jsPDF('portrait');
 
     doc.setFontSize(18);
     doc.text('Daily Consumption Report', 14, 20);

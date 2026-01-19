@@ -95,6 +95,24 @@ const CreateOrderPage: React.FC = () => {
       ),
     },
     {
+      accessorKey: 'salespersonName',
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Sales Person" />,
+      enableColumnFilter: true,
+      cell: ({ row }) => {
+        const fullName = row.original.salespersonName || '-';
+        const parts = fullName.split(' ');
+        const titles = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.'];
+        let displayName = parts[0];
+
+        // If first part is a title and there's a name after it, combine them
+        if (titles.includes(parts[0]) && parts.length > 1) {
+          displayName = `${parts[0]} ${parts[1]}`;
+        }
+
+        return <span className="font-medium">{displayName}</span>;
+      },
+    },
+    {
       accessorKey: 'productNames',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Products" />,
       cell: ({ row }) => {
@@ -242,7 +260,7 @@ const CreateOrderPage: React.FC = () => {
         date: format(new Date(order.orderDate), 'dd-MMM-yy'),
         paymentTerms: fullOrder.paymentMethod || 'Bank Transfer',
         buyerRef: `ORD-${order.orderId}`,
-        otherRef: '',
+        otherRef: order.salespersonName || '',
         dispatchThrough: '',
         destination: fullOrder.deliveryAddress || '',
         deliveryTerms: '',

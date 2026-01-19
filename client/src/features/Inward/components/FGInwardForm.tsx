@@ -57,7 +57,7 @@ export const FGInwardForm = React.forwardRef<HTMLFormElement, FGInwardFormProps>
     const [currentItem, setCurrentItem] = useState<CurrentItemState>({
       productId: 0,
       quantity: '',
-      unitId: 7, // Default to NOS for FG
+      unitId: 0,
       totalPrice: '',
       unitPrice: 0,
     });
@@ -119,6 +119,21 @@ export const FGInwardForm = React.forwardRef<HTMLFormElement, FGInwardFormProps>
       }
     };
 
+    const getDefaultUnitId = () => {
+      // Logic same as PM: Find 'NO' unit
+      return units.find(u => u.UnitName === 'NO')?.UnitID || 0;
+    };
+
+    // Update currentItem unit when units are loaded
+    useEffect(() => {
+      if (units.length > 0 && (currentItem.unitId === 0 || currentItem.unitId === 7)) {
+        const defaultId = getDefaultUnitId();
+        if (defaultId) {
+          setCurrentItem(prev => ({ ...prev, unitId: defaultId }));
+        }
+      }
+    }, [units]);
+
     const loadProducts = async () => {
       try {
         const productsData = await inventoryApi.getAllProducts();
@@ -133,7 +148,7 @@ export const FGInwardForm = React.forwardRef<HTMLFormElement, FGInwardFormProps>
       setCurrentItem({
         productId: 0,
         quantity: '',
-        unitId: 7, // NOS for FG
+        unitId: getDefaultUnitId(),
         totalPrice: '',
         unitPrice: 0,
       });
@@ -192,7 +207,7 @@ export const FGInwardForm = React.forwardRef<HTMLFormElement, FGInwardFormProps>
           return;
         }
 
-        const finalUnitId = currentItem.unitId || 7; // Default to NOS
+        const finalUnitId = currentItem.unitId || getDefaultUnitId();
 
         const total = currentItem.totalPrice ? Number(currentItem.totalPrice) : 0;
 
@@ -273,7 +288,7 @@ export const FGInwardForm = React.forwardRef<HTMLFormElement, FGInwardFormProps>
             return;
           }
 
-          const finalUnitId = currentItem.unitId || 7; // Default to NOS
+          const finalUnitId = currentItem.unitId || getDefaultUnitId();
           const selectedProduct = products.find(p => p.productId === currentItem.productId);
 
           newItemToAdd = {
@@ -463,11 +478,10 @@ export const FGInwardForm = React.forwardRef<HTMLFormElement, FGInwardFormProps>
                   {items.map((item, idx) => (
                     <tr
                       key={idx}
-                      className={`transition-colors duration-150 ${
-                        editingItemIndex === idx
+                      className={`transition-colors duration-150 ${editingItemIndex === idx
                           ? 'bg-[var(--primary-light)] border-l-4 border-l-[var(--primary)]'
                           : 'hover:bg-[var(--surface-hover)]'
-                      }`}
+                        }`}
                     >
                       <td className="px-4 py-3 text-[var(--text-primary)] font-medium whitespace-nowrap">
                         {getProductName(item)}

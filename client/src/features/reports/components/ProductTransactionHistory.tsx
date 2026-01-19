@@ -9,6 +9,7 @@ import { reportsApi } from '../api/reportsApi';
 import { ProductWiseReportItem } from '../types';
 import { showToast } from '@/utils/toast';
 import { addPdfFooter } from '@/utils/pdfUtils';
+import { formatDate } from '@/utils/dateUtils';
 
 interface ProductTransactionHistoryProps {
     productId: string;
@@ -66,7 +67,7 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
 
         const tableColumn = ['Date', 'Details', 'Type', 'Inward', 'Outward', 'Balance'];
         const tableRows = data.map(item => [
-            item.date ? new Date(item.date).toLocaleDateString() : '-',
+            formatDate(item.date),
             item.type || '-',
             item.transactionType || '-',
             item.inward || '0',
@@ -98,7 +99,7 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
                     const dateObj = new Date(dateStr);
                     return (
                         <div className="flex flex-col">
-                            <span className="font-medium text-gray-900">{dateObj.toLocaleDateString()}</span>
+                            <span className="font-medium text-gray-900">{formatDate(dateStr)}</span>
                             <span className="text-xs text-gray-500">
                                 {dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>

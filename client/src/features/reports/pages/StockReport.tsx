@@ -125,6 +125,7 @@ const StockReport = () => {
       'Type',
       'Available Qty',
       'Available Weight (kg)',
+      'Reserved Qty',
       'Min Stock Level',
       'Selling Price',
       'Status',
@@ -135,6 +136,7 @@ const StockReport = () => {
       item.productType,
       item.availableQuantity,
       item.availableWeightKg,
+      item.reservedQuantity,
       item.minStockLevel,
       `Rs. ${Number(item.sellingPrice).toFixed(2)}`,
       item.isActive ? 'Active' : 'Inactive',
@@ -165,6 +167,7 @@ const StockReport = () => {
       'Type',
       'Available Qty',
       'Available Weight (kg)',
+      'Reserved Qty',
       'Min Stock Level',
       'Selling Price',
       'Status',
@@ -175,6 +178,7 @@ const StockReport = () => {
       item.productType,
       item.availableQuantity,
       item.availableWeightKg,
+      item.reservedQuantity,
       item.minStockLevel,
       Number(item.sellingPrice).toFixed(2),
       item.isActive ? 'Active' : 'Inactive',
@@ -519,6 +523,15 @@ const StockReport = () => {
         cell: ({ row }) => (
           <div className="text-right text-[var(--text-secondary)]">
             {Number(row.original.availableWeightKg).toFixed(2)}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'reservedQuantity',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Reserved Qty" />,
+        cell: ({ row }) => (
+          <div className="text-right text-[var(--text-secondary)]">
+            {Number(row.original.reservedQuantity).toFixed(2)}
           </div>
         ),
       },

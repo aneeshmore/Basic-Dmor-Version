@@ -1349,7 +1349,7 @@ const QuotationMaker = () => {
                     />
                   </div>
                   <div className="p-1">
-                    <span className="font-bold block text-[8pt]">Other References</span>
+                    <span className="font-bold block text-[8pt]">Sales Person</span>
                     <EditableInput
                       isPdfMode={isPdfMode}
                       readOnly={true}
@@ -1359,26 +1359,15 @@ const QuotationMaker = () => {
                   </div>
                 </div>
 
-                {/* Dispatch / Destination */}
-                <div className="grid grid-cols-2 divide-x divide-black h-[50px]">
-                  <div className="p-1">
-                    <span className="font-bold block text-[8pt]">Dispatched through</span>
-                    <EditableInput
-                      isPdfMode={isPdfMode}
-                      readOnly={true}
-                      value={data.dispatchThrough}
-                      onChange={v => updateField('dispatchThrough', v)}
-                    />
-                  </div>
-                  <div className="p-1">
-                    <span className="font-bold block text-[8pt]">Destination</span>
-                    <EditableInput
-                      isPdfMode={isPdfMode}
-                      readOnly={true}
-                      value={data.destination}
-                      onChange={v => updateField('destination', v)}
-                    />
-                  </div>
+                {/* Dispatch */}
+                <div className="h-[50px] p-1">
+                  <span className="font-bold block text-[8pt]">Dispatched through</span>
+                  <EditableInput
+                    isPdfMode={isPdfMode}
+                    readOnly={true}
+                    value={data.dispatchThrough}
+                    onChange={v => updateField('dispatchThrough', v)}
+                  />
                 </div>
 
                 {/* Terms of Delivery */}

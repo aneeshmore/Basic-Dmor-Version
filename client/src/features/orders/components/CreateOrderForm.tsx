@@ -963,13 +963,6 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
           .replace(/ /g, '-'),
         customerId: Number(customerId),
 
-        // Company Details
-        companyName: 'Morex Technologies',
-        companyAddress: 'Plot No. 123, Sector 45, Gurugram, India',
-        companyPhone: '+91 98765 43210',
-        companyWeb: 'www.morex.com',
-        companyEmail: 'office@morex.com',
-
         // Salesperson Info (for order conversion)
         salespersonId: typeof salesPersonId === 'number' ? salesPersonId : undefined,
         salespersonName: salespersonName,
@@ -1288,6 +1281,14 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
         enableColumnFilter: true,
         enableSorting: true,
         cell: ({ row }) => <span className="font-medium">{row.original.buyerName || '-'}</span>,
+      },
+      {
+        accessorKey: 'salesPerson',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Sales Person" />,
+        cell: ({ row }) => {
+          const name = row.original.content?.salespersonName || row.original.content?.otherRef || '-';
+          return <span className="font-medium">{name}</span>;
+        },
       },
       {
         header: 'Items',
