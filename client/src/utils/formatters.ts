@@ -118,3 +118,15 @@ export const formatTimeIST = (dateString: string | null | undefined): string => 
     return '-';
   }
 };
+
+export const formatCurrency = (amount: number | string | undefined | null) => {
+  if (amount === undefined || amount === null) return '-';
+  const num = Number(amount);
+  if (isNaN(num)) return '-';
+
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(num);
+};

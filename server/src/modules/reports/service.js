@@ -318,6 +318,83 @@ export class ReportsService {
     }
   }
 
+  async getSalesmanRevenueReport(startDate, endDate) {
+    try {
+      const conditions = [];
+
+      // Filter by date range on orderDate
+      if (startDate) {
+        conditions.push(gte(orders.orderDate, new Date(startDate)));
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        conditions.push(lte(orders.orderDate, end));
+      }
+
+      // Exclude cancelled/rejected/returned orders
+      conditions.push(notInArray(orders.status, ['Cancelled', 'Rejected', 'Returned']));
+
+      // Include valid salespersons (where salespersonId is set)
+      conditions.push(isNotNull(orders.salespersonId));
+
+      const salesmanOrders = await db.query.orders.findMany({
+        where: and(...conditions),
+        with: {
+          salesperson: true,
+          customer: true,
+        },
+        orderBy: (orders, { desc }) => [desc(orders.orderDate)],
+      });
+
+      // Group by Salesperson
+      const grouped = {};
+
+      salesmanOrders.forEach(order => {
+        const spId = order.salespersonId;
+        const spName = order.salesperson
+          ? `${order.salesperson.firstName} ${order.salesperson.lastName}`
+          : 'Unknown';
+
+        // Initialize group if not exists
+        if (!grouped[spId]) {
+          grouped[spId] = {
+            salespersonId: spId,
+            salespersonName: spName,
+            totalRevenue: 0,
+            orderCount: 0,
+            orders: [],
+          };
+        }
+
+        const amount = parseFloat(order.totalAmount || '0');
+        grouped[spId].totalRevenue += amount;
+        grouped[spId].orderCount += 1;
+        grouped[spId].orders.push({
+          orderId: order.orderId,
+          orderNumber: order.orderNumber,
+          customerName: order.customer?.companyName || 'Unknown',
+          amount: amount,
+          date: order.orderDate,
+          status: order.status,
+          billNo: order.account?.billNo || '-',
+        });
+      });
+
+      const result = Object.values(grouped);
+
+      // Sort by Revenue DESC
+      result.sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+      return result;
+
+    } catch (error) {
+      console.error('Error fetching salesman revenue report:', error);
+      throw error;
+    }
+  }
+
+
   async getDailyConsumptionReport(date) {
     try {
       if (!date) {

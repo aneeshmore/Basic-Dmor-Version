@@ -41,4 +41,12 @@ router.get(
   reportsController.getCancelledOrders
 );
 
+
+router.get(
+  '/salesman-revenue',
+  requirePermission('GET:/reports/salesman-revenue'),
+  reportsController.getSalesmanRevenueReport
+);
+
 export default router;
+

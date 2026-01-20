@@ -167,4 +167,11 @@ export const reportsApi = {
     });
     return response.data.data;
   },
+
+  getSalesmanRevenueReport: async (startDate?: string, endDate?: string) => {
+    const response = await apiClient.get('/reports/salesman-revenue', {
+      params: { startDate, endDate },
+    });
+    return response.data.data;
+  },
 };

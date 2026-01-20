@@ -214,6 +214,10 @@ const PaymentEntry = lazy(() => import('@/features/operations/pages/PaymentEntry
 
 const PaymentReport = lazy(() => import('@/features/reports/pages/PaymentReport'));
 
+const SalespersonRevenueReport = lazy(
+  () => import('@/features/reports/pages/SalespersonRevenueReport')
+);
+
 // ============================================
 // ROUTE REGISTRY
 // ============================================
@@ -799,6 +803,14 @@ export const routeRegistry: RouteNode[] = [
         component: BatchProductionReport,
         permission: { module: 'report-batch' },
         apis: [{ route: '/reports/batch-production', method: 'GET', label: 'View Batch Report' }],
+      },
+      {
+        id: 'salesperson-revenue',
+        path: '/reports/salesperson-revenue',
+        label: 'Salesperson Revenue Report',
+        icon: DollarSign,
+        component: SalespersonRevenueReport,
+        permission: { module: 'report-salesperson-revenue' },
       },
       {
         id: 'payment-report',
