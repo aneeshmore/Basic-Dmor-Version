@@ -81,6 +81,7 @@ const CompanySettingsPage: React.FC = () => {
                             <Input {...register('email')} placeholder="office@morex.com" />
                         </div>
 
+
                         <div className="space-y-2 md:col-span-2">
                             <label className="text-sm font-medium text-[var(--text-primary)]">Address</label>
                             <textarea
@@ -89,6 +90,11 @@ const CompanySettingsPage: React.FC = () => {
                                 className="w-full px-3 py-2 border border-[var(--border)] bg-[var(--surface-secondary)] rounded-lg focus:outline-none focus:border-blue-500 resize-none text-[var(--text-primary)]"
                                 placeholder="Full Company Address"
                             />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-[var(--text-primary)]">Pincode</label>
+                            <Input {...register('pincode')} placeholder="Pincode" />
                         </div>
                     </div>
                 </div>
@@ -102,6 +108,10 @@ const CompanySettingsPage: React.FC = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
+                            <label className="text-sm font-medium text-[var(--text-primary)]">Udyam Registration</label>
+                            <Input {...register('udyamRegistrationNumber')} placeholder="Udyam Registration No." />
+                        </div>
+                        <div className="space-y-2">
                             <label className="text-sm font-medium text-[var(--text-primary)]">GSTIN</label>
                             <Input {...register('gstNumber')} placeholder="GST Number" />
                         </div>
@@ -112,6 +122,18 @@ const CompanySettingsPage: React.FC = () => {
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-[var(--text-primary)]">Contact Number</label>
                             <Input {...register('contactNumber')} placeholder="Phone Number" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-[var(--text-primary)]">CGST Label/Rate</label>
+                            <Input {...register('cgst')} placeholder="CGST" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-[var(--text-primary)]">SGST Label/Rate</label>
+                            <Input {...register('sgst')} placeholder="SGST" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-[var(--text-primary)]">IGST Label/Rate</label>
+                            <Input {...register('igst')} placeholder="IGST" />
                         </div>
                         {/* Logo URL Placeholder */}
                         <div className="space-y-2">

@@ -14,5 +14,11 @@ export interface CompanyInfo {
     branch?: string;
     termsAndConditions?: string;
 
+    udyamRegistrationNumber?: string;
+    pincode?: string;
+    cgst?: string;
+    sgst?: string;
+    igst?: string;
+
     updatedAt?: string;
 }

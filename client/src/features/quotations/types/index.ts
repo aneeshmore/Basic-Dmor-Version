@@ -34,6 +34,12 @@ export interface QuotationData {
   companyPAN?: string;
   termsAndConditions?: string;
 
+  udyamRegistrationNumber?: string;
+  companyPincode?: string;
+  companyCGST?: string;
+  companySGST?: string;
+  companyIGST?: string;
+
   // Buyer/Customer Information
   buyerName?: string;
   buyerAddress?: string;

@@ -13,6 +13,7 @@ import { showToast } from '@/utils/toast';
 import { downloadInvoicePDF } from '@/features/quotations/utils/pdfGenerator';
 import { QuotationData } from '@/features/quotations/types';
 import { companyApi } from '@/features/company/api/companyApi';
+import { decodeHtml } from '@/utils/stringUtils';
 
 const formatDisplayOrderId = (orderId: number, dateString: string) => {
   if (!dateString) return `ORD-${orderId}`;
@@ -90,7 +91,7 @@ const CreateOrderPage: React.FC = () => {
       enableColumnFilter: true,
       cell: ({ row }) => (
         <span className="font-medium">
-          {row.original.companyName || row.original.customerName || 'Unknown'}
+          {decodeHtml(row.original.companyName || row.original.customerName) || 'Unknown'}
         </span>
       ),
     },
@@ -117,7 +118,7 @@ const CreateOrderPage: React.FC = () => {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Products" />,
       cell: ({ row }) => {
         if (!row.original.productNames) return <span className="text-muted-foreground">-</span>;
-        const products = row.original.productNames.split(',').map(p => p.trim());
+        const products = row.original.productNames.split(',').map(p => decodeHtml(p.trim()));
         return (
           <div className="flex flex-col gap-1 my-1">
             {products.slice(0, 2).map((product, idx) => (

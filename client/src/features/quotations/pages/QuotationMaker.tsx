@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Download, Plus, Trash2, ArrowLeft, FileText, CheckCircle, RotateCcw, Maximize2, Minimize2, ShoppingCart, Eye, Edit, X } from 'lucide-react';
+import { Download, Trash2, ArrowLeft, FileText, Upload, Save } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { ColumnDef } from '@tanstack/react-table';
@@ -10,7 +10,6 @@ import { showToast } from '@/utils/toast';
 import { numberToWords } from '@/utils/formatters';
 import { QuotationData, QuotationItem } from '../types';
 import { addPdfFooter } from '@/utils/pdfUtils';
-import { productApi } from '@/features/master-products/api/productApi';
 
 import { Product } from '@/features/inventory/types';
 
@@ -20,8 +19,6 @@ import { Tnc } from '@/features/tnc/types';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import { Input, Select, Modal } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
-import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table';
-import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { quotationApi, QuotationRecord } from '../api/quotationApi';
 import { companyApi } from '@/features/company/api/companyApi';
@@ -34,7 +31,7 @@ import { Customer } from '@/features/masters/types';
 import { Employee } from '@/features/employees/types';
 import UpdateConfirmModal from '@/features/orders/components/UpdateConfirmModal';
 
-import { Save } from 'lucide-react';
+
 
 const INITIAL_DATA: QuotationData = {
   quotationNo: '',
@@ -55,6 +52,12 @@ const INITIAL_DATA: QuotationData = {
   companyCode: '',
   companyPAN: '',
   termsAndConditions: '',
+
+  udyamRegistrationNumber: '',
+  companyPincode: '',
+  companyCGST: '',
+  companySGST: '',
+  companyIGST: '',
 
   items: [
     {
@@ -339,6 +342,12 @@ const QuotationMaker = () => {
               companyPhone: c.contactNumber || prev.companyPhone,
               companyPAN: c.panNumber || prev.companyPAN,
               termsAndConditions: c.termsAndConditions || prev.termsAndConditions,
+
+              udyamRegistrationNumber: c.udyamRegistrationNumber || prev.udyamRegistrationNumber,
+              companyPincode: c.pincode || prev.companyPincode,
+              companyCGST: c.cgst || prev.companyCGST,
+              companySGST: c.sgst || prev.companySGST,
+              companyIGST: c.igst || prev.companyIGST,
               // Bank Details
               bankName: c.bankName || prev.bankName,
               accountNo: c.accountNumber || prev.accountNo,
@@ -554,7 +563,56 @@ const QuotationMaker = () => {
     }
   };
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    // Phone validation (10 digits)
+    if (data.companyPhone && !/^\d{10}$/.test(data.companyPhone.replace(/\D/g, ''))) {
+      newErrors.companyPhone = 'Invalid phone number (10 digits required)';
+    }
+
+    // Email validation
+    if (data.companyEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.companyEmail)) {
+      newErrors.companyEmail = 'Invalid email address';
+    }
+
+    // Pincode validation (6 digits)
+    if (data.companyPincode && !/^\d{6}$/.test(data.companyPincode)) {
+      newErrors.companyPincode = 'Invalid pincode (6 digits required)';
+    }
+
+    // Tax rates validation (numeric)
+    const validateRate = (val: string | number | undefined, field: string) => {
+      if (val !== undefined && val !== '' && isNaN(Number(val))) {
+        newErrors[field] = 'Must be a number';
+      }
+    };
+
+    validateRate(data.companyCGST, 'companyCGST');
+    validateRate(data.companySGST, 'companySGST');
+    validateRate(data.companyIGST, 'companyIGST');
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handlePreview = (isInvoiceMode: boolean) => {
+    if (validateForm()) {
+      setIsInvoice(isInvoiceMode);
+      setMode('preview');
+    } else {
+      showToast.error('Please fix validation errors before proceeding');
+    }
+  };
+
   const handleSaveCompanyInfo = async () => {
+    if (!validateForm()) {
+      showToast.error('Please fix validation errors');
+      return;
+    }
+
     try {
       setLoading(true);
       await companyApi.update({
@@ -566,6 +624,12 @@ const QuotationMaker = () => {
         contactNumber: data.companyPhone,
         panNumber: data.companyPAN,
         termsAndConditions: data.termsAndConditions,
+
+        udyamRegistrationNumber: data.udyamRegistrationNumber,
+        pincode: data.companyPincode,
+        cgst: data.companyCGST,
+        sgst: data.companySGST,
+        igst: data.companyIGST,
         bankName: data.bankName,
         accountNumber: data.accountNo,
         ifscCode: data.ifsc,
@@ -582,6 +646,14 @@ const QuotationMaker = () => {
 
   const updateField = (field: keyof QuotationData, value: any) => {
     setData(prev => ({ ...prev, [field]: value }));
+    // Clear error for this field if it exists
+    if (errors[field]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
   };
 
   // useCallback prevents re-creation on every render, stabilizing the DataTable columns
@@ -833,27 +905,26 @@ const QuotationMaker = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  {isEditMode ? 'Update Quotation' : 'Create New Quotation'}
+                  {isEditMode ? 'Update Quotation' : 'Setup Company Details'}
                 </h1>
                 <p className="text-sm text-[var(--text-secondary)] mt-1">
                   {isEditMode
                     ? 'Review and modify the quotation details below'
-                    : 'Fill in the customer and product details to generate a quotation'}
+                    : 'Configure your company details to generate a quotation & invoice'}
                 </p>
               </div>
               <div className="flex gap-2 flex-shrink-0">
                 <Button
-                  onClick={handleSaveQuotation}
-                  disabled={quotationLoading || isGenerating}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-sm flex items-center"
-                >
-                  <Save className="mr-2 h-4 w-4" /> {isEditMode ? 'Update & Resubmit' : 'Save & Send'}
-                </Button>
-                <Button
-                  onClick={() => setMode('preview')}
+                  onClick={() => handlePreview(false)}
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm flex items-center"
                 >
-                  <FileText className="mr-2 h-4 w-4" /> Preview
+                  <FileText className="mr-2 h-4 w-4" /> Preview Quotation
+                </Button>
+                <Button
+                  onClick={() => handlePreview(true)}
+                  className="bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white shadow-sm flex items-center"
+                >
+                  <FileText className="mr-2 h-4 w-4" /> Preview Invoice
                 </Button>
               </div>
             </div>
@@ -861,16 +932,16 @@ const QuotationMaker = () => {
 
           {/* Horizontal Layout: Company Info (Left - Narrower) + Quotation Items (Right - Wider) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* LEFT SIDE: Quotation Information - Takes 1 column */}
-            <div className="bg-[var(--surface)] p-6 rounded-lg h-fit lg:sticky lg:top-4 lg:col-span-1">
-              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-                Company Information
+            {/* CENTER: Quotation Setup - Takes full width centered */}
+            <div className="bg-[var(--surface)] p-6 rounded-lg lg:col-span-3 max-w-4xl mx-auto w-full">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4 border-b pb-2">
+                Setup Company Details
               </h3>
 
               <div className="space-y-4">
-                {/* Company Name and Address */}
-                <div className="space-y-4">
-                  <div>
+                {/* Company Name and Logo */}
+                <div className="flex gap-4 items-start">
+                  <div className="flex-1">
                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                       Company Name
                     </label>
@@ -885,68 +956,116 @@ const QuotationMaker = () => {
                     </label>
                     <div className="flex items-center gap-4">
                       {/* Preview */}
-                      <div className="h-12 w-12 border border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden bg-gray-50">
+                      <div className="h-10 w-10 border border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden bg-gray-50">
                         {data.companyLogo ? (
                           <img src={data.companyLogo} alt="Logo" className="w-full h-full object-contain" />
                         ) : (
-                          <span className="text-xs text-gray-400">No Logo</span>
+                          <span className="text-[10px] text-gray-400">Logo</span>
                         )}
                       </div>
 
                       {/* Upload Button */}
-                      <div className="relative">
-                        <input
-                          type="file"
-                          id="logo-upload"
-                          className="hidden"
-                          accept="image/png, image/jpeg, image/jpg"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              if (file.size > 500 * 1024) { // 500KB limit
-                                alert("File too large. Please upload an image under 500KB.");
-                                return;
+                      {!data.companyLogo && (
+                        <div className="relative">
+                          <input
+                            type="file"
+                            id="logo-upload"
+                            className="hidden"
+                            accept="image/png, image/jpeg, image/jpg"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                if (file.size > 500 * 1024) { // 500KB limit
+                                  alert("File too large. Please upload an image under 500KB.");
+                                  return;
+                                }
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  updateField('companyLogo', reader.result as string);
+                                };
+                                reader.readAsDataURL(file);
                               }
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                updateField('companyLogo', reader.result as string);
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                        />
-                        <label
-                          htmlFor="logo-upload"
-                          className="cursor-pointer px-3 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded hover:bg-blue-100 border border-blue-200"
-                        >
-                          Upload Logo
-                        </label>
-                      </div>
+                            }}
+                          />
+                          <label
+                            htmlFor="logo-upload"
+                            className="cursor-pointer px-4 py-2 bg-[var(--surface-secondary)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] text-sm font-medium rounded-lg border border-dashed border-[var(--border)] hover:border-[var(--primary)] transition-all flex items-center gap-2 shadow-sm"
+                          >
+                            <Upload size={16} className="text-[var(--primary)]" />
+                            <span>Upload</span>
+                          </label>
+                        </div>
+                      )}
                       {data.companyLogo && (
                         <button
                           onClick={() => updateField('companyLogo', '')}
-                          className="text-sm text-red-500 hover:text-red-700 underline"
+                          className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-full transition-colors"
+                          title="Remove Logo"
                         >
-                          Remove
+                          <Trash2 size={16} />
                         </button>
                       )}
                     </div>
                   </div>
+                </div>
+
+                {/* Contact, Email, Pincode */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      Address
+                      Contact Number
                     </label>
-                    <textarea
-                      value={data.companyAddress}
-                      onChange={e => updateField('companyAddress', e.target.value)}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--text-primary)] rounded-lg focus:outline-none focus:border-[var(--primary)] resize-none"
+                    <Input
+                      value={data.companyPhone}
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        if (val.length <= 10) updateField('companyPhone', val);
+                      }}
+                      error={errors.companyPhone}
+                      placeholder="Enter 10 digit number"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                      Email
+                    </label>
+                    <Input
+                      value={data.companyEmail}
+                      onChange={e => updateField('companyEmail', e.target.value)}
+                      error={errors.companyEmail}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                      Pincode
+                    </label>
+                    <Input
+                      value={data.companyPincode}
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        if (val.length <= 6) updateField('companyPincode', val);
+                      }}
+                      error={errors.companyPincode}
+                      placeholder="6 digits"
                     />
                   </div>
                 </div>
 
-                {/* GSTIN, PAN and Email */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* Address */}
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                    Address
+                  </label>
+                  <textarea
+                    value={data.companyAddress}
+                    onChange={e => updateField('companyAddress', e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--text-primary)] rounded-lg focus:outline-none focus:border-[var(--primary)] resize-none"
+                  />
+                </div>
+
+                {/* GSTIN, PAN, Udyam */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                       GSTIN
@@ -965,25 +1084,57 @@ const QuotationMaker = () => {
                       onChange={e => updateField('companyPAN', e.target.value)}
                     />
                   </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Email
-                      </label>
-                      <Input
-                        value={data.companyEmail}
-                        onChange={e => updateField('companyEmail', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Contact Number
-                      </label>
-                      <Input
-                        value={data.companyPhone}
-                        onChange={e => updateField('companyPhone', e.target.value)}
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                      Udyam Reg. No
+                    </label>
+                    <Input
+                      value={data.udyamRegistrationNumber}
+                      onChange={e => updateField('udyamRegistrationNumber', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Tax Rates */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                      CGST Rate
+                    </label>
+                    <Input
+                      value={data.companyCGST}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val === '' || /^\d*\.?\d*$/.test(val)) updateField('companyCGST', val);
+                      }}
+                      error={errors.companyCGST}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                      SGST Rate
+                    </label>
+                    <Input
+                      value={data.companySGST}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val === '' || /^\d*\.?\d*$/.test(val)) updateField('companySGST', val);
+                      }}
+                      error={errors.companySGST}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                      IGST Rate
+                    </label>
+                    <Input
+                      value={data.companyIGST}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val === '' || /^\d*\.?\d*$/.test(val)) updateField('companyIGST', val);
+                      }}
+                      error={errors.companyIGST}
+                    />
                   </div>
                 </div>
 
@@ -993,23 +1144,25 @@ const QuotationMaker = () => {
                     Bank Details
                   </h4>
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Bank Name
-                      </label>
-                      <Input
-                        value={data.bankName}
-                        onChange={e => updateField('bankName', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                        Account Number
-                      </label>
-                      <Input
-                        value={data.accountNo}
-                        onChange={e => updateField('accountNo', e.target.value)}
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                          Bank Name
+                        </label>
+                        <Input
+                          value={data.bankName}
+                          onChange={e => updateField('bankName', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                          Account Number
+                        </label>
+                        <Input
+                          value={data.accountNo}
+                          onChange={e => updateField('accountNo', e.target.value)}
+                        />
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -1054,41 +1207,6 @@ const QuotationMaker = () => {
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white flex justify-center items-center gap-2"
                   >
                     <Save size={16} /> Save Company Details
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* RIGHT SIDE: Quotation Items - Takes 2 columns */}
-            <div className="bg-[var(--surface)] p-6 rounded-lg flex flex-col transition-all duration-300 lg:col-span-2">
-              <div>
-                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-                  Quotation Items
-                </h3>
-                <p className="text-xs text-[var(--text-secondary)] mb-4">
-                  {data.items.length} item{data.items.length !== 1 ? 's' : ''} in quotation
-                </p>
-              </div>
-
-              {/* Items Table */}
-              <div className="flex-1 overflow-y-auto pr-2" style={{ maxHeight: 'calc(100vh - 300px)' }}>
-                <div className="border border-[var(--border)] rounded-lg overflow-hidden">
-                  <DataTable
-                    columns={columns}
-                    data={data.items}
-                    searchPlaceholder="Search items..."
-                  />
-                </div>
-
-                {/* Add Item Button */}
-                <div className="mt-4">
-                  <Button
-                    variant="secondary"
-                    onClick={addItem}
-                    leftIcon={<Plus size={18} />}
-                    className="w-full border-2 border-dashed border-[var(--primary)] bg-[var(--primary)]/5 hover:bg-[var(--primary)]/10"
-                  >
-                    Add Item
                   </Button>
                 </div>
               </div>

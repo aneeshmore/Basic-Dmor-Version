@@ -21,6 +21,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect';
 import { useCreateOrder } from '../hooks/useOrders';
 import { showToast } from '@/utils/toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { decodeHtml } from '@/utils/stringUtils';
 
 import { customerApi } from '@/features/masters/api/customerApi';
 import { employeeApi } from '@/features/employees/api/employeeApi';
@@ -1082,8 +1083,8 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
       if (customer) {
         const custId = customer.customerId || customer.CustomerID || 0;
         setCustomerId(custId);
-        setCompanyName(customer.companyName || customer.CompanyName || '');
-        setDeliveryAddress(content.buyerAddress || content.customerAddress || '');
+        setCompanyName(decodeHtml(customer.companyName || customer.CompanyName) || '');
+        setDeliveryAddress(decodeHtml(content.buyerAddress || content.customerAddress) || '');
 
         // Set salesperson from content
         if (content.salespersonId) {
@@ -1097,7 +1098,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
       }
 
       // Set remarks
-      setRemarks(content.remarks || '');
+      setRemarks(decodeHtml(content.remarks) || '');
 
       // Load items
       if (content.items && content.items.length > 0) {
@@ -1119,7 +1120,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
       setEditingQuotation(quotation);
 
       // Pre-fill quotation modal fields
-      setQuotationAddress(content.buyerAddress || content.customerAddress || '');
+      setQuotationAddress(decodeHtml(content.buyerAddress || content.customerAddress) || '');
       setSelectedPaymentTerms(content.paymentTerms || '');
       setSelectedDeliveryTerms(content.deliveryTerms || '');
 
@@ -1280,13 +1281,13 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
         header: ({ column }) => <DataTableColumnHeader column={column} title="Customer" />,
         enableColumnFilter: true,
         enableSorting: true,
-        cell: ({ row }) => <span className="font-medium">{row.original.buyerName || '-'}</span>,
+        cell: ({ row }) => <span className="font-medium">{decodeHtml(row.original.buyerName) || '-'}</span>,
       },
       {
         accessorKey: 'salesPerson',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Sales Person" />,
         cell: ({ row }) => {
-          const name = row.original.content?.salespersonName || row.original.content?.otherRef || '-';
+          const name = decodeHtml(row.original.content?.salespersonName || row.original.content?.otherRef) || '-';
           return <span className="font-medium">{name}</span>;
         },
       },
