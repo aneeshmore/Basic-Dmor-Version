@@ -935,8 +935,7 @@ export default function ScheduleBatchPage() {
                 unit: 'KG',
                 sequence: item.sequence || 0,
                 waitingTime: item.waitingTime || 0,
-                isAdditional:
-                  (rmInfo?.masterProductName || '').toLowerCase().includes('water') || false,
+                isAdditional: false, // Standard ingredients are not additional
               };
             })
             .sort((a: any, b: any) => a.sequence - b.sequence);
@@ -1019,7 +1018,7 @@ export default function ScheduleBatchPage() {
             unit: item.Unit,
             sequence: item.Sequence || 0,
             waitingTime: 0,
-            isAdditional: item.RawMaterialName?.toLowerCase().includes('water') || false,
+            isAdditional: false, // Standard BOM items are never additional by default
           };
         });
 
@@ -1156,9 +1155,9 @@ export default function ScheduleBatchPage() {
         masterProductId: masterProductId,
         scheduledDate,
         plannedQuantity: Number(plannedQuantity), // Allow decimals
-        density: 0,
-        viscosity: 0,
-        waterPercentage: 0,
+        density: pdDensity || 0, // Use fetched/calculated density
+        viscosity: plannedViscosityRef || 0, // Use fetched/calculated viscosity
+        waterPercentage: pdWaterPercentage || 0, // Use fetched water percentage
         supervisorId: Number(supervisorId),
         labourNames: laborName,
         orders: validOrders,
@@ -1172,7 +1171,7 @@ export default function ScheduleBatchPage() {
           isAdditional: m.isAdditional || false,
         })),
         expectedDeliveryDate: expectedDeliveryDate || undefined,
-        pmRemarks: pmRemarks || undefined,
+        pmRemarks: finalRemarks || undefined,
       };
 
       await productionManagerApi.scheduleBatch(batchData);
