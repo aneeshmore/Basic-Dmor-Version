@@ -12,6 +12,7 @@ import {
   Loader,
   CheckCircle,
   Eye,
+  XCircle,
 } from 'lucide-react';
 import { showToast } from '@/utils/toast';
 import jsPDF from 'jspdf';
@@ -32,7 +33,9 @@ import { Bar, Pie, Line } from 'react-chartjs-2';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table';
 import { Button, Badge, Input, Modal } from '@/components/ui';
-import { addPdfFooter } from '@/utils/pdfUtils';
+import { addPdfFooter, addPdfHeader } from '@/utils/pdfUtils';
+import { CompanyInfo } from '@/features/company/types';
+import { companyApi } from '@/features/company/api/companyApi';
 
 ChartJS.register(
   CategoryScale,
@@ -53,6 +56,23 @@ const BatchProductionReport = () => {
   // expandedBatchIds is handled by DataTable's state internally
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [previewBatch, setPreviewBatch] = useState<BatchProductionReportItem | null>(null);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+
+  // Fetch Company Info
+  useEffect(() => {
+    const fetchCompanyInfo = async () => {
+      try {
+        const res = await companyApi.get();
+        if (res.data) {
+          // Adjust based on actual API response structure (often res.data.data or res.data)
+          setCompanyInfo((res.data as any).data || res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch company info", err);
+      }
+    };
+    fetchCompanyInfo();
+  }, []);
 
   // ... (existing helper function and useEffects) ...
   // Helper to get current week start (Sunday) and end (Saturday)
@@ -136,15 +156,11 @@ const BatchProductionReport = () => {
     const colorGray100: RGBColor = [243, 244, 246]; // Gray 100
     const colorGray700: RGBColor = [55, 65, 81]; // Gray 700
 
-    // 1. Header: DMOR PAINTS Centered
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text('DMOR PAINTS', pageWidth / 2, 15, { align: 'center' });
-    doc.setLineWidth(0.5);
-    doc.line(margin, 20, pageWidth - margin, 20); // Underline
+    // 1. Header: Company Info + Title
+    const headerEndY = addPdfHeader(doc, companyInfo, `Batch Production Report: ${batch.batchNo}`);
 
     // 2. Info Block - Reorganized Layout
+
     // Use autoTable for layout precision on the text block to match Preview's alignment
     // Left Info Block
     const infoData = [
@@ -172,7 +188,7 @@ const BatchProductionReport = () => {
     ];
 
     autoTable(doc, {
-      startY: 25,
+      startY: headerEndY + 5,
       margin: { left: margin },
       body: infoData,
       theme: 'plain',
@@ -554,7 +570,7 @@ const BatchProductionReport = () => {
     addPdfFooter(doc);
     doc.save(`Batch_Report_${batch.batchNo}.pdf`);
     showToast.success(`Downloaded report for batch ${batch.batchNo}`);
-  }, []);
+  }, [companyInfo]);
 
   const handleExportAll = () => {
     if (data.length === 0) {
@@ -564,17 +580,17 @@ const BatchProductionReport = () => {
 
     const doc = new jsPDF('landscape');
 
-    // Add Title
-    doc.setFontSize(18);
-    doc.text('Batch Production Report', 14, 20);
+    // Add Header
+    const headerEndY = addPdfHeader(doc, companyInfo, 'Batch Production Report');
 
     // Add Filters Info
     doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
     let subtitle = `Generated on: ${formatDateTime(new Date())}`;
     if (statusFilter !== 'All') subtitle += ` | Status: ${statusFilter}`;
     if (startDate) subtitle += ` | From: ${startDate}`;
     if (endDate) subtitle += ` | To: ${endDate}`;
-    doc.text(subtitle, 14, 28);
+    doc.text(subtitle, 14, headerEndY + 5);
 
     // Define columns
     const tableColumn = [
@@ -612,7 +628,7 @@ const BatchProductionReport = () => {
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
-      startY: 34,
+      startY: headerEndY + 12,
       styles: { fontSize: 7 },
       headStyles: { fillColor: [22, 163, 74] },
     });
@@ -630,8 +646,9 @@ const BatchProductionReport = () => {
     const completed = data.filter(b => b.status === 'Completed').length;
     const inProgress = data.filter(b => b.status === 'In Progress').length;
     const scheduled = data.filter(b => b.status === 'Scheduled').length;
+    const cancelled = data.filter(b => b.status === 'Cancelled').length;
 
-    return { total, completed, inProgress, scheduled };
+    return { total, completed, inProgress, scheduled, cancelled };
   }, [data]);
 
   const formatNumberForPreview = formatNumber;
@@ -1131,7 +1148,7 @@ const BatchProductionReport = () => {
 
       {/* Statistics Cards */}
       {!isLoading && data.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div
             onClick={() => setStatusFilter('All')}
             className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === 'All'
@@ -1228,6 +1245,30 @@ const BatchProductionReport = () => {
               </div>
             </div>
           </div>
+          <div
+            onClick={() => setStatusFilter('Cancelled')}
+            className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === 'Cancelled'
+              ? 'ring-2 ring-red-500 border-red-500 bg-red-50'
+              : 'border-red-100 bg-red-50/30'
+              }`}
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-xs font-semibold text-red-600 uppercase tracking-wider">
+                  Cancelled
+                </p>
+                <p className="text-3xl font-bold text-red-700 mt-2">{stats.cancelled}</p>
+              </div>
+              <div
+                className={`p-2 rounded-lg ${statusFilter === 'Cancelled'
+                  ? 'bg-red-500 text-white'
+                  : 'bg-red-100 text-red-600'
+                  }`}
+              >
+                <XCircle className="w-6 h-6" />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1253,7 +1294,7 @@ const BatchProductionReport = () => {
       {/* Status Filter Buttons (Table Controls) */}
       <div className="flex items-center gap-2 pt-4 border-t border-gray-100">
         <span className="text-sm font-medium text-gray-500 mr-2">Filter Table:</span>
-        {['All', 'Scheduled', 'In Progress', 'Completed'].map(status => (
+        {['All', 'Scheduled', 'In Progress', 'Completed', 'Cancelled'].map(status => (
           <Button
             key={status}
             size="sm"
