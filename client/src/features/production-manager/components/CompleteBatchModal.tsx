@@ -151,6 +151,9 @@ export default function CompleteBatchModal({
       return;
     }
 
+    // Check if water - if so, it's NOT additional (treated as RM)
+    const isWater = (selectedProduct.masterProductName || selectedProduct.MasterProductName).toLowerCase().includes('water');
+
     const newMaterial: Material = {
       batchMaterialId: -Date.now(), // Temporary ID
       materialId: selectedMaterialId,
@@ -158,7 +161,7 @@ export default function CompleteBatchModal({
       plannedQuantity: 0,
       actualQuantity: 0,
       variance: 0,
-      isAdditional: true,
+      isAdditional: !isWater,
     };
 
     setMaterials(prev => [...prev, newMaterial]);
@@ -471,13 +474,12 @@ export default function CompleteBatchModal({
                                   />
                                 </td>
                                 <td
-                                  className={`py-2 px-3 text-right font-medium ${
-                                    mat.variance > 0
+                                  className={`py-2 px-3 text-right font-medium ${mat.variance > 0
                                       ? 'text-red-500'
                                       : mat.variance < 0
                                         ? 'text-green-500'
                                         : 'text-[var(--text-secondary)]'
-                                  }`}
+                                    }`}
                                 >
                                   {mat.variance > 0 ? '+' : ''}
                                   {mat.variance.toFixed(3)}

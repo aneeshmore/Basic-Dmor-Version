@@ -858,16 +858,21 @@ export default function ScheduleBatchPage() {
       return;
     }
 
+    const materialName = mp.masterProductName || mp.MasterProductName;
+    // Check if water - if so, it's NOT additional (treated as RM)
+    const isWater = materialName.toLowerCase().includes('water');
+
     const newMaterial = {
       materialId: mpId,
-      materialName: mp.masterProductName || mp.MasterProductName,
+      materialName: materialName,
       requiredQuantity: 0, // Default 0 until percentage set
       availableQuantity: 0,
       percentage: '',
       unit: 'KG',
       sequence: consolidatedBOM.length + 1,
       waitingTime: 0,
-      isAdditional: true,
+      isAdditional: !isWater, // Water is not additional for manual add
+      isWater: isWater,
     };
 
     setConsolidatedBOM(prev => [...prev, newMaterial]);
@@ -1410,11 +1415,13 @@ export default function ScheduleBatchPage() {
       return;
     }
 
+    const isWater = material.masterProductName.toLowerCase().includes('water');
+
     const newExtraMaterial = {
       materialId: selectedExtraMaterialId,
       materialName: material.masterProductName,
       quantity: extraMaterialQty,
-      isExtra: true,
+      isExtra: !isWater, // Water is not extra for manual add
       canAddMultiple,
     };
 
@@ -1564,11 +1571,11 @@ export default function ScheduleBatchPage() {
           })),
           // Extra materials
           ...extraMaterials.map(m => ({
-            batchMaterialId: null,
+            batchMaterialId: 0,
             materialId: m.materialId,
             plannedQuantity: 0,
             actualQuantity: m.quantity,
-            isAdditional: true,
+            isAdditional: m.isExtra !== undefined ? m.isExtra : true,
           })),
         ],
         outputSkus: outputSkus.map(s => ({
