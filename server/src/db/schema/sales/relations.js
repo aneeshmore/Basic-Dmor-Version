@@ -30,7 +30,10 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     references: [employees.employeeId],
   }),
   orderDetails: many(orderDetails),
-  account: one(accounts),
+  account: one(accounts, {
+    fields: [orders.orderId],
+    references: [accounts.orderId],
+  }),
   batchProducts: many(batchProducts), // Updated from batchOrders
   dispatch: one(dispatches, {
     fields: [orders.dispatchId],
