@@ -128,6 +128,7 @@ export interface MaterialInwardReportItem {
   totalCost: string | null;
   notes: string | null;
   totalQty?: number;
+  balanceQty?: number;
 }
 
 export interface StockReportItem {

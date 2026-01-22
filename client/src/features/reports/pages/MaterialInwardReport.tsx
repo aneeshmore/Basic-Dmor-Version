@@ -9,7 +9,9 @@ import { FileDown } from 'lucide-react';
 import { showToast } from '@/utils/toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { addPdfFooter } from '@/utils/pdfUtils';
+import { addPdfFooter, addPdfHeader } from '@/utils/pdfUtils';
+import { companyApi } from '@/features/company/api/companyApi';
+import { CompanyInfo } from '@/features/company/types';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -39,6 +41,12 @@ const MaterialInwardReport = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [productTypeFilter, setProductTypeFilter] = useState<'FG' | 'RM' | 'PM' | 'All'>('All');
   const [productFilter, setProductFilter] = useState<string>('');
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+
+  useEffect(() => {
+    companyApi.get().then(res => setCompanyInfo(res.data.data)).catch(console.error);
+  }, []);
+
   const [startDate, setStartDate] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
@@ -74,12 +82,10 @@ const MaterialInwardReport = () => {
   useEffect(() => {
     const fetchProductList = async () => {
       try {
-        const type =
-          productTypeFilter === 'All' ? undefined : (productTypeFilter as 'FG' | 'RM' | 'PM');
-        const result = await reportsApi.getProductsList(type);
+        const result = await reportsApi.getProductsList(productTypeFilter);
 
         const formatted = result.map((p: any) => ({
-          id: String(p.productId || p.ProductID),
+          id: `${p.productType || 'Unknown'}-${p.productId || p.ProductID}`,
           label: p.productName || p.ProductName || p.masterProductName,
           value: p.productName || p.ProductName || p.masterProductName, // Use name for filtering compatibility with existing logic
         }));
@@ -105,15 +111,14 @@ const MaterialInwardReport = () => {
 
     const doc = new jsPDF('landscape');
 
-    doc.setFontSize(18);
-    doc.text('Material Inward Report', 14, 20);
+    const startY = addPdfHeader(doc, companyInfo, 'Material Inward Report');
 
     doc.setFontSize(10);
     let subtitle = `Generated on: ${new Date().toLocaleString()}`;
     if (productTypeFilter !== 'All') subtitle += ` | Type: ${productTypeFilter}`;
     if (startDate) subtitle += ` | From: ${startDate}`;
     if (endDate) subtitle += ` | To: ${endDate}`;
-    doc.text(subtitle, 14, 28);
+    doc.text(subtitle, 14, startY + 10);
 
     const tableColumn = [
       'Inward Date',
@@ -122,6 +127,7 @@ const MaterialInwardReport = () => {
       'Supplier',
       'Bill No',
       'Unit Price',
+      'Available Qty',
       'Total Cost',
     ];
 
@@ -132,15 +138,16 @@ const MaterialInwardReport = () => {
       item.supplierName || '-',
       item.billNo || '-',
       item.unitPrice ? `Rs. ${Number(item.unitPrice).toFixed(2)}` : '-',
-      item.totalQty !== undefined && item.unitPrice
-        ? `Rs. ${(item.totalQty * Number(item.unitPrice)).toFixed(2)}`
+      item.balanceQty !== undefined ? item.balanceQty : '-',
+      item.balanceQty !== undefined && item.unitPrice
+        ? `Rs. ${(item.balanceQty * Number(item.unitPrice)).toFixed(2)}`
         : '-',
     ]);
 
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
-      startY: 34,
+      startY: startY + 20,
       styles: { fontSize: 8 },
       headStyles: { fillColor: [59, 130, 246] },
     });
@@ -164,6 +171,7 @@ const MaterialInwardReport = () => {
       'Supplier',
       'Bill No',
       'Unit Price',
+      'Available Qty',
       'Total Cost',
       'Notes',
     ];
@@ -175,8 +183,9 @@ const MaterialInwardReport = () => {
       item.supplierName || '-',
       item.billNo || '-',
       item.unitPrice ? Number(item.unitPrice).toFixed(2) : '-',
-      item.totalQty !== undefined && item.unitPrice
-        ? (item.totalQty * Number(item.unitPrice)).toFixed(2)
+      item.balanceQty || '-',
+      item.balanceQty !== undefined && item.unitPrice
+        ? (item.balanceQty * Number(item.unitPrice)).toFixed(2)
         : '-',
       item.notes || '-',
     ]);
@@ -223,20 +232,8 @@ const MaterialInwardReport = () => {
     if (productFilter) {
       result = data.filter(item => item.productName === productFilter);
     }
-    // 1. Sort oldest to newest to calculate running totals
-    const sortedAsc = [...result].sort(
-      (a, b) => new Date(a.inwardDate).getTime() - new Date(b.inwardDate).getTime()
-    );
-
-    // 2. Calculate running totals
-    let runningTotal = 0;
-    const withTotals = sortedAsc.map(item => {
-      runningTotal += Number(item.quantity || 0);
-      return { ...item, totalQty: runningTotal };
-    });
-
-    // 3. Sort newest to oldest for display
-    return withTotals.sort(
+    // Sort newest to oldest for display
+    return result.sort(
       (a, b) => new Date(b.inwardDate).getTime() - new Date(a.inwardDate).getTime()
     );
   }, [data, productFilter]);
@@ -527,11 +524,11 @@ const MaterialInwardReport = () => {
       },
 
       {
-        id: 'totalQty',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Total Qty" />,
+        id: 'balanceQty',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Available Qty" />,
         cell: ({ row }) => (
           <div className="text-right font-semibold text-[var(--color-primary-600)]">
-            {row.original.totalQty !== undefined ? row.original.totalQty.toFixed(2) : '-'}
+            {row.original.balanceQty !== undefined ? row.original.balanceQty : '-'}
           </div>
         ),
       },
@@ -549,8 +546,8 @@ const MaterialInwardReport = () => {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Total Cost" />,
         cell: ({ row }) => {
           const totalCost =
-            row.original.totalQty !== undefined && row.original.unitPrice
-              ? row.original.totalQty * Number(row.original.unitPrice)
+            row.original.balanceQty !== undefined && row.original.unitPrice
+              ? row.original.balanceQty * Number(row.original.unitPrice)
               : 0;
           return (
             <div className="text-right font-semibold text-[var(--color-success)]">

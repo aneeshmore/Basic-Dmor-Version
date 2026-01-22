@@ -667,6 +667,7 @@ export class ReportsService {
           totalCost: materialInward.totalCost,
           notes: materialInward.notes,
           productType: masterProducts.productType,
+          balanceQty: inventoryTransactions.balanceAfter,
         })
         .from(materialInward)
         .innerJoin(
@@ -675,10 +676,40 @@ export class ReportsService {
         )
         .leftJoin(products, eq(materialInward.productId, products.productId))
         .leftJoin(suppliers, eq(materialInward.supplierId, suppliers.supplierId))
+        .leftJoin(
+          inventoryTransactions,
+          and(
+            eq(inventoryTransactions.referenceId, materialInward.inwardId),
+            eq(inventoryTransactions.referenceType, 'Inward')
+          )
+        )
         .where(and(...conditions))
+        // Use group by to avoid duplicates if multiple transactions exists, though usually 1:1 for Inward
+        // We select the max balance or distinct one. For simplicity in this report, we assume the latest transaction reflects the balance.
+        .groupBy(
+          materialInward.inwardId,
+          materialInward.inwardDate,
+          products.productName,
+          masterProducts.masterProductName,
+          suppliers.supplierName,
+          materialInward.billNo,
+          materialInward.quantity,
+          materialInward.unitPrice,
+          materialInward.totalCost,
+          materialInward.notes,
+          masterProducts.productType,
+          inventoryTransactions.balanceAfter
+        )
         .orderBy(desc(materialInward.inwardDate));
 
-      return results;
+      return results.map(row => ({
+        ...row,
+        // If balanceQty is found from transaction, use it.
+        // Note: multiple transactions might cause row duplication without aggregation.
+        // But since we group by all fields including balanceAfter, duplicates with same balance merge.
+        // Ideally there's 1 transaction per inward.
+        balanceQty: row.balanceQty ? Number(row.balanceQty) : null,
+      }));
     } catch (error) {
       console.error('Error fetching material inward report:', error);
       throw error;

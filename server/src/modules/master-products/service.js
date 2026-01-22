@@ -214,20 +214,50 @@ export class MasterProductsService {
   }
 
   async getProductsByType(productType) {
-    const validTypes = ['FG', 'RM', 'PM'];
+    const validTypes = ['FG', 'RM', 'PM', 'ALL'];
     if (!validTypes.includes(productType)) {
       throw new ValidationError('Invalid product type');
     }
 
-    // For FG: Fetch from products table (SKUs)
-    // For RM/PM: Fetch from master_products table (no SKUs exist for RM/PM)
+    if (productType === 'ALL') {
+      // 1. Get all FG SKUs
+      const fgProducts = await this.getAllProducts({ productType: 'FG' });
+
+      // 2. Get RM and PM Master Products
+      const rmMasters = await this.repository.findAllMasterProducts({ productType: 'RM' });
+      const pmMasters = await this.repository.findAllMasterProducts({ productType: 'PM' });
+
+      // 3. Format RM/PM to match Product structure
+      const formatMaster = (mp) => ({
+        productId: mp.masterProduct?.masterProductId,
+        ProductID: mp.masterProduct?.masterProductId,
+        productName: mp.masterProduct?.masterProductName,
+        ProductName: mp.masterProduct?.masterProductName,
+        masterProductName: mp.masterProduct?.masterProductName,
+        productType: mp.masterProduct?.productType,
+        ProductType: mp.masterProduct?.productType,
+        availableQuantity:
+          mp.masterProduct?.productType === 'RM'
+            ? mp.rmDetails?.availableQty || 0
+            : mp.pmDetails?.availableQty || 0,
+        availableWeightKg:
+          mp.masterProduct?.productType === 'RM' ? mp.rmDetails?.availableWeightKg || 0 : null,
+        minStockLevel: mp.masterProduct?.minStockLevel || 0,
+        isActive: mp.masterProduct?.isActive,
+      });
+
+      const formattedRMs = rmMasters.map(formatMaster);
+      const formattedPMs = pmMasters.map(formatMaster);
+
+      return [...fgProducts, ...formattedRMs, ...formattedPMs];
+    }
+
     if (productType === 'FG') {
       return await this.getAllProducts({ productType });
     } else {
       // For RM and PM, return master products formatted like products
       const masterProductsData = await this.repository.findAllMasterProducts({ productType });
 
-      // Transform master products to have product-like structure for frontend compatibility
       return masterProductsData.map(mp => ({
         productId: mp.masterProduct?.masterProductId,
         ProductID: mp.masterProduct?.masterProductId,

@@ -189,6 +189,7 @@ export class InventoryService {
     try {
       await db.insert(inventoryTransactions).values({
         productId,
+        masterProductId: product.masterProductId,
         transactionType,
         quantity: String(-quantity), // Negative for deduction
         weightKg: weightKg ? String(weightKg) : null,
@@ -260,6 +261,7 @@ export class InventoryService {
     try {
       await db.insert(inventoryTransactions).values({
         productId,
+        masterProductId: product.masterProductId,
         transactionType,
         quantity: String(quantity),
         weightKg: weightKg ? String(weightKg) : null,

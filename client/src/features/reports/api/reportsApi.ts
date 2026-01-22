@@ -89,7 +89,9 @@ export const reportsApi = {
 
   getProductsList: async (type?: 'FG' | 'RM' | 'PM' | 'All'): Promise<any[]> => {
     let url = '/catalog/products';
-    if (type && type !== 'All') {
+
+    // If type is provided (even 'All'), use the type endpoint to get combined/specific lists
+    if (type) {
       url = `/catalog/products/type/${type}`;
     }
 
