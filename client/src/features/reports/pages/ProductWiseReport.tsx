@@ -4,11 +4,13 @@ import { FileDown } from 'lucide-react';
 import { showToast } from '@/utils/toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { addPdfFooter } from '@/utils/pdfUtils';
+import { addPdfFooter, addPdfHeader } from '@/utils/pdfUtils';
 import { ColumnDef, SortingState } from '@tanstack/react-table';
 import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table';
 import { Button, Input, SearchableSelect } from '@/components/ui';
 import { reportsApi } from '../api/reportsApi';
+import { companyApi } from '@/features/company/api/companyApi';
+import { CompanyInfo } from '@/features/company/types';
 import { Bar } from 'react-chartjs-2';
 import { ProductInfo, BOMItem, StockReportItem } from '../types';
 import ProductTransactionHistory from '../components/ProductTransactionHistory';
@@ -40,6 +42,12 @@ const ProductWiseReport = () => {
   const chartRef = useRef<ChartJS<'bar'> | null>(null);
   const [chartKey, setChartKey] = useState(0);
   const [sorting, setSorting] = useState<SortingState>([{ id: 'updatedAt', desc: true }]);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+
+  useEffect(() => {
+    companyApi.get().then(res => setCompanyInfo(res.data.data)).catch(console.error);
+  }, []);
+
   const [data, setData] = useState<StockReportItem[]>([]);
   // const [summaryData, setSummaryData] = useState<StockReportItem[]>([]); // Using 'data' for summary list now
   const [productInfo, setProductInfo] = useState<ProductInfo | null>(null);
@@ -181,22 +189,21 @@ const ProductWiseReport = () => {
     const doc = new jsPDF('landscape');
 
     // Add Title
-    doc.setFontSize(18);
-    doc.text('Product Transaction Ledger', 14, 20);
+    const startY = addPdfHeader(doc, companyInfo, 'Product Transaction Ledger');
 
     // Add Info
     doc.setFontSize(10);
     if (isDetailView) {
       const selectedProductLabel =
         products.find(p => p.value === selectedProduct)?.label || selectedProduct;
-      doc.text(`Product: ${selectedProductLabel}`, 14, 30);
+      doc.text(`Product: ${selectedProductLabel}`, 14, startY + 10);
     } else {
-      doc.text(`Category: ${productTypeFilter}`, 14, 30);
+      doc.text(`Category: ${productTypeFilter}`, 14, startY + 10);
     }
 
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 36);
-    if (startDate) doc.text(`From: ${startDate}`, 14, 42);
-    if (endDate) doc.text(`To: ${endDate}`, 14, 48);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, startY + 15);
+    if (startDate) doc.text(`From: ${startDate}`, 14, startY + 20);
+    if (endDate) doc.text(`To: ${endDate}`, 14, startY + 25);
 
     // Define columns based on whether a specific product is selected
     const tableColumn = [
@@ -220,7 +227,7 @@ const ProductWiseReport = () => {
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
-      startY: 54,
+      startY: startY + 30,
       styles: { fontSize: 8 },
       headStyles: { fillColor: [71, 85, 105] },
     });

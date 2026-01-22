@@ -8,7 +8,9 @@ import { ColumnDef } from '@tanstack/react-table';
 import CustomerTransactionHistory from '../components/CustomerTransactionHistory';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { addPdfFooter } from '@/utils/pdfUtils';
+import { addPdfFooter, addPdfHeader } from '@/utils/pdfUtils';
+import { companyApi } from '@/features/company/api/companyApi';
+import { CompanyInfo } from '@/features/company/types';
 import { showToast } from '@/utils/toast';
 import {
     Chart as ChartJS,
@@ -44,9 +46,11 @@ interface CustomerSummary {
 export default function PaymentReport() {
     const [customers, setCustomers] = useState<CustomerSummary[]>([]);
     const [loading, setLoading] = useState(false);
+    const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
 
     useEffect(() => {
         loadCustomers();
+        companyApi.get().then(res => setCompanyInfo(res.data.data)).catch(console.error);
     }, []);
 
     const loadCustomers = async () => {
@@ -77,10 +81,9 @@ export default function PaymentReport() {
         }
 
         const doc = new jsPDF();
-        doc.setFontSize(18);
-        doc.text('Customer Balance Summary', 14, 20);
+        const startY = addPdfHeader(doc, companyInfo, 'Customer Balance Summary');
         doc.setFontSize(10);
-        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 30);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, startY + 10);
 
         const tableColumn = ['Company Name', 'Contact Person', 'Mobile', 'Balance (Rs.)'];
         const tableRows = customers.map(c => [
@@ -93,7 +96,7 @@ export default function PaymentReport() {
         autoTable(doc, {
             head: [tableColumn],
             body: tableRows,
-            startY: 40,
+            startY: startY + 20,
             styles: { fontSize: 9 },
             headStyles: { fillColor: [63, 81, 181] },
         });

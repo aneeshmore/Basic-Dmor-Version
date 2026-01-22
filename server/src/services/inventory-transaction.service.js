@@ -79,6 +79,7 @@ export class InventoryTransactionService {
             : null,
         notes,
         createdBy: parseInt(createdBy),
+        masterProductId: product.masterProductId,
       };
 
       // Insert transaction record

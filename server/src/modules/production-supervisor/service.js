@@ -268,6 +268,7 @@ export class ProductionSupervisorService {
           const balance = rmStock ? parseFloat(rmStock.availableQty || 0) : 0;
 
           await db.insert(inventoryTransactions).values({
+            masterProductId: material.materialId,
             productId: transactionProductId,
             transactionType: 'Production Consumption',
             quantity: -quantityToDeduct,

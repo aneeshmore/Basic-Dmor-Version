@@ -48,7 +48,9 @@ import {
 } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { addPdfFooter } from '@/utils/pdfUtils';
+import { addPdfFooter, addPdfHeader } from '@/utils/pdfUtils';
+import { CompanyInfo } from '@/features/company/types';
+import { companyApi } from '@/features/company/api/companyApi';
 
 // Register ChartJS components
 ChartJS.register(
@@ -121,6 +123,17 @@ const SalespersonRevenueReport: React.FC = () => {
     const [customStart, setCustomStart] = useState<string>('');
     const [customEnd, setCustomEnd] = useState<string>('');
     const [showPresetDropdown, setShowPresetDropdown] = useState(false);
+    const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+
+    // Fetch Company Info
+    useEffect(() => {
+        companyApi.get()
+            .then(res => {
+                const info = (res.data as any).data || res.data;
+                setCompanyInfo(info);
+            })
+            .catch(console.error);
+    }, []);
 
     // Calculate actual start/end dates based on preset
     const dateRange = useMemo(() => {
@@ -263,22 +276,35 @@ const SalespersonRevenueReport: React.FC = () => {
         };
     }, [data]);
 
-    const downloadSalespersonPDF = (salespersonName: string, orders: OrderItem[]) => {
+    const downloadSalespersonPDF = async (salespersonName: string, orders: OrderItem[]) => {
+        let currentCompanyInfo = companyInfo;
+
+        // If not in state, try fetching fresh
+        if (!currentCompanyInfo) {
+            try {
+                const res = await companyApi.get();
+                currentCompanyInfo = res.data.data || (res.data as any);
+            } catch (error) {
+                console.error("Failed to fetch company info for PDF", error);
+            }
+        }
+
         const doc = new jsPDF();
 
-        // Title
-        doc.setFontSize(18);
-        doc.text('Salesperson Revenue Report', 14, 20);
+        // Header
+        const headerEndY = addPdfHeader(doc, currentCompanyInfo, 'Salesperson Revenue Report');
 
         // Metadata
         doc.setFontSize(10);
-        doc.text(`Salesperson: ${salespersonName}`, 14, 30);
-        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 35);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
+        doc.text(`Salesperson: ${salespersonName}`, 14, headerEndY + 5);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, headerEndY + 10);
 
         const periodText = dateRange.start && dateRange.end
             ? `Period: ${format(dateRange.start, 'dd MMM yyyy')} - ${format(dateRange.end, 'dd MMM yyyy')}`
             : 'Period: All Time';
-        doc.text(periodText, 14, 40);
+        doc.text(periodText, 14, headerEndY + 15);
 
         // Table
         const tableColumn = ['Order No', 'Bill No', 'Date', 'Customer', 'Status', 'Amount'];
@@ -294,7 +320,7 @@ const SalespersonRevenueReport: React.FC = () => {
         autoTable(doc, {
             head: [tableColumn],
             body: tableRows,
-            startY: 45,
+            startY: headerEndY + 20,
             theme: 'grid',
             headStyles: { fillColor: [66, 66, 66] },
         });

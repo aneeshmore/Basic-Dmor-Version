@@ -9,7 +9,9 @@ import { FileDown, AlertTriangle } from 'lucide-react';
 import { showToast } from '@/utils/toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { addPdfFooter } from '@/utils/pdfUtils';
+import { addPdfFooter, addPdfHeader } from '@/utils/pdfUtils';
+import { companyApi } from '@/features/company/api/companyApi';
+import { CompanyInfo } from '@/features/company/types';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -43,8 +45,11 @@ const LowStockReport = () => {
   const [productFilter, setProductFilter] = useState<string>('');
   const [chartLimit, setChartLimit] = useState<number>(10);
 
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+
   useEffect(() => {
     fetchData();
+    companyApi.get().then(res => setCompanyInfo(res.data.data)).catch(console.error);
   }, []);
 
   const fetchData = async () => {
@@ -110,13 +115,12 @@ const LowStockReport = () => {
 
     const doc = new jsPDF('landscape');
 
-    doc.setFontSize(18);
-    doc.text('Low Stock Report', 14, 20);
+    const startY = addPdfHeader(doc, companyInfo, 'Low Stock Report');
 
     doc.setFontSize(10);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, startY + 10);
     if (productTypeFilter !== 'All') {
-      doc.text(`Product Type: ${productTypeFilter}`, 14, 34);
+      doc.text(`Product Type: ${productTypeFilter}`, 14, startY + 16);
     }
 
     const tableColumn = [
@@ -142,7 +146,7 @@ const LowStockReport = () => {
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
-      startY: productTypeFilter !== 'All' ? 40 : 34,
+      startY: productTypeFilter !== 'All' ? startY + 22 : startY + 16,
       styles: { fontSize: 8 },
       headStyles: { fillColor: [239, 68, 68] }, // Red for low stock report
     });

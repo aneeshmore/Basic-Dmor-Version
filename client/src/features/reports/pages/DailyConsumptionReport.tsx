@@ -9,7 +9,9 @@ import { FileDown, PieChart as PieChartIcon, BarChart3, TrendingUp, Package } fr
 import { showToast } from '@/utils/toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { addPdfFooter } from '@/utils/pdfUtils';
+import { addPdfFooter, addPdfHeader } from '@/utils/pdfUtils';
+import { companyApi } from '@/features/company/api/companyApi';
+import { CompanyInfo } from '@/features/company/types';
 import { formatDate, formatDateTime } from '@/utils/dateUtils';
 import {
   Chart as ChartJS,
@@ -78,8 +80,11 @@ const DailyConsumptionReport: React.FC = () => {
     }
   };
 
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+
   useEffect(() => {
     fetchReport();
+    companyApi.get().then(res => setCompanyInfo(res.data.data)).catch(console.error);
   }, [date]);
 
   // Filter data
@@ -96,14 +101,13 @@ const DailyConsumptionReport: React.FC = () => {
 
     const doc = new jsPDF('portrait');
 
-    doc.setFontSize(18);
-    doc.text('Daily Consumption Report', 14, 20);
+    const startY = addPdfHeader(doc, companyInfo, 'Daily Consumption Report');
 
     doc.setFontSize(10);
-    doc.text(`Generated on: ${formatDateTime(new Date())}`, 14, 28);
-    doc.text(`Date: ${date}`, 14, 34);
+    doc.text(`Generated on: ${formatDateTime(new Date())}`, 14, startY + 10);
+    doc.text(`Date: ${date}`, 14, startY + 16);
     if (productTypeFilter !== 'All') {
-      doc.text(`Type: ${productTypeFilter}`, 14, 40);
+      doc.text(`Type: ${productTypeFilter}`, 14, startY + 22);
     }
 
     const tableColumn = [
@@ -125,7 +129,7 @@ const DailyConsumptionReport: React.FC = () => {
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
-      startY: productTypeFilter !== 'All' ? 46 : 40,
+      startY: productTypeFilter !== 'All' ? startY + 28 : startY + 22,
       styles: { fontSize: 8 },
       headStyles: { fillColor: [34, 197, 94] },
     });

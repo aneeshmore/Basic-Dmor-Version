@@ -920,6 +920,7 @@ export class ProductionManagerRepository {
       if (product.length > 0) {
         await db.insert(inventoryTransactions).values({
           productId: product[0].productId,
+          masterProductId: masterProductId,
           transactionType: 'Production Consumption',
           quantity: -Math.abs(quantity), // Negative for consumption
           referenceType: 'Batch',

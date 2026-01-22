@@ -11,8 +11,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePermission } from '@/hooks/usePermission';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { addPdfFooter } from '@/utils/pdfUtils';
+import { addPdfFooter, addPdfHeader } from '@/utils/pdfUtils';
 import { formatDate, formatDateTime } from '@/utils/dateUtils';
+import { CompanyInfo } from '@/features/company/types';
+import { companyApi } from '@/features/company/api/companyApi';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -63,6 +65,22 @@ const StockReport = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [productTypeFilter, setProductTypeFilter] = useState<string>('All');
   const [productFilter, setProductFilter] = useState<string>('');
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+
+  // Fetch Company Info
+  useEffect(() => {
+    const fetchCompanyInfo = async () => {
+      try {
+        const res = await companyApi.get();
+        if (res.data) {
+          setCompanyInfo((res.data as any).data || res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch company info", err);
+      }
+    };
+    fetchCompanyInfo();
+  }, []);
   const [startDate, setStartDate] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
@@ -111,13 +129,15 @@ const StockReport = () => {
 
     const doc = new jsPDF('landscape');
 
-    doc.setFontSize(18);
-    doc.text('Stock Report', 14, 20);
+    // Header
+    const headerEndY = addPdfHeader(doc, companyInfo, 'Stock Report');
 
     doc.setFontSize(10);
-    doc.text(`Generated on: ${formatDateTime(new Date())}`, 14, 28);
+    doc.setFont('helvetica', 'normal');
+
+    doc.text(`Generated on: ${formatDateTime(new Date())}`, 14, headerEndY + 5);
     if (productTypeFilter !== 'All') {
-      doc.text(`Product Type: ${productTypeFilter}`, 14, 34);
+      doc.text(`Product Type: ${productTypeFilter}`, 14, headerEndY + 10);
     }
 
     const tableColumn = [
@@ -145,7 +165,7 @@ const StockReport = () => {
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
-      startY: productTypeFilter !== 'All' ? 40 : 34,
+      startY: productTypeFilter !== 'All' ? headerEndY + 15 : headerEndY + 10,
       styles: { fontSize: 8 },
       headStyles: { fillColor: [34, 197, 94] },
     });
@@ -498,23 +518,23 @@ const StockReport = () => {
           </Badge>
         ),
       },
-      // {
-      //   accessorKey: 'availableQuantity',
-      //   header: ({ column }) => <DataTableColumnHeader column={column} title="Available Qty" />,
-      //   cell: ({ row }) => (
-      //     <div
-      //       className={`text-right ${row.original.availableQuantity < row.original.minStockLevel
-      //         ? 'text-[var(--color-error)] font-semibold'
-      //         : 'text-[var(--text-primary)]'
-      //         }`}
-      //     >
-      //       {Number(row.original.availableQuantity).toFixed(2)}
-      //       {row.original.availableQuantity < row.original.minStockLevel && (
-      //         <AlertTriangle className="inline ml-1 h-4 w-4" />
-      //       )}
-      //     </div>
-      //   ),
-      // },
+      {
+        accessorKey: 'availableQuantity',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Available Qty" />,
+        cell: ({ row }) => (
+          <div
+            className={`text-right ${row.original.availableQuantity < row.original.minStockLevel
+              ? 'text-[var(--color-error)] font-semibold'
+              : 'text-[var(--text-primary)]'
+              }`}
+          >
+            {Number(row.original.availableQuantity).toFixed(2)}
+            {row.original.availableQuantity < row.original.minStockLevel && (
+              <AlertTriangle className="inline ml-1 h-4 w-4" />
+            )}
+          </div>
+        ),
+      },
       {
         accessorKey: 'availableWeightKg',
         header: ({ column }) => (

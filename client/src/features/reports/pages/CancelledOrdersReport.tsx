@@ -29,7 +29,9 @@ import {
 import { Bar, Pie } from 'react-chartjs-2';
 import { reportsApi } from '@/features/reports/api/reportsApi';
 import { useAuth } from '@/contexts/AuthContext';
-import { addPdfFooter } from '@/utils/pdfUtils';
+import { addPdfFooter, addPdfHeader } from '@/utils/pdfUtils';
+import { companyApi } from '@/features/company/api/companyApi';
+import { CompanyInfo } from '@/features/company/types';
 
 ChartJS.register(
   CategoryScale,
@@ -80,6 +82,11 @@ const CancelledOrdersReport: React.FC = () => {
   const [showExportOptions, setShowExportOptions] = useState(false);
 
   const [allOrders, setAllOrders] = useState<CancelledOrder[]>([]);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+
+  useEffect(() => {
+    companyApi.get().then(res => setCompanyInfo(res.data.data)).catch(console.error);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -385,13 +392,8 @@ const CancelledOrdersReport: React.FC = () => {
       const { default: jsPDF } = await import('jspdf');
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-      // Add title
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('MOREX TECHNOLOGIES', 14, 15);
-
-      pdf.setFontSize(12);
-      pdf.text('Cancelled Orders Report', 14, 22);
+      // Add Header
+      const startY = addPdfHeader(pdf, companyInfo, 'Cancelled Orders Report');
 
       // Add generation date
       pdf.setFontSize(10);
@@ -399,7 +401,7 @@ const CancelledOrdersReport: React.FC = () => {
       pdf.text(
         `Generated on: ${new Date().toLocaleDateString('en-IN')} | Total Records: ${filteredData.length}`,
         14,
-        28
+        startY + 8
       );
 
       const columns = [
@@ -433,7 +435,7 @@ const CancelledOrdersReport: React.FC = () => {
       const headerHeight = 7;
       const rowHeight = 7;
       const startX = margin;
-      const startY = 38;
+      const tableStartY = startY + 15;
 
       const totalColWidth = columns.reduce((sum, col) => sum + col.width, 0);
       const colWidths = columns.map(col => (col.width / totalColWidth) * contentWidth);
@@ -444,7 +446,7 @@ const CancelledOrdersReport: React.FC = () => {
       let xPos = startX;
       columns.forEach((col, index) => {
         const colWidth = colWidths[index];
-        pdf.rect(xPos, startY, colWidth, headerHeight, 'FD');
+        pdf.rect(xPos, tableStartY, colWidth, headerHeight, 'FD');
         xPos += colWidth;
       });
 
@@ -455,12 +457,12 @@ const CancelledOrdersReport: React.FC = () => {
       columns.forEach((col, index) => {
         const colWidth = colWidths[index];
         const cellCenterX = xPos + colWidth / 2;
-        const cellCenterY = startY + headerHeight / 2 + 1.5;
+        const cellCenterY = tableStartY + headerHeight / 2 + 1.5;
         pdf.text(col.header, cellCenterX, cellCenterY, { align: 'center', maxWidth: colWidth - 1 });
         xPos += colWidth;
       });
 
-      let currentY = startY + headerHeight;
+      let currentY = tableStartY + headerHeight;
       pdf.setTextColor(0, 0, 0);
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(7);

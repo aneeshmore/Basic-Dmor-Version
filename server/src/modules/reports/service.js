@@ -804,7 +804,7 @@ export class ReportsService {
             masterProductName: masterProducts.masterProductName,
             productType: masterProducts.productType,
             availableQuantity: masterProductRM.availableQty,
-            availableWeightKg: sql`0`, // RM doesn't track weight separately
+            availableWeightKg: sql`COALESCE(${masterProductRM.availableQty} * ${masterProductRM.rmDensity}, 0)`, // RM: Qty * Density
             reservedQuantity: sql`0`,
             minStockLevel: masterProducts.minStockLevel,
             sellingPrice: masterProductRM.purchaseCost, // Show purchase cost for RM
@@ -829,7 +829,8 @@ export class ReportsService {
             masterProducts.isActive,
             masterProducts.updatedAt,
             masterProductRM.availableQty,
-            masterProductRM.purchaseCost
+            masterProductRM.purchaseCost,
+            masterProductRM.rmDensity
           )
           .orderBy(masterProducts.masterProductName);
 

@@ -14,8 +14,10 @@ import {
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, Colors } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
 import { reportsApi } from '@/features/reports/api/reportsApi';
+import { companyApi } from '@/features/company/api/companyApi';
+import { CompanyInfo } from '@/features/company/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { addPdfFooter } from '@/utils/pdfUtils';
+import { addPdfFooter, addPdfHeader } from '@/utils/pdfUtils';
 
 ChartJS.register(ArcElement, Tooltip, Legend, Colors);
 
@@ -45,6 +47,11 @@ const ProfitLossReport = () => {
   const [loading, setLoading] = useState(true);
   const [exportLoading, setExportLoading] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+
+  useEffect(() => {
+    companyApi.get().then(res => setCompanyInfo(res.data.data)).catch(console.error);
+  }, []);
 
   // Filter states
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
@@ -226,13 +233,7 @@ const ProfitLossReport = () => {
       const pageWidth = pdf.internal.pageSize.getWidth();
       const margin = 10;
 
-      // Title
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('MOREX TECHNOLOGIES', margin, 15);
-
-      pdf.setFontSize(12);
-      pdf.text('Profit & Loss Report', margin, 22);
+      const startY = addPdfHeader(pdf, companyInfo, 'Profit & Loss Report');
 
       // Meta info
       pdf.setFontSize(10);
@@ -245,7 +246,7 @@ const ProfitLossReport = () => {
       pdf.text(
         `Period: ${periodText} | Generated: ${new Date().toLocaleDateString('en-IN')}`,
         margin,
-        28
+        startY + 10
       );
 
       // Columns
@@ -268,7 +269,7 @@ const ProfitLossReport = () => {
 
       const headerHeight = 8;
       const rowHeight = 7;
-      let currentY = 38;
+      let currentY = startY + 20;
 
       // Helper to draw header
       const drawHeader = () => {
