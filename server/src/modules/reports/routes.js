@@ -48,5 +48,11 @@ router.get(
   reportsController.getSalesmanRevenueReport
 );
 
+router.get(
+  '/salesperson-incentives',
+  requirePermission('GET:/reports/salesperson-incentives'),
+  reportsController.getSalespersonIncentiveReport
+);
+
 export default router;
 

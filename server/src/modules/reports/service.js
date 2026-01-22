@@ -17,6 +17,7 @@ import {
   productionBatch,
   batchProducts,
   materialDiscard,
+  employees,
 } from '../../db/schema/index.js';
 
 export class ReportsService {
@@ -388,8 +389,108 @@ export class ReportsService {
 
       return result;
 
+
     } catch (error) {
       console.error('Error fetching salesman revenue report:', error);
+      throw error;
+    }
+  }
+
+  async getSalespersonIncentiveReport(startDate, endDate) {
+    try {
+      const conditions = [];
+
+      if (startDate) {
+        conditions.push(gte(orders.orderDate, new Date(startDate)));
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        conditions.push(lte(orders.orderDate, end));
+      }
+
+      // Exclude invalid orders
+      conditions.push(notInArray(orders.status, ['Cancelled', 'Rejected', 'Returned']));
+      // Ensure salesperson is assigned
+      conditions.push(isNotNull(orders.salespersonId));
+      // Only include products with incentive > 0
+      conditions.push(sql`${products.incentiveAmount} > 0`);
+
+      const validOrders = await db
+        .select({
+          salespersonId: orders.salespersonId,
+          salespersonFirstName: employees.firstName,
+          salespersonLastName: employees.lastName,
+          productId: products.productId,
+          productName: products.productName,
+          incentiveAmount: products.incentiveAmount,
+          quantity: orderDetails.quantity,
+          orderId: orders.orderId,
+          orderNumber: orders.orderNumber,
+          date: orders.orderDate,
+        })
+        .from(orderDetails)
+        .innerJoin(orders, eq(orderDetails.orderId, orders.orderId))
+        .innerJoin(products, eq(orderDetails.productId, products.productId))
+        .leftJoin(employees, eq(orders.salespersonId, employees.employeeId))
+        .where(and(...conditions));
+
+      // Group by Salesperson
+      const grouped = {};
+
+      validOrders.forEach(item => {
+        const spId = item.salespersonId;
+        const spName = item.salespersonFirstName
+          ? `${item.salespersonFirstName} ${item.salespersonLastName || ''}`.trim()
+          : 'Unknown';
+
+        if (!grouped[spId]) {
+          grouped[spId] = {
+            salespersonId: spId,
+            salespersonName: spName,
+            totalIncentive: 0,
+            details: []
+          };
+        }
+
+        const qty = parseFloat(item.quantity || 0);
+        const rate = parseFloat(item.incentiveAmount || 0);
+        const incentive = qty * rate;
+
+        grouped[spId].totalIncentive += incentive;
+
+        // Find if product already exists in details for this salesperson
+        let productEntry = grouped[spId].details.find(d => d.productId === item.productId);
+        if (!productEntry) {
+          productEntry = {
+            productId: item.productId,
+            productName: item.productName,
+            totalQuantity: 0,
+            incentiveRate: rate,
+            totalIncentive: 0,
+            orders: [] // specific orders contributing to this
+          };
+          grouped[spId].details.push(productEntry);
+        }
+
+        productEntry.totalQuantity += qty;
+        productEntry.totalIncentive += incentive;
+        productEntry.orders.push({
+          orderNumber: item.orderNumber,
+          date: item.date,
+          quantity: qty,
+          incentive: incentive
+        });
+      });
+
+      const result = Object.values(grouped);
+      // Sort by Total Incentive DESC
+      result.sort((a, b) => b.totalIncentive - a.totalIncentive);
+
+      return result;
+
+    } catch (error) {
+      console.error('Error fetching salesperson incentive report:', error);
       throw error;
     }
   }

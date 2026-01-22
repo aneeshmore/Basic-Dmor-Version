@@ -174,4 +174,11 @@ export const reportsApi = {
     });
     return response.data.data;
   },
+
+  getSalespersonIncentiveReport: async (startDate?: string, endDate?: string) => {
+    const response = await apiClient.get('/reports/salesperson-incentives', {
+      params: { startDate, endDate },
+    });
+    return response.data.data;
+  },
 };

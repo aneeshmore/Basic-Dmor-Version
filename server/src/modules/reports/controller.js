@@ -130,3 +130,17 @@ export const getSalesmanRevenueReport = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getSalespersonIncentiveReport = async (req, res, next) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const data = await reportsService.getSalespersonIncentiveReport(startDate, endDate);
+    res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

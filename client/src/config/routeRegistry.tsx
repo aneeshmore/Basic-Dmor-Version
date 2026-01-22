@@ -218,6 +218,11 @@ const SalespersonRevenueReport = lazy(
   () => import('@/features/reports/pages/SalespersonRevenueReport')
 );
 
+const SalespersonIncentiveReport = lazy(
+  () => import('@/features/reports/pages/SalespersonIncentiveReport')
+);
+
+
 // ============================================
 // ROUTE REGISTRY
 // ============================================
@@ -812,6 +817,18 @@ export const routeRegistry: RouteNode[] = [
         component: SalespersonRevenueReport,
         permission: { module: 'report-salesperson-revenue' },
       },
+      {
+        id: 'salesperson-incentive',
+        path: '/reports/salesperson-incentives',
+        label: 'Salesperson Incentive Report',
+        icon: DollarSign,
+        component: SalespersonIncentiveReport,
+        permission: { module: 'report-salesperson-incentives' },
+        apis: [
+          { route: '/reports/salesperson-incentives', method: 'GET', label: 'View Incentive Report' },
+        ],
+      },
+
       {
         id: 'payment-report',
         path: '/reports/payments',
