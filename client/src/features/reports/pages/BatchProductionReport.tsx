@@ -217,12 +217,61 @@ const BatchProductionReport = () => {
     const actViscosity = batch.actualViscosity ? parseFloat(batch.actualViscosity) : 0;
     const viscosityVariance = actViscosity - stdViscosity;
 
-    // Calculate total weight from actual quantity and density
-    const actualQty = batch.actualQuantity ? parseFloat(batch.actualQuantity) : 0;
-    const stdTotalWeight = batch.plannedQuantity
-      ? parseFloat(batch.plannedQuantity) * stdDensity
-      : 0;
-    const actTotalWeight = actualQty * actDensity;
+    // --- CALCULATIONS FOR TABLES (Moved up for use in Quality Table) ---
+
+    // 1. Ingredients Calculation (Left Table)
+    const allIngredients = (batch.rawMaterials || []).filter(rm => rm.productType !== 'PM');
+    const regularIngredients = allIngredients.filter(rm => !rm.isAdditional);
+    const additionalIngredients = allIngredients.filter(rm => rm.isAdditional);
+    const ingredients = [...regularIngredients, ...additionalIngredients];
+
+    // Total Actual Weight from Ingredients (Sum of Actual Qty)
+    const totalActualWeight = ingredients.reduce(
+      (sum, rm) => sum + parseFloat(rm.actualQty || rm.percentage || '0'),
+      0
+    );
+    const totalPercentage = ingredients.reduce(
+      (sum, rm) => sum + parseFloat(rm.percentage || '0'),
+      0
+    );
+
+    // 2. Sub Products Calculation (Right Table / Shade Table)
+    const filteredSubProducts = (batch.subProducts || []).filter(sp => {
+      const qty = parseFloat(sp.actualQty || '0');
+      return qty > 0;
+    });
+
+    // Total LTR from Sub Products
+    const totalLtr = (batch.subProducts || []).reduce((s, x) => {
+      const qty = parseFloat(x.actualQty || '0');
+      const capacity = x.capacity ? parseFloat(x.capacity.toString()) : 0;
+      return s + qty * capacity;
+    }, 0);
+
+    const totalBatchQty = filteredSubProducts.reduce(
+      (s, x) => s + (parseFloat(x.batchQty || '0') || 0),
+      0
+    );
+    const totalSubActualQty = filteredSubProducts.reduce(
+      (s, x) => s + (parseFloat(x.actualQty || '0') || 0),
+      0
+    );
+    const totalKg = (batch.subProducts || []).reduce((s, x) => {
+      const qty = parseFloat(x.actualQty || '0');
+      const capacity = x.capacity ? parseFloat(x.capacity.toString()) : 0;
+      const ltr = qty * capacity;
+      const density = x.fillingDensity
+        ? parseFloat(x.fillingDensity.toString())
+        : parseFloat(batch.packingDensity || batch.actualDensity || batch.density || '0');
+      return s + ltr * density;
+    }, 0);
+
+    // Calculate total weight for Quality Table
+    // Standard = Total of Actual Column from Ingredients Table
+    const stdTotalWeight = totalActualWeight;
+
+    // Actual = Total of LTR Column in Shade Table * Actual Density
+    const actTotalWeight = totalLtr * actDensity;
     const totalWeightVariance = actTotalWeight - stdTotalWeight;
 
     // Header for Quality Table
@@ -230,10 +279,11 @@ const BatchProductionReport = () => {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0); // Black
-    doc.text('Quality & Variance Analysis', rightTableX, 29);
+    const qualityTitleY = headerEndY + 5; // Align with left info block start
+    doc.text('Quality & Variance Analysis', rightTableX, qualityTitleY);
 
     autoTable(doc, {
-      startY: 32,
+      startY: qualityTitleY + 4, // Start table below title
       margin: { left: rightTableX }, // Align to right side
       head: [['Parameter', 'Standard ', 'Actual', 'Variance']],
       body: [
@@ -280,14 +330,7 @@ const BatchProductionReport = () => {
 
     // 3. Tables Section - Side by Side
     // Separate regular and additional materials
-    const allIngredients = (batch.rawMaterials || []).filter(rm => rm.productType !== 'PM');
-    const regularIngredients = allIngredients.filter(rm => !rm.isAdditional);
-    const additionalIngredients = allIngredients.filter(rm => rm.isAdditional);
-
-    // Regular materials first, then additional at bottom
-    const ingredients = [...regularIngredients, ...additionalIngredients];
-
-    // Create body with Seq, Product, Percentage, Actual columns
+    // Ingredients Body and Totals - Already calculated above
     const ingredientsBody = ingredients.map((rm, index) => [
       index + 1,
       rm.rawMaterialName,
@@ -295,22 +338,7 @@ const BatchProductionReport = () => {
       formatNumber(rm.actualQty || rm.percentage),
     ]);
 
-    // Totals for Ingredients
-    const totalPercentage = ingredients.reduce(
-      (sum, rm) => sum + parseFloat(rm.percentage || '0'),
-      0
-    );
-    const totalActualWeight = ingredients.reduce(
-      (sum, rm) => sum + parseFloat(rm.actualQty || rm.percentage || '0'),
-      0
-    );
-
-    // Sub Products Body and Totals - Filter to only include actualQty > 0
-    const filteredSubProducts = (batch.subProducts || []).filter(sp => {
-      const qty = parseFloat(sp.actualQty || '0');
-      return qty > 0;
-    });
-
+    // Sub Products Body - Using calculated filtered list
     const subProductsBody = filteredSubProducts.map(sp => {
       const qty = parseFloat(sp.actualQty || '0');
       const capacity = sp.capacity ? parseFloat(sp.capacity.toString()) : 0;
@@ -330,30 +358,6 @@ const BatchProductionReport = () => {
         capacity > 0 ? formatNumber(kg) : '', // Blank if 0 in preview image
       ];
     });
-
-    // Sub Product Totals - Using filtered list
-    const totalBatchQty = filteredSubProducts.reduce(
-      (s, x) => s + (parseFloat(x.batchQty || '0') || 0),
-      0
-    );
-    const totalSubActualQty = filteredSubProducts.reduce(
-      (s, x) => s + (parseFloat(x.actualQty || '0') || 0),
-      0
-    );
-    const totalLtr = (batch.subProducts || []).reduce((s, x) => {
-      const qty = parseFloat(x.actualQty || '0');
-      const capacity = x.capacity ? parseFloat(x.capacity.toString()) : 0;
-      return s + qty * capacity;
-    }, 0);
-    const totalKg = (batch.subProducts || []).reduce((s, x) => {
-      const qty = parseFloat(x.actualQty || '0');
-      const capacity = x.capacity ? parseFloat(x.capacity.toString()) : 0;
-      const ltr = qty * capacity;
-      const density = x.fillingDensity
-        ? parseFloat(x.fillingDensity.toString())
-        : parseFloat(batch.packingDensity || batch.actualDensity || batch.density || '0');
-      return s + ltr * density;
-    }, 0);
 
     const tableY = currentY;
     const gap = 10;

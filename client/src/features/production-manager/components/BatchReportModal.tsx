@@ -199,6 +199,8 @@ export default function BatchReportModal({
 
     doc.setFontSize(10);
 
+    let tablesStartY = 70; // Default start Y for main tables
+
     if (reportType === 'batch-chart') {
       // Batch Chart Report
       doc.text(`Batch No : ${batch.batchNo} / ${batch.masterProductName || ''}`, 14, 25);
@@ -213,7 +215,7 @@ export default function BatchReportModal({
     } else {
       // Completion Chart Report - Reorganized Layout
       // LEFT SIDE: Batch info + Date/Time fields
-      doc.text(`Batch No : ${batch.batchNo} / ${batch.masterProductName || ''}`, 14, 25);
+      doc.text(`Batch No : ${batch.batchNo} / ${batch.masterProductName || ''}`, 14, 25, { maxWidth: 85 });
       doc.text(`Supervisor : Mr. ${batch.supervisorName || 'N/A'}`, 14, 32);
       doc.text(`Labours : ${batch.labourNames || 'N/A'}`, 14, 38);
       doc.text(`Date : ${new Date(batch.scheduledDate).toLocaleDateString()}`, 14, 44);
@@ -253,9 +255,14 @@ export default function BatchReportModal({
       const totalWeightVariance = actTotalWeight - stdTotalWeight;
 
       // Draw Quality & Variance Analysis Table on right side
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Quality & Variance Analysis', 105, 24);
+      doc.setFont('helvetica', 'normal');
+
       autoTable(doc, {
-        startY: 22,
-        margin: { left: 110 },
+        startY: 35,
+        margin: { left: 105 },
         head: [['Parameter', 'Standard / Theoretical', 'Actual', 'Variance']],
         body: [
           ['Density', stdDensity.toFixed(2), actDensity.toFixed(2), densityVariance.toFixed(2)],
@@ -278,12 +285,15 @@ export default function BatchReportModal({
         bodyStyles: { fillColor: [255, 255, 255] },
         columnStyles: {
           0: { cellWidth: 25 },
-          1: { cellWidth: 30, halign: 'right' },
+          1: { cellWidth: 29, halign: 'right' },
           2: { cellWidth: 18, halign: 'right' },
           3: { cellWidth: 18, halign: 'right' },
         },
-        tableWidth: 91,
+        tableWidth: 90,
       });
+
+      const qualityTableFinalY = (doc as any).lastAutoTable.finalY;
+      tablesStartY = Math.max(tablesStartY, qualityTableFinalY + 10);
     }
 
     // Raw Materials Table (Only raw materials, no packaging)
@@ -426,7 +436,7 @@ export default function BatchReportModal({
 
     // Draw Material Table (Left Side)
     autoTable(doc, {
-      startY: 60,
+      startY: tablesStartY,
       head: [
         reportType === 'batch-chart'
           ? ['Seq', 'Product', 'Wait', 'UseQty', 'Check']
@@ -469,7 +479,7 @@ export default function BatchReportModal({
 
     // Draw Product Table (Right Side)
     autoTable(doc, {
-      startY: 60,
+      startY: tablesStartY,
       head: [['Shade', 'QTY', 'ACT QTY', 'LTR', 'KG']],
       body: productData,
       foot: [
