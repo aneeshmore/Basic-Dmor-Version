@@ -25,6 +25,7 @@ import { customerApi } from '@/features/masters/api/customerApi';
 import { quotationApi, QuotationRecord } from '@/features/quotations/api/quotationApi';
 import { Visit } from '../types';
 import { showToast } from '@/utils/toast';
+import { decodeHtml } from '@/utils/stringUtils';
 
 const LEAD_STATUSES = [
   {
@@ -139,9 +140,9 @@ export const CrmDashboard = () => {
       const term = searchTerm.toLowerCase();
       const filtered = originalCustomers.filter(
         c =>
-          c.CompanyName?.toLowerCase().includes(term) ||
-          c.ContactPerson?.toLowerCase().includes(term) ||
-          c.Location?.toLowerCase().includes(term)
+          (c.CompanyName && decodeHtml(c.CompanyName).toLowerCase().includes(term)) ||
+          (c.ContactPerson && decodeHtml(c.ContactPerson).toLowerCase().includes(term)) ||
+          (c.Location && decodeHtml(c.Location).toLowerCase().includes(term))
       );
       setCustomers(filtered);
     }
@@ -353,10 +354,10 @@ export const CrmDashboard = () => {
     // Filter list by search term if provided
     const filteredList = upcomingSearchTerm.trim()
       ? list.filter(
-          v =>
-            v.customer?.companyName?.toLowerCase().includes(upcomingSearchTerm.toLowerCase()) ||
-            v.notes?.toLowerCase().includes(upcomingSearchTerm.toLowerCase())
-        )
+        v =>
+          v.customer?.companyName?.toLowerCase().includes(upcomingSearchTerm.toLowerCase()) ||
+          v.notes?.toLowerCase().includes(upcomingSearchTerm.toLowerCase())
+      )
       : list;
 
     return (
@@ -398,7 +399,7 @@ export const CrmDashboard = () => {
                   )}
                 </td>
                 <td className="p-4 font-medium text-[var(--text-primary)]">
-                  {visit.customer?.companyName}
+                  {decodeHtml(visit.customer?.companyName)}
                 </td>
                 <td className="p-4">
                   {(() => {
@@ -468,21 +469,19 @@ export const CrmDashboard = () => {
       {/* Tabs */}
       <div className="flex border-b border-[var(--border)] gap-4">
         <button
-          className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${
-            activeTab === 'upcoming'
-              ? 'border-[var(--primary)] text-[var(--primary)]'
-              : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-          }`}
+          className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'upcoming'
+            ? 'border-[var(--primary)] text-[var(--primary)]'
+            : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            }`}
           onClick={() => setActiveTab('upcoming')}
         >
           Upcoming Follow-ups
         </button>
         <button
-          className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${
-            activeTab === 'customers'
-              ? 'border-[var(--primary)] text-[var(--primary)]'
-              : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-          }`}
+          className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'customers'
+            ? 'border-[var(--primary)] text-[var(--primary)]'
+            : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            }`}
           onClick={() => setActiveTab('customers')}
         >
           All Customers
@@ -583,11 +582,11 @@ export const CrmDashboard = () => {
                   return (
                     <tr key={cust.CustomerID} className="hover:bg-[var(--surface-hover)]">
                       <td className="p-4 font-medium text-[var(--text-primary)]">
-                        {cust.CompanyName}
+                        {decodeHtml(cust.CompanyName)}
                       </td>
-                      <td className="p-4 text-[var(--text-secondary)]">{cust.Location || '-'}</td>
+                      <td className="p-4 text-[var(--text-secondary)]">{decodeHtml(cust.Location) || '-'}</td>
                       <td className="p-4 text-[var(--text-secondary)]">
-                        {cust.ContactPerson} <br />
+                        {decodeHtml(cust.ContactPerson)} <br />
                         <span className="text-xs">{cust.MobileNo && cust.MobileNo[0]}</span>
                       </td>
                       <td className="p-4 text-right flex justify-end gap-2">
@@ -740,7 +739,7 @@ export const CrmDashboard = () => {
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            Marking follow-up for <strong>{completingVisit?.customer?.companyName}</strong> as done.
+            Marking follow-up for <strong>{decodeHtml(completingVisit?.customer?.companyName)}</strong> as done.
           </p>
 
           <div className="flex justify-end">
@@ -919,10 +918,9 @@ export const CrmDashboard = () => {
                         <div
                           className={`
                             absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 
-                            ${
-                              isLatest
-                                ? 'bg-purple-600 border-white ring-2 ring-purple-100 z-10 scale-110'
-                                : 'bg-gray-300 border-white ring-2 ring-gray-50'
+                            ${isLatest
+                              ? 'bg-purple-600 border-white ring-2 ring-purple-100 z-10 scale-110'
+                              : 'bg-gray-300 border-white ring-2 ring-gray-50'
                             }
                           `}
                         />
@@ -1046,10 +1044,9 @@ export const CrmDashboard = () => {
                       <div
                         className={`
                           absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 
-                          ${
-                            index === arr.length - 1
-                              ? 'bg-[var(--primary)] border-white ring-2 ring-blue-100 z-10 scale-110'
-                              : 'bg-gray-300 border-white ring-2 ring-gray-50'
+                          ${index === arr.length - 1
+                            ? 'bg-[var(--primary)] border-white ring-2 ring-blue-100 z-10 scale-110'
+                            : 'bg-gray-300 border-white ring-2 ring-gray-50'
                           }
                         `}
                       />
@@ -1080,11 +1077,10 @@ export const CrmDashboard = () => {
                                 .map((status, i) => (
                                   <span
                                     key={i}
-                                    className={`px-2 py-1 rounded-full text-xs font-medium border ${
-                                      index === arr.length - 1
-                                        ? 'bg-blue-50 text-blue-700 border-blue-100'
-                                        : 'bg-gray-100 text-gray-600 border-gray-200'
-                                    }`}
+                                    className={`px-2 py-1 rounded-full text-xs font-medium border ${index === arr.length - 1
+                                      ? 'bg-blue-50 text-blue-700 border-blue-100'
+                                      : 'bg-gray-100 text-gray-600 border-gray-200'
+                                      }`}
                                   >
                                     {status}
                                   </span>
@@ -1150,17 +1146,16 @@ export const CrmDashboard = () => {
               <div>
                 <span className="text-gray-500">Status:</span>
                 <span
-                  className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${
-                    previewQuotation.status === 'Approved'
-                      ? 'bg-green-100 text-green-700'
-                      : previewQuotation.status === 'Pending'
-                        ? 'bg-orange-100 text-orange-700'
-                        : previewQuotation.status === 'Rejected'
-                          ? 'bg-red-100 text-red-700'
-                          : previewQuotation.status === 'Converted'
-                            ? 'bg-purple-100 text-purple-700'
-                            : 'bg-gray-100 text-gray-700'
-                  }`}
+                  className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${previewQuotation.status === 'Approved'
+                    ? 'bg-green-100 text-green-700'
+                    : previewQuotation.status === 'Pending'
+                      ? 'bg-orange-100 text-orange-700'
+                      : previewQuotation.status === 'Rejected'
+                        ? 'bg-red-100 text-red-700'
+                        : previewQuotation.status === 'Converted'
+                          ? 'bg-purple-100 text-purple-700'
+                          : 'bg-gray-100 text-gray-700'
+                    }`}
                 >
                   {previewQuotation.status}
                 </span>

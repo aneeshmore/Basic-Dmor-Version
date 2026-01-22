@@ -25,7 +25,10 @@ import {
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import { reportsApi } from '@/features/reports/api/reportsApi';
-import { addPdfFooter } from '@/utils/pdfUtils';
+import { addPdfFooter, addPdfHeader } from '@/utils/pdfUtils';
+import { companyApi } from '@/features/company/api/companyApi';
+import { decodeHtml } from '@/utils/stringUtils';
+import { CompanyInfo } from '@/features/company/types';
 
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
@@ -67,6 +70,12 @@ const CustomerContactReport: React.FC = () => {
   const [orders, setOrders] = useState<any[]>([]);
   const [exportLoading, setExportLoading] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+
+  // Fetch company info
+  useEffect(() => {
+    companyApi.get().then(res => setCompanyInfo(res.data.data)).catch(console.error);
+  }, []);
 
   // Fetch customers and orders on component mount or year change
   useEffect(() => {
@@ -192,10 +201,10 @@ const CustomerContactReport: React.FC = () => {
         }
 
         return (
-          customer.customerName?.toLowerCase().includes(query) ||
-          customer.companyName?.toLowerCase().includes(query) ||
+          (customer.customerName && decodeHtml(customer.customerName).toLowerCase().includes(query)) ||
+          (customer.companyName && decodeHtml(customer.companyName).toLowerCase().includes(query)) ||
           customer.customerId.toString().includes(query) ||
-          customer.location?.toLowerCase().includes(query) ||
+          (customer.location && decodeHtml(customer.location).toLowerCase().includes(query)) ||
           customer.mobile1?.includes(query) ||
           salespersonName.toLowerCase().includes(query)
         );
@@ -276,7 +285,7 @@ const CustomerContactReport: React.FC = () => {
     // We stick to filteredCustomers for chart as discussed
     const locationCounts = filteredCustomers.reduce(
       (acc, customer) => {
-        const locationName = customer.location?.trim();
+        const locationName = decodeHtml(customer.location)?.trim();
         if (!locationName) return acc;
 
         const existing = acc.find(item => item.name === locationName);
@@ -321,10 +330,8 @@ const CustomerContactReport: React.FC = () => {
         format: 'a4',
       });
 
-      // Add title
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('MOREX TECHNOLOGIES', 14, 15);
+      // Add centralized header
+      const startY = addPdfHeader(pdf, companyInfo, 'Customer Contact Report');
 
       // Add generation date
       pdf.setFontSize(10);
@@ -332,7 +339,7 @@ const CustomerContactReport: React.FC = () => {
       pdf.text(
         `Generated on: ${new Date().toLocaleDateString('en-IN')} | Total Records: ${processedCustomers.length}`,
         14,
-        22
+        startY + 8
       );
 
       // Column definitions
@@ -356,9 +363,9 @@ const CustomerContactReport: React.FC = () => {
         }
         return [
           `${index + 1}`,
-          customer.companyName || 'N/A',
-          customer.customerName || 'N/A',
-          customer.location || 'N/A',
+          decodeHtml(customer.companyName) || 'N/A',
+          decodeHtml(customer.customerName) || 'N/A',
+          decodeHtml(customer.location) || 'N/A',
           mobile,
           customer.gstNo || 'N/A',
           `${customer.totalOrders || 0}`,
@@ -374,7 +381,7 @@ const CustomerContactReport: React.FC = () => {
       const headerHeight = 9;
       const rowHeight = 7;
       const startX = margin;
-      const startY = 32;
+      const tableStartY = startY + 15;
 
       // Calculate column widths based on content width
       const totalColWidth = columns.reduce((sum, col) => sum + col.width, 0);
@@ -388,7 +395,7 @@ const CustomerContactReport: React.FC = () => {
       let xPos = startX;
       columns.forEach((col, index) => {
         const colWidth = colWidths[index];
-        pdf.rect(xPos, startY, colWidth, headerHeight, 'FD');
+        pdf.rect(xPos, tableStartY, colWidth, headerHeight, 'FD');
         xPos += colWidth;
       });
 
@@ -401,7 +408,7 @@ const CustomerContactReport: React.FC = () => {
       columns.forEach((col, index) => {
         const colWidth = colWidths[index];
         const cellCenterX = xPos + colWidth / 2;
-        const cellCenterY = startY + headerHeight / 2 + 1.5;
+        const cellCenterY = tableStartY + headerHeight / 2 + 1.5;
         pdf.text(col.header, cellCenterX, cellCenterY, {
           maxWidth: colWidth - 2,
           align: 'center',
@@ -409,7 +416,7 @@ const CustomerContactReport: React.FC = () => {
         xPos += colWidth;
       });
 
-      let currentY = startY + headerHeight;
+      let currentY = tableStartY + headerHeight;
 
       // Draw data rows
       pdf.setTextColor(0, 0, 0); // Black
@@ -491,7 +498,7 @@ const CustomerContactReport: React.FC = () => {
           const cellCenterY = currentY + rowHeight / 2 + 1.3;
 
           // Draw centered text
-          pdf.text(String(cellText), cellCenterX, cellCenterY, {
+          pdf.text(decodeHtml(String(cellText)), cellCenterX, cellCenterY, {
             maxWidth: colWidth - 2,
             align: 'center',
           });
@@ -559,9 +566,9 @@ const CustomerContactReport: React.FC = () => {
             `${customer.mobile1 || ''} ${customer.mobile2 ? '/ ' + customer.mobile2 : ''}`.trim();
           return [
             index + 1,
-            `"${(customer.companyName || '').replace(/"/g, '""')}"`,
-            `"${(customer.customerName || '').replace(/"/g, '""')}"`,
-            `"${(customer.location || '').replace(/"/g, '""')}"`,
+            `"${(decodeHtml(customer.companyName) || '').replace(/"/g, '""')}"`,
+            `"${(decodeHtml(customer.customerName) || '').replace(/"/g, '""')}"`,
+            `"${(decodeHtml(customer.location) || '').replace(/"/g, '""')}"`,
             `"${mobile.replace(/"/g, '""')}"`,
             `"${(customer.gstNo || '').replace(/"/g, '""')}"`,
             customer.totalOrders || 0,
@@ -953,14 +960,14 @@ const CustomerContactReport: React.FC = () => {
                           {startIndex + index + 1}
                         </td>
                         <td className="px-6 py-4 text-sm font-semibold text-[var(--foreground)]">
-                          {customer.companyName}
+                          {decodeHtml(customer.companyName)}
                         </td>
                         <td className="px-6 py-4 text-sm text-[var(--foreground)]">
-                          {customer.customerName}
+                          {decodeHtml(customer.customerName)}
                         </td>
                         <td className="px-6 py-4 text-sm">
                           <span className="inline-flex rounded-full bg-[var(--primary)]/10 px-3 py-1 text-xs font-medium text-[var(--primary)]">
-                            {customer.location || 'N/A'}
+                            {decodeHtml(customer.location) || 'N/A'}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-[var(--foreground)]">

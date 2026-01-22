@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/common';
 import { formatDate, formatDateTime } from '@/utils/dateUtils';
+import { decodeHtml } from '@/utils/stringUtils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -33,7 +34,9 @@ import { Doughnut, Line, Bar } from 'react-chartjs-2';
 import { reportsApi } from '@/features/reports/api/reportsApi';
 import apiClient from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { addPdfFooter } from '@/utils/pdfUtils';
+import { addPdfFooter, addPdfHeader } from '@/utils/pdfUtils';
+import { CompanyInfo } from '@/features/company/types';
+import { companyApi } from '@/features/company/api/companyApi';
 
 // Register ChartJS components
 ChartJS.register(
@@ -92,6 +95,22 @@ const CustomerReport: React.FC = () => {
   } | null>({ key: 'companyName', direction: 'asc' });
   const [showExportOptions, setShowExportOptions] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+
+  // Fetch Company Info
+  useEffect(() => {
+    const fetchCompanyInfo = async () => {
+      try {
+        const res = await companyApi.get();
+        if (res.data) {
+          setCompanyInfo((res.data as any).data || res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch company info", err);
+      }
+    };
+    fetchCompanyInfo();
+  }, []);
 
   // Set default salesperson for sales person role
   useEffect(() => {
@@ -351,9 +370,9 @@ const CustomerReport: React.FC = () => {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         customer =>
-          customer.companyName?.toLowerCase().includes(query) ||
-          customer.contactPerson?.toLowerCase().includes(query) ||
-          customer.location?.toLowerCase().includes(query) ||
+          (customer.companyName && decodeHtml(customer.companyName).toLowerCase().includes(query)) ||
+          (customer.contactPerson && decodeHtml(customer.contactPerson).toLowerCase().includes(query)) ||
+          (customer.location && decodeHtml(customer.location).toLowerCase().includes(query)) ||
           customer.customerId.toString().includes(query)
       );
     }
@@ -427,7 +446,7 @@ const CustomerReport: React.FC = () => {
     // Revenue by City
     const revenueByCity = filteredCustomers.reduce(
       (acc, customer) => {
-        const city = customer.location || 'N/A';
+        const city = decodeHtml(customer.location) || 'N/A';
         const existing = acc.find(item => item.name === city);
         if (existing) {
           existing.value += customer.totalAmount;
@@ -536,9 +555,10 @@ const CustomerReport: React.FC = () => {
 
   // Chart data for top customers
   const topCustomersChartData = {
-    labels: stats.top5Customers.map(c =>
-      c.companyName.length > 15 ? c.companyName.substring(0, 15) + '...' : c.companyName
-    ),
+    labels: stats.top5Customers.map(c => {
+      const name = decodeHtml(c.companyName);
+      return name.length > 15 ? name.substring(0, 15) + '...' : name;
+    }),
     datasets: [
       {
         data: stats.top5Customers.map(c => c.totalAmount),
@@ -589,13 +609,8 @@ const CustomerReport: React.FC = () => {
         format: 'a4',
       });
 
-      // Add title
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('MOREX TECHNOLOGIES', 14, 15);
-
-      pdf.setFontSize(12);
-      pdf.text('Customer Sales Report', 14, 22);
+      // Add Header
+      const headerEndY = addPdfHeader(pdf, companyInfo, 'Customer Sales Report');
 
       // Add generation date
       pdf.setFontSize(10);
@@ -603,7 +618,7 @@ const CustomerReport: React.FC = () => {
       pdf.text(
         `Generated on: ${formatDateTime(new Date())} | Total Records: ${processedCustomers.length}`,
         14,
-        28
+        headerEndY + 5
       );
 
       // Column definitions - optimized for better display
@@ -618,10 +633,10 @@ const CustomerReport: React.FC = () => {
 
       // Convert data
       const tableData = processedCustomers.map(customer => [
-        customer.companyName,
-        customer.contactPerson,
+        decodeHtml(customer.companyName),
+        decodeHtml(customer.contactPerson),
         customer.contactNo,
-        customer.location,
+        decodeHtml(customer.location),
         ...customer.monthlyAmounts.map(amt => (amt > 0 ? `Rs. ${(amt / 1000).toFixed(1)}K` : '-')),
         `Rs. ${(customer.totalAmount / 1000).toFixed(1)}K`,
       ]);
@@ -749,7 +764,7 @@ const CustomerReport: React.FC = () => {
           const cellCenterY = currentY + rowHeight / 2 + 1.3;
 
           // Draw centered text in cell
-          pdf.text(String(cellText), cellCenterX, cellCenterY, {
+          pdf.text(decodeHtml(String(cellText)), cellCenterX, cellCenterY, {
             align: 'center',
           });
 
@@ -1259,12 +1274,12 @@ const CustomerReport: React.FC = () => {
                     className="hover:bg-[var(--background)] transition-colors"
                   >
                     <td className="px-6 py-4 font-semibold text-[var(--primary)]">
-                      {customer.companyName}
+                      {decodeHtml(customer.companyName)}
                     </td>
                     <td className="px-6 py-4 text-[var(--foreground)]">
                       <div className="space-y-1">
                         <div>
-                          {customer.customerId} - {customer.contactPerson}
+                          {customer.customerId} - {decodeHtml(customer.contactPerson)}
                         </div>
                         <div className="text-sm text-[var(--text-secondary)]">
                           {customer.contactNo}
@@ -1273,7 +1288,7 @@ const CustomerReport: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex rounded-full bg-[var(--primary)]/10 px-3 py-1 text-xs font-medium text-[var(--primary)]">
-                        {customer.location}
+                        {decodeHtml(customer.location)}
                       </span>
                     </td>
                     {customer.monthlyAmounts.map((amount, monthIdx) => (
