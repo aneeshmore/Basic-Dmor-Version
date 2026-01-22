@@ -216,20 +216,9 @@ export class ReportsService {
           const calculatedPackagingMaterials = Array.from(packagingMap.values());
 
 
-          // Extract Bill Numbers
-          const billNumbers = [
-            ...new Set(
-              batch.batchProducts
-                ?.map(bp => bp.order?.account?.billNo)
-                .filter(Boolean)
-            ),
-          ].join(', ');
-
           return {
             batchId: batch.batchId,
             batchNo: batch.batchNo,
-            billNo: billNumbers || '-',
-            // ... (rest of existing fields)
             productId: referenceProductId, // Use the resolved ID
             masterProductId: batch.masterProductId,
             productName: batch.masterProduct?.masterProductName || 'Unknown Product',
@@ -310,6 +299,7 @@ export class ReportsService {
             packagingMaterials: calculatedPackagingMaterials, // Add calculated PMs
           };
         })
+
       );
 
       return batchesWithBom;
@@ -790,15 +780,26 @@ export class ReportsService {
             packageCapacityKg: sql`0`,
             isActive: masterProducts.isActive,
             updatedAt: masterProducts.updatedAt,
-            totalInward: sql`0`, // TODO: Calculate from inventory transactions if needed
-            totalOutward: sql`0`,
+            totalInward: sql`COALESCE(SUM(CASE WHEN ${inventoryTransactions.quantity} > 0 AND ${inventoryTransactions.createdAt} >= ${start.toISOString()} AND ${inventoryTransactions.createdAt} <= ${end.toISOString()} THEN ${inventoryTransactions.quantity} ELSE 0 END), 0)`,
+            totalOutward: sql`COALESCE(SUM(CASE WHEN ${inventoryTransactions.quantity} < 0 AND ${inventoryTransactions.createdAt} >= ${start.toISOString()} AND ${inventoryTransactions.createdAt} <= ${end.toISOString()} THEN ABS(${inventoryTransactions.quantity}) ELSE 0 END), 0)`,
           })
           .from(masterProducts)
           .innerJoin(
             masterProductRM,
             eq(masterProducts.masterProductId, masterProductRM.masterProductId)
           )
+          .leftJoin(inventoryTransactions, eq(masterProducts.masterProductId, inventoryTransactions.masterProductId))
           .where(and(...rmConditions))
+          .groupBy(
+            masterProducts.masterProductId,
+            masterProducts.masterProductName,
+            masterProducts.productType,
+            masterProducts.minStockLevel,
+            masterProducts.isActive,
+            masterProducts.updatedAt,
+            masterProductRM.availableQty,
+            masterProductRM.purchaseCost
+          )
           .orderBy(masterProducts.masterProductName);
 
         results.push(...rmResults);
@@ -825,15 +826,27 @@ export class ReportsService {
             packageCapacityKg: masterProductPM.capacity,
             isActive: masterProducts.isActive,
             updatedAt: masterProducts.updatedAt,
-            totalInward: sql`0`, // TODO: Calculate from inventory transactions if needed
-            totalOutward: sql`0`,
+            totalInward: sql`COALESCE(SUM(CASE WHEN ${inventoryTransactions.quantity} > 0 AND ${inventoryTransactions.createdAt} >= ${start.toISOString()} AND ${inventoryTransactions.createdAt} <= ${end.toISOString()} THEN ${inventoryTransactions.quantity} ELSE 0 END), 0)`,
+            totalOutward: sql`COALESCE(SUM(CASE WHEN ${inventoryTransactions.quantity} < 0 AND ${inventoryTransactions.createdAt} >= ${start.toISOString()} AND ${inventoryTransactions.createdAt} <= ${end.toISOString()} THEN ABS(${inventoryTransactions.quantity}) ELSE 0 END), 0)`,
           })
           .from(masterProducts)
           .innerJoin(
             masterProductPM,
             eq(masterProducts.masterProductId, masterProductPM.masterProductId)
           )
+          .leftJoin(inventoryTransactions, eq(masterProducts.masterProductId, inventoryTransactions.masterProductId))
           .where(and(...pmConditions))
+          .groupBy(
+            masterProducts.masterProductId,
+            masterProducts.masterProductName,
+            masterProducts.productType,
+            masterProducts.minStockLevel,
+            masterProducts.isActive,
+            masterProducts.updatedAt,
+            masterProductPM.availableQty,
+            masterProductPM.purchaseCost,
+            masterProductPM.capacity
+          )
           .orderBy(masterProducts.masterProductName);
 
         results.push(...pmResults);

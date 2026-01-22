@@ -817,17 +817,17 @@ export const routeRegistry: RouteNode[] = [
         component: SalespersonRevenueReport,
         permission: { module: 'report-salesperson-revenue' },
       },
-      {
-        id: 'salesperson-incentive',
-        path: '/reports/salesperson-incentives',
-        label: 'Salesperson Incentive Report',
-        icon: DollarSign,
-        component: SalespersonIncentiveReport,
-        permission: { module: 'report-salesperson-incentives' },
-        apis: [
-          { route: '/reports/salesperson-incentives', method: 'GET', label: 'View Incentive Report' },
-        ],
-      },
+      // {
+      //   id: 'salesperson-incentive',
+      //   path: '/reports/salesperson-incentives',
+      //   label: 'Salesperson Incentive Report',
+      //   icon: DollarSign,
+      //   component: SalespersonIncentiveReport,
+      //   permission: { module: 'report-salesperson-incentives' },
+      //   apis: [
+      //     { route: '/reports/salesperson-incentives', method: 'GET', label: 'View Incentive Report' },
+      //   ],
+      // },
 
       {
         id: 'payment-report',

@@ -75,7 +75,6 @@ export interface RawMaterialReportItem {
 export interface BatchProductionReportItem {
   batchId: number;
   batchNo: string;
-  billNo?: string;
   productName: string | null;
   productType?: 'FG' | 'RM' | 'PM';
   batchType?: 'MAKE_TO_ORDER' | 'MAKE_TO_STOCK'; // Added batch type

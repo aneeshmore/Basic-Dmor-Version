@@ -185,25 +185,26 @@ export default function AcceptedOrdersPage() {
           navigate('/operations/split-order', { state: { orderId } });
         } else {
           // Schedule directly without opening modal
-          setIsLoading(true);
-          // Update order details first (silent)
-          await productionManagerApi.updateOrderDetails(
-            orderId,
-            {
-              expectedDeliveryDate: data.expectedDeliveryDate,
-              pmRemarks: data.remarks,
-            },
-            { successMessage: undefined }
-          );
+          // setIsLoading(true);
+          // // Update order details first (silent)
+          // await productionManagerApi.updateOrderDetails(
+          //   orderId,
+          //   {
+          //     expectedDeliveryDate: data.expectedDeliveryDate,
+          //     pmRemarks: data.remarks,
+          //   },
+          //   { successMessage: undefined }
+          // );
 
-          // Auto schedule the order (shows its own success toast)
-          await productionManagerApi.autoScheduleOrder({
-            orderId,
-            expectedDeliveryDate: data.expectedDeliveryDate,
-          });
+          // // Auto schedule the order (shows its own success toast)
+          // await productionManagerApi.autoScheduleOrder({
+          //   orderId,
+          //   expectedDeliveryDate: data.expectedDeliveryDate,
+          // });
 
-          fetchOrders();
-          setIsLoading(false);
+          // fetchOrders();
+          // setIsLoading(false);
+          showToast.error("Auto-scheduling is currently disabled.");
         }
       } catch (error) {
         console.error('Failed to process order:', error);

@@ -237,8 +237,9 @@ const BatchProductionReport = () => {
 
     // 2. Sub Products Calculation (Right Table / Shade Table)
     const filteredSubProducts = (batch.subProducts || []).filter(sp => {
-      const qty = parseFloat(sp.actualQty || '0');
-      return qty > 0;
+      const actQty = parseFloat(sp.actualQty || '0');
+      const batchQty = parseFloat(sp.batchQty || '0');
+      return actQty > 0 || batchQty > 0;
     });
 
     // Total LTR from Sub Products
@@ -944,36 +945,57 @@ const BatchProductionReport = () => {
         accessorKey: 'batchNo',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Batch" />,
         cell: ({ row }) => {
-          const isStock = row.original.batchType === 'MAKE_TO_STOCK';
+          const status = row.original.status || 'Scheduled';
+
+          let statusColor = 'text-[var(--primary)]';
+          let BadgeComp = null;
+
+          if (status === 'Completed') {
+            statusColor = 'text-green-700 dark:text-green-400';
+            BadgeComp = (
+              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[9px] uppercase tracking-wide font-bold bg-green-600 text-white dark:bg-green-500 shadow-sm">
+                <CheckCircle className="w-2.5 h-2.5" />
+                Completed
+              </span>
+            );
+          } else if (status === 'Cancelled') {
+            statusColor = 'text-red-700 dark:text-red-400';
+            BadgeComp = (
+              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[9px] uppercase tracking-wide font-bold bg-red-600 text-white dark:bg-red-500 shadow-sm">
+                <XCircle className="w-2.5 h-2.5" />
+                Cancelled
+              </span>
+            );
+          } else if (status === 'In Progress') {
+            statusColor = 'text-blue-700 dark:text-blue-400';
+            BadgeComp = (
+              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[9px] uppercase tracking-wide font-bold bg-blue-600 text-white dark:bg-blue-500 shadow-sm">
+                <Loader className="w-2.5 h-2.5 animate-spin" />
+                In Progress
+              </span>
+            );
+          } else {
+            // Scheduled or Default
+            statusColor = 'text-amber-700 dark:text-amber-400';
+            BadgeComp = (
+              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[9px] uppercase tracking-wide font-bold bg-amber-500 text-white dark:bg-amber-500 shadow-sm">
+                <Calendar className="w-2.5 h-2.5" />
+                Scheduled
+              </span>
+            );
+          }
+
           return (
             <div className="flex items-center gap-2">
-              <span className="font-medium text-[var(--primary)] hover:underline">
+              <span className={`font-medium ${statusColor} hover:underline`}>
                 {row.original.batchNo}
               </span>
-              {isStock ? (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wide font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                  <Warehouse className="w-2.5 h-2.5" />
-                  Stock
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wide font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                  <ShoppingCart className="w-2.5 h-2.5" />
-                  Order
-                </span>
-              )}
+              {BadgeComp}
             </div>
           );
         },
       },
-      {
-        accessorKey: 'billNo',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Bill No" />,
-        cell: ({ row }) => (
-          <div className="font-medium text-[var(--text-secondary)]">
-            {row.original.billNo || '-'}
-          </div>
-        ),
-      },
+
       {
         accessorKey: 'startedAt',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
@@ -1152,7 +1174,7 @@ const BatchProductionReport = () => {
 
       {/* Statistics Cards */}
       {!isLoading && data.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div
             onClick={() => setStatusFilter('All')}
             className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === 'All'
@@ -1177,30 +1199,7 @@ const BatchProductionReport = () => {
               </div>
             </div>
           </div>
-          <div
-            onClick={() => setStatusFilter('Scheduled')}
-            className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === 'Scheduled'
-              ? 'ring-2 ring-amber-500 border-amber-500 bg-amber-50'
-              : 'border-amber-100 bg-amber-50/30'
-              }`}
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider">
-                  Scheduled
-                </p>
-                <p className="text-3xl font-bold text-amber-700 mt-2">{stats.scheduled}</p>
-              </div>
-              <div
-                className={`p-2 rounded-lg ${statusFilter === 'Scheduled'
-                  ? 'bg-amber-500 text-white'
-                  : 'bg-amber-100 text-amber-600'
-                  }`}
-              >
-                <Calendar className="w-6 h-6" />
-              </div>
-            </div>
-          </div>
+
           <div
             onClick={() => setStatusFilter('In Progress')}
             className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === 'In Progress'
@@ -1298,7 +1297,7 @@ const BatchProductionReport = () => {
       {/* Status Filter Buttons (Table Controls) */}
       <div className="flex items-center gap-2 pt-4 border-t border-gray-100">
         <span className="text-sm font-medium text-gray-500 mr-2">Filter Table:</span>
-        {['All', 'Scheduled', 'In Progress', 'Completed', 'Cancelled'].map(status => (
+        {['All', 'In Progress', 'Completed', 'Cancelled'].map(status => (
           <Button
             key={status}
             size="sm"
@@ -1337,11 +1336,15 @@ const BatchProductionReport = () => {
                 </h4>
                 {row.original.subProducts &&
                   row.original.subProducts.filter(sub => {
-                    const qty =
+                    const actQty =
                       typeof sub.actualQty === 'number'
                         ? sub.actualQty
                         : parseFloat(sub.actualQty || '0');
-                    return qty > 0;
+                    const batchQty =
+                      typeof sub.batchQty === 'number'
+                        ? sub.batchQty
+                        : parseFloat(sub.batchQty || '0');
+                    return actQty > 0 || batchQty > 0;
                   }).length > 0 ? (
                   <table className="w-full text-sm text-left bg-[var(--surface)] rounded-lg border border-[var(--border)]">
                     <thead className="bg-[var(--color-neutral-100)] text-[var(--text-secondary)]">
@@ -1354,11 +1357,15 @@ const BatchProductionReport = () => {
                     <tbody className="divide-y divide-[var(--border)]">
                       {row.original.subProducts
                         .filter(sub => {
-                          const qty =
+                          const actQty =
                             typeof sub.actualQty === 'number'
                               ? sub.actualQty
                               : parseFloat(sub.actualQty || '0');
-                          return qty > 0;
+                          const batchQty =
+                            typeof sub.batchQty === 'number'
+                              ? sub.batchQty
+                              : parseFloat(sub.batchQty || '0');
+                          return actQty > 0 || batchQty > 0;
                         })
                         .map(sub => (
                           <tr key={sub.subProductId}>
@@ -1715,20 +1722,28 @@ const BatchProductionReport = () => {
                   <tbody>
                     {previewBatch.subProducts &&
                       previewBatch.subProducts.filter(sp => {
-                        // Only show SKUs with actualQty > 0
-                        const qty =
+                        // Only show SKUs with actualQty > 0 OR batchQty > 0
+                        const actQty =
                           typeof sp.actualQty === 'number'
                             ? sp.actualQty
                             : parseFloat(sp.actualQty || '0');
-                        return qty > 0;
+                        const batchQty =
+                          typeof sp.batchQty === 'number'
+                            ? sp.batchQty
+                            : parseFloat(sp.batchQty || '0');
+                        return actQty > 0 || batchQty > 0;
                       }).length > 0 ? (
                       previewBatch.subProducts
                         .filter(sp => {
-                          const qty =
+                          const actQty =
                             typeof sp.actualQty === 'number'
                               ? sp.actualQty
                               : parseFloat(sp.actualQty || '0');
-                          return qty > 0;
+                          const batchQty =
+                            typeof sp.batchQty === 'number'
+                              ? sp.batchQty
+                              : parseFloat(sp.batchQty || '0');
+                          return actQty > 0 || batchQty > 0;
                         })
                         .map((sp, idx) => (
                           <tr key={idx}>
@@ -1766,11 +1781,15 @@ const BatchProductionReport = () => {
                         {formatNumberForPreview(
                           (previewBatch.subProducts || [])
                             .filter(sp => {
-                              const qty =
+                              const actQty =
                                 typeof sp.actualQty === 'number'
                                   ? sp.actualQty
                                   : parseFloat(sp.actualQty || '0');
-                              return qty > 0;
+                              const batchQty =
+                                typeof sp.batchQty === 'number'
+                                  ? sp.batchQty
+                                  : parseFloat(sp.batchQty || '0');
+                              return actQty > 0 || batchQty > 0;
                             })
                             .reduce((sum, sp) => sum + parseFloat(sp.batchQty || '0'), 0)
                         )}
@@ -1779,11 +1798,15 @@ const BatchProductionReport = () => {
                         {formatNumberForPreview(
                           (previewBatch.subProducts || [])
                             .filter(sp => {
-                              const qty =
+                              const actQty =
                                 typeof sp.actualQty === 'number'
                                   ? sp.actualQty
                                   : parseFloat(sp.actualQty || '0');
-                              return qty > 0;
+                              const batchQty =
+                                typeof sp.batchQty === 'number'
+                                  ? sp.batchQty
+                                  : parseFloat(sp.batchQty || '0');
+                              return actQty > 0 || batchQty > 0;
                             })
                             .reduce((sum, sp) => sum + parseFloat(String(sp.actualQty) || '0'), 0)
                         )}
