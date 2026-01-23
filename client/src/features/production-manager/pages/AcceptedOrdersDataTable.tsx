@@ -141,11 +141,10 @@ const ExpandedOrderContent = ({
 
                     {invResult && (
                       <div
-                        className={`px-3 py-1.5 rounded border text-xs font-medium flex items-center gap-3 ${
-                          invResult.canFulfill
-                            ? 'bg-[var(--success)]/10 border-[var(--success)] text-[var(--success)]'
-                            : 'bg-[var(--danger)]/10 border-[var(--danger)] text-[var(--danger)]'
-                        }`}
+                        className={`px-3 py-1.5 rounded border text-xs font-medium flex items-center gap-3 ${invResult.canFulfill
+                          ? 'bg-[var(--success)]/10 border-[var(--success)] text-[var(--success)]'
+                          : 'bg-[var(--danger)]/10 border-[var(--danger)] text-[var(--danger)]'
+                          }`}
                       >
                         <span>Req: {invResult.orderedQuantity}</span>
                         <span>Free: {Number(invResult.availableQuantity).toFixed(2)}</span>
@@ -304,12 +303,12 @@ export function AcceptedOrdersDataTable({
                 // Inventory shortage: Show Accept (to PM Dashboard) and Split Order buttons
                 <>
                   <button
-                    onClick={() => handleProcessOrder(orderId, 'schedule')}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--warning)]/10 text-[var(--warning)] hover:bg-[var(--warning)]/20 rounded-md transition-colors shadow-sm w-full justify-center text-xs font-bold uppercase border border-[var(--warning)]/30"
-                    title="Accept order and show in PM Dashboard for scheduling"
+                    onClick={() => handleProcessOrder(orderId, 'dispatch')}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--success)]/10 text-[var(--success)] hover:bg-[var(--success)]/20 rounded-md transition-colors shadow-sm w-full justify-center text-xs font-bold uppercase border border-[var(--success)]/30"
+                    title="Force dispatch despite shortage"
                   >
-                    <Check className="w-3.5 h-3.5" />
-                    Accept
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Dispatch
                   </button>
                   <button
                     onClick={() => handleProcessOrder(orderId, 'split')}

@@ -81,39 +81,47 @@ export class AdminAccountsService {
       paymentDate: new Date(),
     };
 
-    // Update the order status to Accepted (ready for production)
+    // Determine Status Flow: Pending -> Verified -> Accepted
+    // If currently Verified, move to Accepted (Ready for Production)
+    // If currently Pending (or other), move to Verified (Payment Cleared but manual release to PM)
+    let newStatus = 'Verified';
+    if (existing.orders.status === 'Verified') {
+      newStatus = 'Accepted';
+    }
+
+    // Update the order status
     const orderData = {
-      status: 'Accepted',
+      status: newStatus,
     };
 
     await this.repository.updateAccount(orderId, accountData);
     await this.repository.updateOrder(orderId, orderData);
 
-    // Check for material shortages after payment clearance
-    await this.checkMaterialRequirements(orderId);
+    // Only perform Production checks/notifications if fully Accepted
+    if (newStatus === 'Accepted') {
+      // Check for material shortages after payment clearance
+      await this.checkMaterialRequirements(orderId);
 
-    // Send Notification
-    try {
-      const full = await this.repository.findById(orderId); // reusing fetch, though logic below fetches again. Optimized to reuse if possible but here keeping safe.
-      // Wait, findById returns joined object: { orders, customers, employees, accounts }
-      // Perfect.
+      // Send Notification
+      try {
+        const full = await this.repository.findById(orderId);
+        const { customers: customer, employees: salesperson, orders: order } = full;
+        const customerName = customer ? customer.companyName : 'Customer';
 
-      const { customers: customer, employees: salesperson, orders: order } = full;
-      const customerName = customer ? customer.companyName : 'Customer';
+        // Notify Salesperson & Others (PMs, Admins)
+        await this.notificationsService.createOrderStatusNotification(
+          orderId,
+          customerName,
+          'Accepted',
+          salesperson?.employeeId,
+          order?.orderNumber
+        );
 
-      // Notify Salesperson & Others (PMs, Admins)
-      await this.notificationsService.createOrderStatusNotification(
-        orderId,
-        customerName,
-        'Accepted',
-        salesperson?.employeeId,
-        order?.orderNumber
-      );
-
-      // Clean up 'NewOrder' notifications
-      await this.notificationsService.clearNotificationsForOrder(orderId, ['NewOrder']);
-    } catch (err) {
-      console.error('Failed to send notification in acceptOrder:', err);
+        // Clean up 'NewOrder' notifications
+        await this.notificationsService.clearNotificationsForOrder(orderId, ['NewOrder']);
+      } catch (err) {
+        console.error('Failed to send notification in acceptOrder:', err);
+      }
     }
 
     // Fetch full data again for DTO
@@ -149,13 +157,26 @@ export class AdminAccountsService {
       paymentDate: new Date(),
     };
 
-    // Update the order status to Accepted (ready for production)
+    // Determine Status Flow: Pending -> Verified -> Accepted (Legacy compatibility)
+    // If currently Verified, move to Accepted
+    let newStatus = 'Verified';
+    if (existing.orders.status === 'Verified') {
+      newStatus = 'Accepted';
+    }
+
+    // Update the order status
     const orderData = {
-      status: 'Accepted',
+      status: newStatus,
     };
 
     await this.repository.updateAccount(orderId, accountData);
     await this.repository.updateOrder(orderId, orderData);
+
+    // Only perform Production checks/notifications if fully Accepted
+    if (newStatus === 'Accepted') {
+      // Check for material shortages after payment clearance
+      await this.checkMaterialRequirements(orderId);
+    }
 
     // Fetch full data again for DTO
     const fullData = await this.repository.findById(orderId);

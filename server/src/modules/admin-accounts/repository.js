@@ -28,7 +28,9 @@ export class AdminAccountsRepository {
           // Orders with Pending status (not yet accepted)
           eq(orders.status, 'Pending'),
           // Orders on hold
-          eq(orders.status, 'On Hold')
+          eq(orders.status, 'On Hold'),
+          // Orders verified (payment cleared) but not yet sent to production
+          eq(orders.status, 'Verified')
         )
       )
       .orderBy(desc(orders.createdAt));

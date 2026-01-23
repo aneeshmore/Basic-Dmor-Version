@@ -339,10 +339,10 @@ export function PendingOrdersDataTable({
                       !tableEditedData[row.original.orderId]?.paymentCleared
                     }
                     className="inline-flex items-center gap-1 px-3 py-1 text-[var(--success)] bg-[var(--background)] hover:bg-[#ecfdf5] border border-[var(--success)]/20 rounded-lg transition-colors font-medium text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Accept"
+                    title={row.original.status === 'Verified' ? 'Send to Production' : 'Accept Payment'}
                   >
                     <Check className="w-3 h-3" />
-                    Accept
+                    {row.original.status === 'Verified' ? 'Send to Prod' : 'Accept'}
                   </button>
                   <button
                     onClick={e => {
