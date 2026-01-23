@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import { useNotifications, useAllNotifications, useMarkAsRead } from '../hooks';
 import { cn } from '@/utils/cn';
-import { showToast } from '@/utils/toast';
+import { showToast } from '@/utils/toast'; // Or path to stringUtils if already imported but we need to add it.
+import { decodeHtml } from '@/utils/stringUtils';
 import { Button } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
 import {
@@ -571,21 +572,21 @@ const NotificationsPage = () => {
               <div className="mt-1">{getPriorityIcon(n.priority)}</div>
               <div className="flex-1">
                 <div className="flex justify-between items-start">
-                  <h4 className="font-semibold text-[var(--text-primary)]">{n.title}</h4>
+                  <h4 className="font-semibold text-[var(--text-primary)]">{decodeHtml(n.title)}</h4>
                   <span className="text-xs text-[var(--text-secondary)] whitespace-nowrap ml-2 flex-shrink-0 font-medium">
                     {n.createdAt
                       ? new Date(n.createdAt).toLocaleString('en-GB', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: false,
-                        })
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false,
+                      })
                       : ''}
                   </span>
                 </div>
-                <p className="text-[var(--text-secondary)] text-sm mt-1">{n.message}</p>
+                <p className="text-[var(--text-secondary)] text-sm mt-1">{decodeHtml(n.message)}</p>
                 {renderContent(n)}
               </div>
               {!n.isRead && (
@@ -643,12 +644,12 @@ const NotificationsPage = () => {
                 <div className="grid grid-cols-[100px_1fr] gap-2">
                   <span className="text-gray-500">Company:</span>
                   <span className="font-medium text-gray-900">
-                    {selectedOrderDetails.customerName}
+                    {decodeHtml(selectedOrderDetails.customerName)}
                   </span>
 
                   <span className="text-gray-500">Address:</span>
                   <span className="text-gray-900 whitespace-pre-wrap">
-                    {selectedOrderDetails.address || selectedOrderDetails.location}
+                    {decodeHtml(selectedOrderDetails.address || selectedOrderDetails.location)}
                   </span>
                 </div>
               </div>
@@ -660,13 +661,13 @@ const NotificationsPage = () => {
                   <span className="font-medium text-gray-900">
                     {selectedOrderDetails.orderCreatedDate
                       ? new Date(selectedOrderDetails.orderCreatedDate).toLocaleString('en-GB', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: false,
-                        })
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false,
+                      })
                       : 'N/A'}
                   </span>
 
@@ -687,7 +688,7 @@ const NotificationsPage = () => {
             {selectedOrderDetails.adminRemarks && (
               <div className="bg-yellow-50 p-3 rounded-md border border-yellow-100 text-sm">
                 <span className="font-semibold text-yellow-800">Remarks: </span>
-                <span className="text-yellow-900">{selectedOrderDetails.adminRemarks}</span>
+                <span className="text-yellow-900">{decodeHtml(selectedOrderDetails.adminRemarks)}</span>
               </div>
             )}
 
@@ -708,7 +709,7 @@ const NotificationsPage = () => {
                   <tbody className="divide-y divide-gray-100">
                     {selectedOrderDetails.items?.map((item, idx) => (
                       <tr key={idx} className="bg-white hover:bg-gray-50 transition-colors">
-                        <td className="p-2 font-medium text-gray-900">{item.productName}</td>
+                        <td className="p-2 font-medium text-gray-900">{decodeHtml(item.productName)}</td>
                         <td className="p-2 text-center text-gray-600">{item.size}</td>
                         <td className="p-2 text-center text-gray-900 font-medium">
                           {item.quantity} {item.unit}
@@ -761,13 +762,13 @@ const NotificationsPage = () => {
                 <span className="font-semibold text-gray-900">
                   {selectedDispatch.createdAt
                     ? new Date(selectedDispatch.createdAt).toLocaleString('en-GB', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false,
-                      })
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false,
+                    })
                     : 'N/A'}
                 </span>
               </div>
@@ -870,13 +871,13 @@ const NotificationsPage = () => {
                       <td className="p-3 text-gray-600">
                         {order.orderCreatedDate
                           ? new Date(order.orderCreatedDate).toLocaleString('en-GB', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: false,
-                            })
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false,
+                          })
                           : '-'}
                       </td>
                       <td className="p-3 font-medium text-gray-900">{order.customerName}</td>

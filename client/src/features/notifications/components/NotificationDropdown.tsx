@@ -15,6 +15,7 @@ import type { Notification } from '../types';
 import { cn } from '@/utils/cn';
 import { formatDistanceToNow } from 'date-fns';
 import { showToast } from '@/utils/toast';
+import { decodeHtml } from '@/utils/stringUtils';
 
 interface NotificationDropdownProps {
   className?: string;
@@ -184,12 +185,12 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ clas
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="font-medium text-sm text-[var(--text-primary)] truncate">
-                            {notification.title}
+                            {decodeHtml(notification.title)}
                           </h4>
                           {getPriorityBadge(notification.priority)}
                         </div>
                         <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
-                          {notification.message}
+                          {decodeHtml(notification.message)}
                         </p>
                         <p className="text-xs text-[var(--text-secondary)] mt-1 opacity-70">
                           {formatDistanceToNow(new Date(notification.createdAt), {

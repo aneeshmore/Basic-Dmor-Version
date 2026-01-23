@@ -21,6 +21,7 @@ import {
   AdminOrderDetails,
 } from '@/features/admin-accounts/api/adminAccountsApi';
 import { showToast } from '@/utils/toast';
+import { decodeHtml } from '@/utils/stringUtils';
 
 interface DashboardNotificationsProps {
   types?: string[]; // Filter by type: 'NewOrder', 'OrderUpdate', 'Dispatch', etc.
@@ -224,7 +225,7 @@ export const DashboardNotifications: React.FC<DashboardNotificationsProps> = ({
                       <span className="text-2xl font-bold">{group.count}</span>
                       <span className="font-semibold text-sm">{displayLabel}</span>
                     </div>
-                    <p className="text-xs opacity-75 mt-0.5 line-clamp-1">{group.latestMessage}</p>
+                    <p className="text-xs opacity-75 mt-0.5 line-clamp-1">{decodeHtml(group.latestMessage)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -254,7 +255,7 @@ export const DashboardNotifications: React.FC<DashboardNotificationsProps> = ({
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <h4 className="font-medium text-sm text-gray-900">{item.title}</h4>
+                              <h4 className="font-medium text-sm text-gray-900">{decodeHtml(item.title)}</h4>
                               {item.priority === 'critical' && (
                                 <span className="px-1.5 py-0.5 text-xs bg-red-100 text-red-700 rounded">
                                   Critical
@@ -267,7 +268,7 @@ export const DashboardNotifications: React.FC<DashboardNotificationsProps> = ({
                               )}
                             </div>
                             <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                              {item.message}
+                              {decodeHtml(item.message)}
                             </p>
                             <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
                               <span>{formatDate(item.createdAt)}</span>
@@ -356,12 +357,12 @@ export const DashboardNotifications: React.FC<DashboardNotificationsProps> = ({
                 <div className="grid grid-cols-[100px_1fr] gap-2">
                   <span className="text-gray-500">Company:</span>
                   <span className="font-medium text-gray-900">
-                    {selectedOrderDetails.customerName}
+                    {decodeHtml(selectedOrderDetails.customerName)}
                   </span>
 
                   <span className="text-gray-500">Address:</span>
                   <span className="text-gray-900 whitespace-pre-wrap">
-                    {selectedOrderDetails.address || selectedOrderDetails.location}
+                    {decodeHtml(selectedOrderDetails.address || selectedOrderDetails.location)}
                   </span>
                 </div>
               </div>
@@ -393,7 +394,7 @@ export const DashboardNotifications: React.FC<DashboardNotificationsProps> = ({
             {selectedOrderDetails.adminRemarks && (
               <div className="bg-yellow-50 p-3 rounded-md border border-yellow-100 text-sm">
                 <span className="font-semibold text-yellow-800">Remarks: </span>
-                <span className="text-yellow-900">{selectedOrderDetails.adminRemarks}</span>
+                <span className="text-yellow-900">{decodeHtml(selectedOrderDetails.adminRemarks)}</span>
               </div>
             )}
 
@@ -414,7 +415,7 @@ export const DashboardNotifications: React.FC<DashboardNotificationsProps> = ({
                   <tbody className="divide-y divide-gray-100">
                     {selectedOrderDetails.items?.map((item, idx) => (
                       <tr key={idx} className="bg-white hover:bg-gray-50 transition-colors">
-                        <td className="p-2 font-medium text-gray-900">{item.productName}</td>
+                        <td className="p-2 font-medium text-gray-900">{decodeHtml(item.productName)}</td>
                         <td className="p-2 text-center text-gray-600">{item.size}</td>
                         <td className="p-2 text-center text-gray-900 font-medium">
                           {item.quantity} {item.unit}

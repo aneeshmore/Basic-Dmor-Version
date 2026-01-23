@@ -6,7 +6,17 @@ import { showToast } from '@/utils/toast';
 export const useNotifications = (filters?: NotificationFilters) => {
   return useQuery({
     queryKey: ['notifications', filters],
-    queryFn: () => notificationsApi.getNotifications(filters).then(res => res.data.data),
+    queryFn: () =>
+      notificationsApi.getNotifications(filters).then(res => {
+        // Deduplicate Logic
+        const uniqueMap = new Map();
+        res.data.data.forEach((item: any) => {
+          if (!uniqueMap.has(item.notificationId)) {
+            uniqueMap.set(item.notificationId, item);
+          }
+        });
+        return Array.from(uniqueMap.values());
+      }),
     refetchInterval: 60000, // Refetch every 60 seconds
     refetchOnWindowFocus: true,
   });
@@ -15,7 +25,17 @@ export const useNotifications = (filters?: NotificationFilters) => {
 export const useAllNotifications = (enabled: boolean = false) => {
   return useQuery({
     queryKey: ['notifications', 'all'],
-    queryFn: () => notificationsApi.getAllNotifications().then(res => res.data.data),
+    queryFn: () =>
+      notificationsApi.getAllNotifications().then(res => {
+        // Deduplicate Logic
+        const uniqueMap = new Map();
+        res.data.data.forEach((item: any) => {
+          if (!uniqueMap.has(item.notificationId)) {
+            uniqueMap.set(item.notificationId, item);
+          }
+        });
+        return Array.from(uniqueMap.values());
+      }),
     enabled: enabled, // Only fetch if toggled on
     refetchInterval: 30000,
     refetchOnWindowFocus: true,

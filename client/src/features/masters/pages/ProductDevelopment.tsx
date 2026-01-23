@@ -580,8 +580,8 @@ const ProductDevelopment = () => {
   const handleSave = async () => {
     const totalPercentage = calculateTotalPercentage();
     // Constraint removed: Allow saving even if not 100%
-    // Determine status based on completion
-    const isComplete = Math.abs(totalPercentage - 100) < 0.01;
+    // Determine status based on completion (User requirement: 100.000 to 100.0009)
+    const isComplete = totalPercentage >= 100 && totalPercentage <= 100.0009;
     const status = isComplete ? 'Completed' : 'Incomplete';
 
     if (!selectedMasterProductId) {
@@ -974,7 +974,13 @@ const ProductDevelopment = () => {
                   <td className="px-2 py-3"></td>
                   <td className="px-4 py-3 text-right">Total:</td>
                   <td className="px-4 py-3">
-                    <span className={totalPercentage === 100 ? 'text-green-600' : 'text-red-500'}>
+                    <span
+                      className={
+                        totalPercentage >= 100 && totalPercentage <= 100.999
+                          ? 'text-green-600'
+                          : 'text-red-500'
+                      }
+                    >
                       {totalPercentage.toFixed(3)}%
                     </span>
                   </td>

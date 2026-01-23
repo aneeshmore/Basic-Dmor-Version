@@ -4,6 +4,7 @@ import { AlertTriangle, AlertCircle, Trash2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/utils/cn';
+import { decodeHtml } from '@/utils/stringUtils';
 
 export const AlertsTicker = () => {
   const [isTickerModalOpen, setIsTickerModalOpen] = useState(false);
@@ -24,14 +25,16 @@ export const AlertsTicker = () => {
         list.forEach((s: any) => activeShortages.add(s.materialName));
       }
     });
-    activeShortages.forEach(name => items.push(`⚠️ Low Stock: ${name}`));
+    activeShortages.forEach(name => items.push(`⚠️ Low Stock: ${decodeHtml(name)}`));
 
     // Pending Orders
     notifications.forEach((n: any) => {
       if (n.type === 'NewOrder') {
         const orderNum = n.data?.orderNumber;
         const customer = n.data?.customerName;
-        items.push(`📦 Pending Order: ${customer ? `${customer}` : (orderNum ? `#${orderNum}` : 'Unknown')}`);
+        items.push(
+          `📦 Pending Order: ${customer ? `${decodeHtml(customer)}` : orderNum ? `#${orderNum}` : 'Unknown'}`
+        );
       }
     });
 
@@ -149,7 +152,7 @@ export const AlertsTicker = () => {
                           n.priority === 'critical' ? 'text-gray-900' : 'text-gray-900'
                         )}
                       >
-                        {n.title}
+                        {decodeHtml(n.title)}
                       </h4>
                       <button
                         onClick={() => handleDelete(n.notificationId)}
@@ -158,7 +161,7 @@ export const AlertsTicker = () => {
                         <Trash2 size={18} />
                       </button>
                     </div>
-                    <p className="text-sm text-gray-700 mt-1 leading-relaxed">{n.message}</p>
+                    <p className="text-sm text-gray-700 mt-1 leading-relaxed">{decodeHtml(n.message)}</p>
                     <p className="text-xs text-gray-500 mt-3 font-medium">
                       {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
                     </p>
