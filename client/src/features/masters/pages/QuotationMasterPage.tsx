@@ -25,6 +25,7 @@ import { inventoryApi } from '@/features/inventory/api/inventoryApi';
 import { showToast } from '@/utils/toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { downloadQuotationPDF } from '@/features/quotations/utils/pdfGenerator';
+import { decodeHtml } from '@/utils/stringUtils';
 
 interface Product {
   productId?: number;
@@ -238,8 +239,8 @@ const QuotationMasterPage: React.FC = () => {
         header: 'Customer',
         enableColumnFilter: true,
         cell: ({ row }) => (
-          <div className="font-medium max-w-[200px] truncate" title={row.original.buyerName}>
-            {row.original.buyerName || '-'}
+          <div className="font-medium max-w-[200px] truncate" title={decodeHtml(row.original.buyerName)}>
+            {decodeHtml(row.original.buyerName) || '-'}
           </div>
         ),
       },
@@ -410,11 +411,10 @@ const QuotationMasterPage: React.FC = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div
-          className={`p-4 rounded-lg border hover:shadow-md transition-all cursor-pointer ${
-            currentFilter === 'all'
-              ? 'bg-blue-50 border-blue-300 shadow-md'
-              : 'bg-[var(--surface)] border-[var(--border)]'
-          }`}
+          className={`p-4 rounded-lg border hover:shadow-md transition-all cursor-pointer ${currentFilter === 'all'
+            ? 'bg-blue-50 border-blue-300 shadow-md'
+            : 'bg-[var(--surface)] border-[var(--border)]'
+            }`}
           onClick={() => setCurrentFilter('all')}
         >
           <div className="flex items-center gap-3">
@@ -429,11 +429,10 @@ const QuotationMasterPage: React.FC = () => {
         </div>
 
         <div
-          className={`p-4 rounded-lg border hover:shadow-md transition-all cursor-pointer ${
-            currentFilter === 'pending'
-              ? 'bg-orange-50 border-orange-300 shadow-md'
-              : 'bg-[var(--surface)] border-orange-200'
-          }`}
+          className={`p-4 rounded-lg border hover:shadow-md transition-all cursor-pointer ${currentFilter === 'pending'
+            ? 'bg-orange-50 border-orange-300 shadow-md'
+            : 'bg-[var(--surface)] border-orange-200'
+            }`}
           onClick={() => setCurrentFilter('pending')}
         >
           <div className="flex items-center gap-3">
@@ -448,11 +447,10 @@ const QuotationMasterPage: React.FC = () => {
         </div>
 
         <div
-          className={`p-4 rounded-lg border hover:shadow-md transition-all cursor-pointer ${
-            currentFilter === 'approved'
-              ? 'bg-green-50 border-green-300 shadow-md'
-              : 'bg-[var(--surface)] border-green-200'
-          }`}
+          className={`p-4 rounded-lg border hover:shadow-md transition-all cursor-pointer ${currentFilter === 'approved'
+            ? 'bg-green-50 border-green-300 shadow-md'
+            : 'bg-[var(--surface)] border-green-200'
+            }`}
           onClick={() => setCurrentFilter('approved')}
         >
           <div className="flex items-center gap-3">
@@ -467,11 +465,10 @@ const QuotationMasterPage: React.FC = () => {
         </div>
 
         <div
-          className={`p-4 rounded-lg border hover:shadow-md transition-all cursor-pointer ${
-            currentFilter === 'rejected'
-              ? 'bg-red-50 border-red-300 shadow-md'
-              : 'bg-[var(--surface)] border-red-200'
-          }`}
+          className={`p-4 rounded-lg border hover:shadow-md transition-all cursor-pointer ${currentFilter === 'rejected'
+            ? 'bg-red-50 border-red-300 shadow-md'
+            : 'bg-[var(--surface)] border-red-200'
+            }`}
           onClick={() => setCurrentFilter('rejected')}
         >
           <div className="flex items-center gap-3">
@@ -486,11 +483,10 @@ const QuotationMasterPage: React.FC = () => {
         </div>
 
         <div
-          className={`p-4 rounded-lg border hover:shadow-md transition-all cursor-pointer ${
-            currentFilter === 'converted'
-              ? 'bg-purple-50 border-purple-300 shadow-md'
-              : 'bg-[var(--surface)] border-purple-200'
-          }`}
+          className={`p-4 rounded-lg border hover:shadow-md transition-all cursor-pointer ${currentFilter === 'converted'
+            ? 'bg-purple-50 border-purple-300 shadow-md'
+            : 'bg-[var(--surface)] border-purple-200'
+            }`}
           onClick={() => setCurrentFilter('converted')}
         >
           <div className="flex items-center gap-3">
@@ -609,7 +605,7 @@ const QuotationMasterPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-[var(--text-secondary)]">Name:</span>
-                  <span className="ml-2 font-medium">{selectedQuotation.buyerName}</span>
+                  <span className="ml-2 font-medium">{decodeHtml(selectedQuotation.buyerName)}</span>
                 </div>
                 <div>
                   <span className="text-[var(--text-secondary)]">GSTIN:</span>
@@ -620,9 +616,10 @@ const QuotationMasterPage: React.FC = () => {
                 <div className="col-span-2">
                   <span className="text-[var(--text-secondary)]">Address:</span>
                   <span className="ml-2 font-medium">
-                    {selectedQuotation.content?.customerAddress ||
-                      selectedQuotation.content?.buyerAddress ||
-                      '-'}
+                    {decodeHtml(
+                      selectedQuotation.content?.customerAddress ||
+                      selectedQuotation.content?.buyerAddress
+                    ) || '-'}
                   </span>
                 </div>
               </div>
@@ -667,7 +664,7 @@ const QuotationMasterPage: React.FC = () => {
                       return (
                         <tr key={idx} className="border-t border-[var(--border)]">
                           <td className="p-3">{idx + 1}</td>
-                          <td className="p-3 font-medium">{item.description}</td>
+                          <td className="p-3 font-medium">{decodeHtml(item.description)}</td>
                           <td className="p-3 text-right">{item.quantity}</td>
                           <td className="p-3 text-right text-[var(--text-secondary)]">
                             {packageCapacity > 0 ? `${packageCapacity}L` : '-'}
@@ -716,7 +713,7 @@ const QuotationMasterPage: React.FC = () => {
             {selectedQuotation.status === 'Rejected' && selectedQuotation.rejectionRemark && (
               <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
                 <h4 className="font-semibold text-red-800 mb-2">Rejection Reason</h4>
-                <p className="text-sm text-red-700">{selectedQuotation.rejectionRemark}</p>
+                <p className="text-sm text-red-700">{decodeHtml(selectedQuotation.rejectionRemark)}</p>
               </div>
             )}
 

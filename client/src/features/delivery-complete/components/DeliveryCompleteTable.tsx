@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { decodeHtml } from '@/utils/stringUtils';
 import { DeliveryRecord } from '../types';
 import { DataTable } from '@/components/ui/data-table/DataTable';
 import { ColumnDef } from '@tanstack/react-table';
@@ -32,7 +33,7 @@ export const DeliveryCompleteTable: React.FC<DeliveryCompleteTableProps> = ({
         accessorKey: 'companyName',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Company" />,
         cell: ({ row }) => (
-          <span className="font-medium text-[var(--primary)]">{row.original.companyName}</span>
+          <span className="font-medium text-[var(--primary)]">{decodeHtml(row.original.companyName)}</span>
         ),
       },
       {
@@ -41,7 +42,7 @@ export const DeliveryCompleteTable: React.FC<DeliveryCompleteTableProps> = ({
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5 text-[var(--text-secondary)]">
             <MapPin className="w-3.5 h-3.5" />
-            {row.original.location}
+            {decodeHtml(row.original.location)}
           </div>
         ),
       },
@@ -53,7 +54,7 @@ export const DeliveryCompleteTable: React.FC<DeliveryCompleteTableProps> = ({
             {row.original.items.map((item, idx) => (
               <div key={idx} className="flex items-center gap-1.5 text-[var(--text-primary)]">
                 <Package className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
-                <span className="text-sm">{item.productName}</span>
+                <span className="text-sm">{decodeHtml(item.productName)}</span>
               </div>
             ))}
           </div>

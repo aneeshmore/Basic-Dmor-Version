@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { decodeHtml } from '@/utils/stringUtils';
 import { AlertCircle, CheckSquare, PauseCircle, Check } from 'lucide-react';
 import { AdminOrder, adminAccountsApi, AdminOrderDetails } from '../api/adminAccountsApi';
 import { DataTable } from '@/components/ui/data-table/DataTable';
@@ -83,7 +84,7 @@ const ExpandedOrderDetails = ({ orderId }: { orderId: number }) => {
           >
             <div>
               <span className="font-medium text-[var(--text-primary)]">
-                {item.productName} ({item.size})
+                {decodeHtml(item.productName)} ({item.size})
               </span>
               <span className="text-[var(--text-secondary)] text-xs ml-2">
                 x {item.quantity} {item.unit}
@@ -130,9 +131,9 @@ export const SplitOrdersTable: React.FC<SplitOrdersTableProps> = ({
         cell: info => (
           <span
             className="text-[var(--primary)] font-medium truncate block max-w-[150px]"
-            title={info.getValue() as string}
+            title={decodeHtml(info.getValue() as string)}
           >
-            {info.getValue() as string}
+            {decodeHtml(info.getValue() as string)}
           </span>
         ),
       },
@@ -140,14 +141,14 @@ export const SplitOrdersTable: React.FC<SplitOrdersTableProps> = ({
         header: 'Location',
         accessorKey: 'location',
         cell: info => (
-          <span className="text-[var(--text-primary)]">{(info.getValue() as string) || '-'}</span>
+          <span className="text-[var(--text-primary)]">{decodeHtml(info.getValue() as string) || '-'}</span>
         ),
       },
       {
         header: 'Sales Person',
         accessorKey: 'salesPersonName',
         cell: info => (
-          <span className="text-[var(--text-primary)]">{(info.getValue() as string) || 'N/A'}</span>
+          <span className="text-[var(--text-primary)]">{decodeHtml(info.getValue() as string) || 'N/A'}</span>
         ),
       },
       {

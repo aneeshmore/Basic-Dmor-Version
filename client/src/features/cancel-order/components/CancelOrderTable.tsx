@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { CancelOrderRecord } from '../types';
 import { format } from 'date-fns';
+import { decodeHtml } from '@/utils/stringUtils';
 
 interface CancelOrderTableProps {
   data: CancelOrderRecord[];
@@ -98,9 +99,8 @@ export const CancelOrderTable: React.FC<CancelOrderTableProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div
-                  className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                    mode === 'cancelled' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
-                  }`}
+                  className={`w-12 h-12 rounded-lg flex items-center justify-center ${mode === 'cancelled' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
+                    }`}
                 >
                   <FileText className="w-6 h-6" />
                 </div>
@@ -115,11 +115,10 @@ export const CancelOrderTable: React.FC<CancelOrderTableProps> = ({
                       </span>
                     )}
                     <span
-                      className={`text-xs px-2 py-0.5 rounded ${
-                        mode === 'cancelled'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-amber-100 text-amber-700'
-                      }`}
+                      className={`text-xs px-2 py-0.5 rounded ${mode === 'cancelled'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-amber-100 text-amber-700'
+                        }`}
                     >
                       {order.status}
                     </span>
@@ -127,7 +126,7 @@ export const CancelOrderTable: React.FC<CancelOrderTableProps> = ({
                   <div className="flex items-center gap-3 mt-1 text-sm text-[var(--text-secondary)]">
                     <span className="flex items-center gap-1">
                       <Building2 className="w-3.5 h-3.5" />
-                      {order.companyName || order.customerName || 'Unknown'}
+                      {decodeHtml(order.companyName || order.customerName || 'Unknown')}
                     </span>
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5" />
@@ -184,7 +183,7 @@ export const CancelOrderTable: React.FC<CancelOrderTableProps> = ({
                       key={idx}
                       className="flex items-center justify-between p-2 bg-[var(--surface)] rounded-lg"
                     >
-                      <span className="text-sm text-[var(--text-primary)]">{item.productName}</span>
+                      <span className="text-sm text-[var(--text-primary)]">{decodeHtml(item.productName)}</span>
                       <div className="flex items-center gap-4 text-sm">
                         <span className="text-[var(--text-secondary)]">
                           Qty: {item.quantity} {item.unit}
@@ -206,11 +205,11 @@ export const CancelOrderTable: React.FC<CancelOrderTableProps> = ({
                       <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5" />
                       <div>
                         <div className="text-sm font-medium text-red-700">Cancellation Reason</div>
-                        <div className="text-sm text-red-600 mt-1">{order.cancelReason}</div>
+                        <div className="text-sm text-red-600 mt-1">{decodeHtml(order.cancelReason)}</div>
                         {order.cancelledAt && (
                           <div className="text-xs text-red-500 mt-2">
                             Cancelled on {formatDate(order.cancelledAt)}
-                            {order.cancelledBy && ` by ${order.cancelledBy}`}
+                            {order.cancelledBy && ` by ${decodeHtml(order.cancelledBy)}`}
                           </div>
                         )}
                       </div>

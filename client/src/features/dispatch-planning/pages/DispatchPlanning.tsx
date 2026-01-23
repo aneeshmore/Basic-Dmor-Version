@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/common';
 import { Button } from '@/components/ui/Button';
+import { decodeHtml } from '@/utils/stringUtils';
 
 interface Vehicle {
   id: number;
@@ -132,7 +133,7 @@ export default function DispatchPlanning() {
 
               return {
                 productId: d.orderDetail.productId,
-                productName: d.product.productName,
+                productName: decodeHtml(d.product.productName),
                 orderedQty,
                 availableQty,
                 packageCapacityKg,
@@ -157,10 +158,12 @@ export default function DispatchPlanning() {
             orderId,
             orderNumber: orderData.order.orderNumber,
             customerName:
-              orderData.customer?.companyName ||
-              orderData.customer?.contactPerson ||
-              'Unknown Customer',
-            location: orderData.customer?.area || orderData.customer?.city || '',
+              decodeHtml(
+                orderData.customer?.companyName ||
+                orderData.customer?.contactPerson
+              ) || 'Unknown Customer',
+            location:
+              decodeHtml(orderData.customer?.area || orderData.customer?.city) || '',
             orderDate: orderData.order.orderDate,
             expectedDeliveryDate: orderData.order.expectedDeliveryDate,
             status: orderData.order.status,
@@ -487,7 +490,7 @@ export default function DispatchPlanning() {
                   </option>
                   {vehicles.map(v => (
                     <option key={v.id} value={v.id}>
-                      {v.vehicleNo} - {v.model} ({v.capacity} T)
+                      {decodeHtml(v.vehicleNo)} - {decodeHtml(v.model)} ({v.capacity} T)
                     </option>
                   ))}
                 </select>
@@ -535,8 +538,8 @@ export default function DispatchPlanning() {
             {selectedVehicle ? (
               <div
                 className={`h-full p-6 rounded-xl border transition-all duration-300 ${isOverloaded
-                    ? 'bg-[var(--danger)]/5 border-[var(--danger)]/20'
-                    : 'bg-[var(--success)]/5 border-[var(--success)]/20'
+                  ? 'bg-[var(--danger)]/5 border-[var(--danger)]/20'
+                  : 'bg-[var(--success)]/5 border-[var(--success)]/20'
                   }`}
               >
                 <div className="flex flex-col h-full justify-between space-y-4">
@@ -593,8 +596,8 @@ export default function DispatchPlanning() {
 
                   <div
                     className={`p-3 rounded-lg border text-center font-bold text-lg ${isOverloaded
-                        ? 'bg-[var(--surface)] border-[var(--danger)]/30 text-[var(--danger)]'
-                        : 'bg-[var(--surface)] border-[var(--success)]/30 text-[var(--success)]'
+                      ? 'bg-[var(--surface)] border-[var(--danger)]/30 text-[var(--danger)]'
+                      : 'bg-[var(--surface)] border-[var(--success)]/30 text-[var(--success)]'
                       }`}
                   >
                     {isOverloaded ? (
@@ -730,8 +733,8 @@ export default function DispatchPlanning() {
             <button
               onClick={() => setOrderFilter('all')}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${orderFilter === 'all'
-                  ? 'bg-[var(--surface)] text-[var(--text-primary)] shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                ? 'bg-[var(--surface)] text-[var(--text-primary)] shadow-sm'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
             >
               All ({orderStats.totalOrders})
@@ -739,8 +742,8 @@ export default function DispatchPlanning() {
             <button
               onClick={() => setOrderFilter('ready')}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${orderFilter === 'ready'
-                  ? 'bg-[var(--success)]/20 text-[var(--success)] shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                ? 'bg-[var(--success)]/20 text-[var(--success)] shadow-sm'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
@@ -749,8 +752,8 @@ export default function DispatchPlanning() {
             <button
               onClick={() => setOrderFilter('partial')}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${orderFilter === 'partial'
-                  ? 'bg-[var(--warning)]/20 text-[var(--warning)] shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                ? 'bg-[var(--warning)]/20 text-[var(--warning)] shadow-sm'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
             >
               <AlertTriangle className="w-3.5 h-3.5" />
@@ -759,8 +762,8 @@ export default function DispatchPlanning() {
             <button
               onClick={() => setOrderFilter('pending')}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${orderFilter === 'pending'
-                  ? 'bg-[var(--danger)]/20 text-[var(--danger)] shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                ? 'bg-[var(--danger)]/20 text-[var(--danger)] shadow-sm'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
             >
               <XCircle className="w-3.5 h-3.5" />
@@ -963,10 +966,10 @@ function OrderViewCard({
   return (
     <div
       className={`bg-[var(--surface)] rounded-xl border-2 transition-all overflow-hidden ${isSelected
-          ? 'border-[var(--primary)] shadow-lg ring-2 ring-[var(--primary)]/20'
-          : isExpanded
-            ? `${borderColors[statusColor]} shadow-lg`
-            : 'border-[var(--border)] hover:border-[var(--border-hover)]'
+        ? 'border-[var(--primary)] shadow-lg ring-2 ring-[var(--primary)]/20'
+        : isExpanded
+          ? `${borderColors[statusColor]} shadow-lg`
+          : 'border-[var(--border)] hover:border-[var(--border-hover)]'
         }`}
     >
       {/* Header Row */}
@@ -1053,10 +1056,10 @@ function OrderViewCard({
             {daysUntilDelivery !== null && (
               <span
                 className={`flex items-center gap-1 ${daysUntilDelivery < 0
-                    ? 'text-[var(--danger)]'
-                    : daysUntilDelivery <= 2
-                      ? 'text-[var(--warning)]'
-                      : 'text-[var(--text-secondary)]'
+                  ? 'text-[var(--danger)]'
+                  : daysUntilDelivery <= 2
+                    ? 'text-[var(--warning)]'
+                    : 'text-[var(--text-secondary)]'
                   }`}
               >
                 <Clock className="w-3.5 h-3.5" />

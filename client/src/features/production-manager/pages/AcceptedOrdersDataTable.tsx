@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
+import { decodeHtml } from '@/utils/stringUtils';
 import { DataTable } from '@/components/ui/data-table/DataTable';
 import { DataTableColumnHeader } from '@/components/ui/data-table/DataTableColumnHeader';
 import { Search, Package, CheckCircle2, AlertCircle, Check, Scissors } from 'lucide-react';
@@ -25,11 +26,12 @@ interface AcceptedOrdersDataTableProps {
 
 const getSalespersonName = (sp: any) => {
   if (!sp) return 'N/A';
-  if (sp.salesPersonName) return sp.salesPersonName;
-  if (sp.name) return sp.name;
-  if (sp.fullName) return sp.fullName;
-  if (sp.firstName) return `${sp.firstName} ${sp.lastName || ''}`.trim();
-  return sp.username || 'N/A';
+  if (sp.salesPersonName) return decodeHtml(sp.salesPersonName);
+  if (sp.name) return decodeHtml(sp.name);
+  if (sp.fullName) return decodeHtml(sp.fullName);
+  if (sp.firstName)
+    return decodeHtml(`${sp.firstName} ${sp.lastName || ''}`.trim());
+  return decodeHtml(sp.username || 'N/A');
 };
 
 const formatTimeSpan = (dateString: string) => {
@@ -128,7 +130,7 @@ const ExpandedOrderContent = ({
                   >
                     <div>
                       <div className="font-medium text-[var(--text-primary)]">
-                        {product.productName || item.productName || 'Unknown Product'} -{' '}
+                        {decodeHtml(product.productName || item.productName || 'Unknown Product')} -{' '}
                         {product.size}
                       </div>
                       <div className="text-[var(--text-secondary)] mt-0.5">
@@ -192,7 +194,7 @@ export function AcceptedOrdersDataTable({
         header: ({ column }) => <DataTableColumnHeader column={column} title="Name Of Company" />,
         cell: ({ row }) => (
           <span className="text-[var(--primary)] font-medium truncate block max-w-[150px]">
-            {row.original.customer?.companyName || 'Unknown'}
+            {decodeHtml(row.original.customer?.companyName || 'Unknown')}
           </span>
         ),
       },
@@ -201,7 +203,7 @@ export function AcceptedOrdersDataTable({
         header: ({ column }) => <DataTableColumnHeader column={column} title="Location" />,
         cell: ({ row }) => (
           <span className="text-xs text-[var(--text-secondary)] truncate block max-w-[120px]">
-            {row.original.customer?.location || row.original.customer?.address || '-'}
+            {decodeHtml(row.original.customer?.location || row.original.customer?.address || '-')}
           </span>
         ),
       },
@@ -254,9 +256,9 @@ export function AcceptedOrdersDataTable({
         cell: ({ row }) => (
           <span
             className="text-xs text-[var(--text-secondary)] truncate block max-w-[100px]"
-            title={row.original.order.adminRemarks}
+            title={decodeHtml(row.original.order.adminRemarks)}
           >
-            {row.original.order.adminRemarks || '-'}
+            {decodeHtml(row.original.order.adminRemarks || '-')}
           </span>
         ),
       },

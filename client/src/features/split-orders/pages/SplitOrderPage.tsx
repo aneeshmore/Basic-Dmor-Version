@@ -33,6 +33,7 @@ import { DataTable } from '@/components/ui/data-table';
 import { DataTableColumnHeader } from '@/components/ui/data-table/DataTableColumnHeader';
 import { PageHeader } from '@/components/common';
 import { Badge } from '@/components/ui';
+import { decodeHtml } from '@/utils/stringUtils';
 
 interface ProductWithMaster extends OrderDetail {
   masterProductName?: string;
@@ -210,7 +211,7 @@ const SplitOrderPage: React.FC = () => {
           const customerId = row.original.customerId;
           return (
             <div className="font-medium text-[var(--text-primary)]">
-              {companyName || customerName || `Customer #${customerId}`}
+              {decodeHtml(companyName || customerName) || `Customer #${customerId}`}
             </div>
           );
         },
@@ -220,7 +221,7 @@ const SplitOrderPage: React.FC = () => {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Products" />,
         cell: ({ row }) => (
           <div className="text-[var(--text-secondary)] text-sm max-w-[200px] truncate">
-            {row.getValue('productNames') || '-'}
+            {decodeHtml(row.getValue('productNames')) || '-'}
           </div>
         ),
       },
@@ -583,7 +584,7 @@ const SplitOrderPage: React.FC = () => {
                     <div>
                       <h2 className="text-lg font-bold">Split Order #{originalOrder.orderId}</h2>
                       <p className="text-white/80 text-sm">
-                        {originalOrder.companyName || 'No Company'}
+                        {decodeHtml(originalOrder.companyName) || 'No Company'}
                       </p>
                     </div>
                   </div>
@@ -612,7 +613,7 @@ const SplitOrderPage: React.FC = () => {
                   <div className="flex items-center gap-2 text-[var(--text-secondary)]">
                     <MapPin className="w-4 h-4" />
                     <span className="truncate max-w-[200px]">
-                      {originalOrder.deliveryAddress || 'No location'}
+                      {decodeHtml(originalOrder.deliveryAddress) || 'No location'}
                     </span>
                   </div>
                 </div>
@@ -702,7 +703,7 @@ const SplitOrderPage: React.FC = () => {
                             </div>
                             <div>
                               <h4 className="font-medium text-[var(--text-primary)] text-sm">
-                                {group.masterProductName}
+                                {decodeHtml(group.masterProductName)}
                               </h4>
                               <p className="text-xs text-[var(--text-secondary)]">
                                 {group.products.length} SKU • Ord: {group.totalOrdered} • Avail:{' '}
@@ -775,7 +776,7 @@ const SplitOrderPage: React.FC = () => {
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
                                       <span className="font-medium text-[var(--text-primary)] text-sm truncate">
-                                        {productInfo?.ProductName ||
+                                        {decodeHtml(productInfo?.ProductName) ||
                                           `Product #${product.productId}`}
                                       </span>
                                       {product.isShort && (

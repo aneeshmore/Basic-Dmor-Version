@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { decodeHtml } from '@/utils/stringUtils';
 import { ColumnDef } from '@tanstack/react-table';
 import { AdminOrder, adminAccountsApi, AdminOrderDetails } from '../api/adminAccountsApi';
 import { DataTable } from '@/components/ui/data-table/DataTable';
@@ -143,7 +144,7 @@ const ExpandedOrderDetails = ({ orderId }: { orderId: number }) => {
           >
             <div>
               <span className="font-medium text-[var(--text-primary)]">
-                {item.productName} ({item.size})
+                {decodeHtml(item.productName)} ({item.size})
               </span>
               <span className="text-[var(--text-secondary)] text-xs ml-2">
                 x {item.quantity} {item.unit}
@@ -203,9 +204,9 @@ export function PendingOrdersDataTable({
         cell: ({ row }) => (
           <span
             className="text-[var(--primary)] font-medium truncate block max-w-[150px]"
-            title={row.original.customerName}
+            title={decodeHtml(row.original.customerName)}
           >
-            {row.original.customerName}
+            {decodeHtml(row.original.customerName)}
           </span>
         ),
       },
@@ -213,7 +214,7 @@ export function PendingOrdersDataTable({
         accessorKey: 'location',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Location" />,
         cell: ({ row }) => (
-          <span className="text-[var(--text-secondary)]">{row.original.location || '-'}</span>
+          <span className="text-[var(--text-secondary)]">{decodeHtml(row.original.location) || '-'}</span>
         ),
       },
       {
@@ -221,7 +222,7 @@ export function PendingOrdersDataTable({
         header: ({ column }) => <DataTableColumnHeader column={column} title="Sales Person" />,
         cell: ({ row }) => (
           <span className="text-[var(--text-secondary)]">
-            {row.original.salesPersonName || 'N/A'}
+            {decodeHtml(row.original.salesPersonName) || 'N/A'}
           </span>
         ),
       },
