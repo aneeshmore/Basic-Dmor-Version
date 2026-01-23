@@ -20,6 +20,9 @@ export interface Product {
   Subcategory?: string | null; // 'Base' | 'Hardener' | 'General'
   HardenerId?: number | null; // Master Product ID of linked Hardener
   CapacityLtr?: number | null; // PM packaging capacity in liters
+  TotalDensity?: number; // Added for volume calculation
+  packageCapacityKg?: number; // Added for package capacity
+  PackageCapacityKg?: number; // Backend case variation
 }
 
 export interface StockLedger {

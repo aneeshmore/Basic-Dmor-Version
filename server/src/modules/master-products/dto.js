@@ -94,6 +94,7 @@ export class ProductDTO {
 
     // 3. Package Capacity (Kg) = Capacity (Ltr) * Density
     this.PackageCapacityKg = pmCapacity * fgDensity;
+    this.packageCapacityKg = this.PackageCapacityKg;
 
     // Filling Density fields
     this.FillingDensity = parseFloat(product.fillingDensity || product.filling_density || 0);
@@ -139,6 +140,9 @@ export class ProductDTO {
 
     this.PackagingId = product.packagingId || product.packaging_id;
     this.packagingId = this.PackagingId;
+
+    this.TotalDensity = fgDensity; // Explicitly map for frontend calculation
+    this.totalDensity = fgDensity;
 
     this.IncentiveAmount = parseFloat(product.incentiveAmount || product.incentive_amount || 0);
     this.incentiveAmount = this.IncentiveAmount;

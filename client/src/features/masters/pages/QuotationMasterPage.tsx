@@ -34,6 +34,7 @@ interface Product {
   ProductName?: string;
   packageCapacityKg?: string | number;
   PackageCapacityKg?: string | number;
+  TotalDensity?: string | number;
 }
 
 const QuotationMasterPage: React.FC = () => {
@@ -87,7 +88,19 @@ const QuotationMasterPage: React.FC = () => {
       const product = products.find(p => (p.productId || p.ProductID) === productId);
       if (!product) return 0;
       const capacity = product.packageCapacityKg || product.PackageCapacityKg;
-      return typeof capacity === 'string' ? parseFloat(capacity) || 0 : capacity || 0;
+      const weight = typeof capacity === 'string' ? parseFloat(capacity) || 0 : capacity || 0;
+
+      // Check for density to calculate volume (L) from weight (Kg)
+      const densityVal = product.TotalDensity;
+      const density = typeof densityVal === 'string' ? parseFloat(densityVal) || 0 : densityVal || 0;
+
+      if (density > 0) {
+        // Volume = Weight / Density
+        // Example: 4.3 Kg / 0.86 = 5 Liters
+        return weight / density;
+      }
+
+      return weight;
     },
     [products]
   );
@@ -667,7 +680,7 @@ const QuotationMasterPage: React.FC = () => {
                           <td className="p-3 font-medium">{decodeHtml(item.description)}</td>
                           <td className="p-3 text-right">{item.quantity}</td>
                           <td className="p-3 text-right text-[var(--text-secondary)]">
-                            {packageCapacity > 0 ? `${packageCapacity}L` : '-'}
+                            {packageCapacity > 0 ? `${parseFloat(packageCapacity.toFixed(2))}L` : '-'}
                           </td>
                           <td className="p-3 text-right">₹{item.rate?.toFixed(2)}</td>
                           <td className="p-3 text-right">{item.discount || 0}%</td>
