@@ -131,7 +131,7 @@ export class ProductionManagerRepository {
       .leftJoin(customers, eq(orders.customerId, customers.customerId))
       .leftJoin(employees, eq(orders.salespersonId, employees.employeeId))
       .leftJoin(accounts, eq(orders.orderId, accounts.orderId))
-      .where(eq(orders.status, 'Accepted'))
+      .where(inArray(orders.status, ['Accepted', 'Verified']))
       .orderBy(desc(orders.orderDate));
 
     if (ordersData.length === 0) {
@@ -210,7 +210,7 @@ export class ProductionManagerRepository {
       .leftJoin(customers, eq(orders.customerId, customers.customerId))
       .leftJoin(employees, eq(orders.salespersonId, employees.employeeId))
       .leftJoin(accounts, eq(orders.orderId, accounts.orderId))
-      .where(inArray(orders.status, ['Accepted', 'Scheduled for Production']))
+      .where(inArray(orders.status, ['Accepted', 'Verified', 'Scheduled for Production']))
       .orderBy(desc(orders.orderDate));
 
     if (ordersData.length === 0) {
