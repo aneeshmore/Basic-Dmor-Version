@@ -148,16 +148,20 @@ export default function BatchReportModal({
       const fillingDensity =
         parseFloat(o.product?.fillingDensity || '0') || parseFloat(batchData.fgDensity || '0');
       const actualQty = parseFloat(o.batchProduct?.producedUnits || '0');
-      const ltr = actualQty * capacityLtr;
+      const plannedQty = parseFloat(o.batchProduct?.plannedUnits || '0');
+      const effQty = actualQty > 0 ? actualQty : plannedQty;
+
+      const ltr = effQty * capacityLtr;
       const kg = ltr * fillingDensity;
       screenTotalLtr += ltr;
       screenTotalKg += kg;
     });
   } else {
-    const ordersMapScreen = new Map<number, any>();
+    // For scheduled/in-progress batches
+    const ordersMapScreen = new Map<string, any>();
     orders.forEach((o: any) => {
       const productId = o.batchProduct?.productId || o.product?.productId;
-      if (productId) ordersMapScreen.set(productId, o);
+      if (productId) ordersMapScreen.set(String(productId), o);
     });
 
     const skusToShow =
@@ -169,12 +173,15 @@ export default function BatchReportModal({
         }));
 
     skusToShow.forEach((sku: any) => {
-      const order = ordersMapScreen.get(sku.productId);
+      const order = ordersMapScreen.get(String(sku.productId));
       const capacityLtr = parseFloat(order?.packagingCapacity || '0');
       const fillingDensity =
         parseFloat(order?.product?.fillingDensity || '0') || parseFloat(batchData?.fgDensity || '0');
       const plannedQty = parseFloat(order?.batchProduct?.plannedUnits || '0');
-      const ltr = plannedQty * capacityLtr;
+      const actualQty = parseFloat(order?.batchProduct?.producedUnits || '0');
+      const effQty = actualQty > 0 ? actualQty : plannedQty;
+
+      const ltr = effQty * capacityLtr;
       const kg = ltr * fillingDensity;
       screenTotalLtr += ltr;
       screenTotalKg += kg;
@@ -350,7 +357,7 @@ export default function BatchReportModal({
     // For scheduled/in-progress batches, use relatedSkus to show all possible SKUs
     let productData: (string | number)[][] = [];
 
-    if (reportType === 'completion-chart' && orders.length > 0) {
+    if ((reportType === 'completion-chart' || batchData.status === 'Completed') && orders.length > 0) {
       // For completed batches, use orders directly - this has the actual SKU data
       productData = orders.map((o: any) => {
         const productName = o.product?.productName || 'Unknown';
@@ -359,7 +366,9 @@ export default function BatchReportModal({
           parseFloat(o.product?.fillingDensity || '0') || parseFloat(batch.fgDensity || '0');
         const plannedQty = parseFloat(o.batchProduct?.plannedUnits || '0');
         const actualQty = parseFloat(o.batchProduct?.producedUnits || '0');
-        const ltr = actualQty > 0 ? actualQty * capacityLtr : plannedQty * capacityLtr;
+
+        const effQty = actualQty > 0 ? actualQty : plannedQty;
+        const ltr = effQty * capacityLtr;
         const kg = ltr * fillingDensity;
 
         return [
@@ -367,22 +376,25 @@ export default function BatchReportModal({
           plannedQty > 0 ? plannedQty.toString() : '0',
           actualQty > 0 ? actualQty.toString() : '',
           '',
-          '',
+          kg > 0 ? kg.toFixed(3) : '',
         ];
       });
     } else {
       // For non-completed batches, use relatedSkus with order lookup
-      const ordersByProductId = new Map<number, any>();
+      const ordersByProductId = new Map<string, any>();
       orders.forEach((o: any) => {
         const productId = o.batchProduct?.productId || o.product?.productId;
         if (productId) {
-          ordersByProductId.set(productId, o);
+          ordersByProductId.set(String(productId), o);
         }
       });
 
       // Use ALL SKUs from relatedSkus, with qty = 0 if no order
+      console.log('PDF: relatedSkus', relatedSkus);
+      console.log('PDF: ordersByProductId', Array.from(ordersByProductId.entries()));
+
       productData = relatedSkus.map((sku: any) => {
-        const order = ordersByProductId.get(sku.productId);
+        const order = ordersByProductId.get(String(sku.productId));
         const productName = sku.productName || 'Unknown';
         const plannedQty = parseFloat(order?.batchProduct?.plannedUnits || '0');
         const actualQty = parseFloat(order?.batchProduct?.producedUnits || '0');
@@ -391,7 +403,8 @@ export default function BatchReportModal({
         const fillingDensity =
           parseFloat(order?.product?.fillingDensity || '0') || parseFloat(batch.fgDensity || '0');
 
-        const ltr = plannedQty * capacityLtr;
+        const effQty = actualQty > 0 ? actualQty : plannedQty;
+        const ltr = effQty * capacityLtr;
         const kg = ltr * fillingDensity;
 
         return [
@@ -399,7 +412,7 @@ export default function BatchReportModal({
           plannedQty > 0 ? plannedQty.toString() : '0',
           actualQty > 0 ? actualQty.toString() : '',
           '',
-          '',
+          kg > 0 ? kg.toFixed(3) : '',
         ];
       });
 
@@ -411,14 +424,17 @@ export default function BatchReportModal({
             parseFloat(o.product?.fillingDensity || '0') || parseFloat(batch.fgDensity || '0');
           const plannedQty = parseFloat(o.batchProduct?.plannedUnits || '0');
           const actualQty = parseFloat(o.batchProduct?.producedUnits || '0');
-          const ltr = plannedQty * capacityLtr;
+
+          const effQty = actualQty > 0 ? actualQty : plannedQty;
+          const ltr = effQty * capacityLtr;
           const kg = ltr * fillingDensity;
+
           return [
             o.product?.productName || 'Unknown',
             plannedQty > 0 ? plannedQty.toString() : '0',
             actualQty > 0 ? actualQty.toString() : '',
             '',
-            '',
+            kg > 0 ? kg.toFixed(3) : '',
           ];
         });
       }
@@ -431,8 +447,10 @@ export default function BatchReportModal({
     }
 
     // Calculate totals for Product Table
+    console.log('PDF: productData', productData);
     const totalLtr = productData.reduce((sum, row) => sum + (parseFloat(row[3] as string) || 0), 0);
     const totalKg = productData.reduce((sum, row) => sum + (parseFloat(row[4] as string) || 0), 0);
+    console.log('PDF: calculated totalKg', totalKg);
 
     // Draw Material Table (Left Side)
     autoTable(doc, {
@@ -488,7 +506,7 @@ export default function BatchReportModal({
           { content: totalPackages.toString(), styles: { fontStyle: 'bold', halign: 'center', textColor: 0 } },
           { content: '', styles: { fontStyle: 'bold', textColor: 0 } },
           { content: '', styles: { fontStyle: 'bold', textColor: 0 } },
-          { content: '', styles: { fontStyle: 'bold', textColor: 0 } },
+          { content: totalKg > 0 ? totalKg.toFixed(3) : '', styles: { fontStyle: 'bold', textColor: 0, halign: 'right' } },
         ],
       ],
       theme: 'grid',
@@ -509,15 +527,15 @@ export default function BatchReportModal({
     // Production Summary Table (SKU-level with APP QTY)
     if (relatedSkus.length > 0) {
       // Build orders map for quick lookup
-      const ordersMapPdf = new Map<number, any>();
+      const ordersMapPdf = new Map<string, any>();
       orders.forEach((o: any) => {
         const productId = o.batchProduct?.productId || o.product?.productId;
-        if (productId) ordersMapPdf.set(productId, o);
+        if (productId) ordersMapPdf.set(String(productId), o);
       });
 
       // Prepare production summary data
       const prodSummaryData = relatedSkus.map((sku: any) => {
-        const order = ordersMapPdf.get(sku.productId);
+        const order = ordersMapPdf.get(String(sku.productId));
         const productName = sku.productName || 'Unknown';
         const appQty = parseFloat(sku.availableQuantity || '0');
         const batchQty = parseFloat(order?.batchProduct?.plannedUnits || '0');
@@ -882,8 +900,8 @@ export default function BatchReportModal({
 
                           const plannedQty = parseFloat(o.batchProduct?.plannedUnits || '0');
                           const actualQty = parseFloat(o.batchProduct?.producedUnits || '0');
-                          const ltr =
-                            actualQty > 0 ? actualQty * capacityLtr : plannedQty * capacityLtr;
+                          const effQty = actualQty > 0 ? actualQty : plannedQty;
+                          const ltr = effQty * capacityLtr;
                           const kg = ltr * fillingDensity;
 
                           return (
@@ -898,17 +916,17 @@ export default function BatchReportModal({
                               <td className="border border-gray-800 px-2 py-1 text-right">
                               </td>
                               <td className="border border-gray-800 px-2 py-1 text-right">
+                                {kg > 0 ? kg.toFixed(3) : ''}
                               </td>
                             </tr>
                           );
                         });
                       }
 
-                      // For non-completed batches, use relatedSkus with order lookup
-                      const ordersMapScreen = new Map<number, any>();
+                      const ordersMapScreen = new Map<string, any>();
                       orders.forEach((o: any) => {
                         const productId = o.batchProduct?.productId || o.product?.productId;
-                        if (productId) ordersMapScreen.set(productId, o);
+                        if (productId) ordersMapScreen.set(String(productId), o);
                       });
 
                       const skusToShow =
@@ -920,7 +938,7 @@ export default function BatchReportModal({
                           }));
 
                       return skusToShow.map((sku: any, idx: number) => {
-                        const order = ordersMapScreen.get(sku.productId);
+                        const order = ordersMapScreen.get(String(sku.productId));
                         const capacityLtr = parseFloat(order?.packagingCapacity || '0');
                         const fillingDensity =
                           parseFloat(order?.product?.fillingDensity || '0') ||
@@ -928,7 +946,9 @@ export default function BatchReportModal({
 
                         const plannedQty = parseFloat(order?.batchProduct?.plannedUnits || '0');
                         const actualQty = parseFloat(order?.batchProduct?.producedUnits || '0');
-                        const ltr = plannedQty * capacityLtr;
+
+                        const effQty = actualQty > 0 ? actualQty : plannedQty;
+                        const ltr = effQty * capacityLtr;
                         const kg = ltr * fillingDensity;
 
                         return (
@@ -945,6 +965,7 @@ export default function BatchReportModal({
                             <td className="border border-gray-800 px-2 py-1 text-right">
                             </td>
                             <td className="border border-gray-800 px-2 py-1 text-right">
+                              {kg > 0 ? kg.toFixed(3) : ''}
                             </td>
                           </tr>
                         );
@@ -963,7 +984,8 @@ export default function BatchReportModal({
                       </td>
                       <td className="border border-gray-800 px-2 py-1 text-right">
                       </td>
-                      <td className="border border-gray-800 px-2 py-1 text-right">
+                      <td className="border border-gray-800 px-2 py-1 text-right font-bold">
+                        {screenTotalKg > 0 ? screenTotalKg.toFixed(3) : ''}
                       </td>
                     </tr>
                   </tfoot>
@@ -1003,14 +1025,14 @@ export default function BatchReportModal({
                     <tbody>
                       {(() => {
                         // Build orders map for quick lookup
-                        const ordersMapScreen = new Map<number, any>();
+                        const ordersMapScreen = new Map<string, any>();
                         orders.forEach((o: any) => {
                           const productId = o.batchProduct?.productId || o.product?.productId;
-                          if (productId) ordersMapScreen.set(productId, o);
+                          if (productId) ordersMapScreen.set(String(productId), o);
                         });
 
                         return relatedSkus.map((sku: any, idx: number) => {
-                          const order = ordersMapScreen.get(sku.productId);
+                          const order = ordersMapScreen.get(String(sku.productId));
                           const appQty = parseFloat(sku.availableQuantity || '0');
                           const batchQty = parseFloat(order?.batchProduct?.plannedUnits || '0');
 

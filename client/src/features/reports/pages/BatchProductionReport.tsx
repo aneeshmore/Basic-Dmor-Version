@@ -258,12 +258,16 @@ const BatchProductionReport = () => {
       0
     );
     const totalKg = (batch.subProducts || []).reduce((s, x) => {
-      const qty = parseFloat(x.actualQty || '0');
+      const actualQty = parseFloat(x.actualQty || '0');
+      const plannedQty = parseFloat(x.batchQty || '0');
+
+      const effQty = actualQty > 0 ? actualQty : plannedQty;
+
       const capacity = x.capacity ? parseFloat(x.capacity.toString()) : 0;
-      const ltr = qty * capacity;
-      const density = x.fillingDensity
-        ? parseFloat(x.fillingDensity.toString())
-        : parseFloat(batch.packingDensity || batch.actualDensity || batch.density || '0');
+      const ltr = effQty * capacity;
+      // Use fillingDensity or fallback to batch density for weight calc
+      const density = parseFloat(x.fillingDensity?.toString() || '0') || parseFloat(batch.packingDensity || batch.actualDensity || batch.density || '0');
+
       return s + ltr * density;
     }, 0);
 
@@ -341,12 +345,16 @@ const BatchProductionReport = () => {
 
     // Sub Products Body - Using calculated filtered list
     const subProductsBody = filteredSubProducts.map(sp => {
-      const qty = parseFloat(sp.actualQty || '0');
+      const actualQty = parseFloat(sp.actualQty || '0');
+      const plannedQty = parseFloat(sp.batchQty || '0');
+      const effQty = actualQty > 0 ? actualQty : plannedQty;
+
       const capacity = sp.capacity ? parseFloat(sp.capacity.toString()) : 0;
-      const ltr = qty * capacity;
+      const ltr = effQty * capacity;
       // Use fillingDensity or fallback to batch density for weight calc
-      const density = sp.fillingDensity
-        ? parseFloat(sp.fillingDensity.toString())
+      const productDensity = parseFloat(sp.fillingDensity?.toString() || '0');
+      const density = productDensity > 0
+        ? productDensity
         : parseFloat(batch.packingDensity || batch.actualDensity || batch.density || '0');
 
       const kg = ltr * density;
