@@ -242,6 +242,9 @@ const StockReport = () => {
     }
   }, [productTypeFilter, productOptions, productFilter]);
 
+  /* Low Stock Filter State */
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+
   // Filter data based on product type and product name
   const filteredData = useMemo(() => {
     let result = data;
@@ -254,21 +257,46 @@ const StockReport = () => {
       result = result.filter(item => item.productName === productFilter);
     }
 
+    if (showLowStockOnly) {
+      result = result.filter(item => item.availableQuantity < item.minStockLevel);
+    }
+
     return result;
-  }, [data, productTypeFilter, productFilter]);
+  }, [data, productTypeFilter, productFilter, showLowStockOnly]);
 
   // Calculate statistics
   const stats = useMemo(() => {
-    const totalProducts = filteredData.length;
-    const lowStock = filteredData.filter(
+    // Stats should calculated from the BASE data (filtered by type/search but NOT by the low-stock-toggle itself to stay informative?)
+    // Actually, usually stats cards summarize the current view or the whole dataset.
+    // However, if we filter by "Low Stock", the "Total Products" count becomes "Low Stock Products".
+    // AND "Low Stock Items" would be same as "Total Products".
+    // Usually, top stats cards act as high level summaries.
+    // If I click "Low Stock Items", I expect the TABLE to filter, but maybe the cards should remain static so I can toggle back?
+    // OR the cards act as tabs.
+    // Let's keep stats based on `data` (filtered by Type/Search only) so the counts on cards don't change when we toggle the card itself.
+    // This makes the card act like a stable filter button.
+
+    // We need a separate "baseFilteredData" for stats calculation if we want them stable against the low-stock toggle.
+    let baseData = data;
+    if (productTypeFilter !== 'All') {
+      baseData = baseData.filter(item => item.productType === productTypeFilter);
+    }
+    if (productFilter) {
+      baseData = baseData.filter(item => item.productName === productFilter);
+    }
+
+    const totalProducts = baseData.length;
+    const lowStock = baseData.filter(
       item => item.availableQuantity < item.minStockLevel
     ).length;
-    const totalAvailable = filteredData.reduce(
+    const totalAvailable = baseData.reduce(
       (sum, item) => sum + parseFloat(item.availableQuantity?.toString() || '0'),
       0
     );
     return { totalProducts, lowStock, totalAvailable };
-  }, [filteredData]);
+  }, [data, productTypeFilter, productFilter]);
+
+  // ... (Chart Data logic should follow filteredData so charts reflect what looks like the table)
 
   // Process data for charts
   const chartData = useMemo(() => {
@@ -592,6 +620,9 @@ const StockReport = () => {
     else handleExport();
   };
 
+  /* Render Return */
+  /* Note: Update the Low Stock Card to be clickable */
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -693,8 +724,18 @@ const StockReport = () => {
               {stats.totalProducts}
             </p>
           </div>
-          <div className="card p-4">
-            <p className="text-sm text-[var(--text-secondary)] font-medium">Low Stock Items</p>
+          <div
+            className={`card p-4 cursor-pointer transition-all border-l-4 ${showLowStockOnly
+              ? 'bg-red-50 border-red-500 shadow-md ring-2 ring-red-200'
+              : 'border-transparent hover:bg-gray-50'
+              }`}
+            onClick={() => setShowLowStockOnly(!showLowStockOnly)}
+            title="Click to filter Low Stock items"
+          >
+            <p className="text-sm text-[var(--text-secondary)] font-medium flex items-center justify-between">
+              Low Stock Items
+              {showLowStockOnly && <Badge className="bg-red-500 text-white text-xs h-5">Filtering</Badge>}
+            </p>
             <p className="text-2xl font-bold text-[var(--color-error)] mt-1">{stats.lowStock}</p>
           </div>
           <div className="card p-4">

@@ -21,11 +21,12 @@ export const addPdfFooter = (doc: jsPDF) => {
 export const addPdfHeader = (doc: jsPDF, companyInfo: CompanyInfo | null, title: string, subTitle?: string) => {
     const width = doc.internal.pageSize.getWidth();
     const margin = 14;
-    const logoY = 10;
-    const logoHeight = 25;
+    // const logoY = 10;
+    // const logoHeight = 25;
     let textY = 15;
 
     // 1. Company Logo
+    /* 
     let logoBottomY = 0;
     if (companyInfo?.logoUrl) {
         try {
@@ -37,6 +38,7 @@ export const addPdfHeader = (doc: jsPDF, companyInfo: CompanyInfo | null, title:
             console.error("Could not add logo to PDF", e);
         }
     }
+    */
 
     // 2. Company Name & Details (Centered)
     doc.setFontSize(18);
@@ -47,6 +49,7 @@ export const addPdfHeader = (doc: jsPDF, companyInfo: CompanyInfo | null, title:
     const companyName = companyInfo?.companyName || 'DMOR PAINTS';
     doc.text(companyName.toUpperCase(), width / 2, textY, { align: 'center' });
 
+    /*
     // Company Address / Contact
     textY += 6;
     doc.setFontSize(9);
@@ -103,10 +106,14 @@ export const addPdfHeader = (doc: jsPDF, companyInfo: CompanyInfo | null, title:
     } else {
         textY += 2;
     }
+    */
+
+    // Simplification: We only have Company Name now.
+    textY += 5; // Add a small margin below company name
 
     // Ensure we start below whichever is taller (Logo or Text)
     // Add some padding (5 units)
-    let currentY = Math.max(logoBottomY || 0, textY || 15) + 5;
+    let currentY = textY + 5;
 
     // Safety check for NaN
     if (isNaN(currentY)) {
