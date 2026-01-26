@@ -38,19 +38,57 @@ export class InventoryTransactionService {
     createdBy,
   }) {
     try {
-      // Get current product balance
-      const product = await db.query.products.findFirst({
+      // 1. Try to find in standard Products table (FG/SKU)
+      let product = await db.query.products.findFirst({
         where: eq(products.productId, productId),
+        with: {
+          masterProduct: true
+        }
       });
 
-      if (!product) {
-        throw new Error(`Product with ID ${productId} not found`);
+      let currentStock = 0;
+      let masterProductId = null;
+
+      if (product) {
+        // It's an SKU (FG)
+        currentStock = parseFloat(product.availableQuantity || 0);
+        masterProductId = product.masterProductId;
+      } else {
+        // 2. Failing that, check if it's a Master Product (RM/PM) passed as productId
+        // We assume the caller might be passing masterProductId as productId for RM/PM
+        const masterProductData = await db.query.masterProducts.findFirst({
+          where: eq(masterProducts.masterProductId, productId),
+          with: {
+            rmDetails: true,
+            pmDetails: true
+          }
+        });
+
+        if (!masterProductData) {
+          throw new Error(`Product with ID ${productId} not found (checked SKU and Master)`);
+        }
+
+        masterProductId = masterProductData.masterProductId;
+
+        if (masterProductData.productType === 'RM') {
+          currentStock = parseFloat(masterProductData.rmDetails?.availableQty || 0);
+        } else if (masterProductData.productType === 'PM') {
+          currentStock = parseFloat(masterProductData.pmDetails?.availableQty || 0);
+        } else {
+          // If FG Master is passed, we can't really track stock on Master for FG usually, 
+          // but maybe they want to? Assuming 0 or throw?
+          // For now, let's treat as 0 if not RM/PM, or maybe assuming it's an error.
+          // But existing logic threw error if not in products.
+          // Let's settle on using 0 if structure exists but no stock field matches.
+          currentStock = 0;
+        }
       }
 
-      // For initial stock transactions, balanceBefore should be 0
-      const balanceBefore =
-        transactionType === 'Initial Stock' ? 0 : product.availableQuantity || 0;
-      const balanceAfter = balanceBefore + quantity;
+      // Since transactions are usually recorded AFTER the stock update, 
+      // the currentStock represents the balance AFTER transaction.
+
+      const balanceAfter = currentStock;
+      const balanceBefore = currentStock - quantity;
 
       // Calculate total value if unit price is provided
       const totalValue = unitPrice ? Math.abs(quantity) * unitPrice : null;

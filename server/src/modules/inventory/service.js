@@ -193,6 +193,8 @@ export class InventoryService {
         transactionType,
         quantity: String(-quantity), // Negative for deduction
         weightKg: weightKg ? String(weightKg) : null,
+        balanceBefore: Math.round(currentAvailable),
+        balanceAfter: Math.round(currentAvailable - quantity),
         referenceType: transactionType === 'Production Consumption' ? 'Batch' : 'Order',
         referenceId,
         notes,
@@ -266,6 +268,8 @@ export class InventoryService {
         quantity: String(quantity),
         weightKg: weightKg ? String(weightKg) : null,
         densityKgPerL: densityKgPerL ? String(densityKgPerL) : null,
+        balanceBefore: Math.round(currentAvailable),
+        balanceAfter: Math.round(currentAvailable + quantity),
         referenceType: transactionType === 'Production Output' ? 'Batch' : 'Inward',
         referenceId,
         notes,

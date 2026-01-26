@@ -1130,32 +1130,111 @@ export class ReportsService {
         }
       }
 
-      // Build where conditions for inventory transactions
-      const conditions = [];
+      // Build basic filtering conditions for queries
+      const buildConditions = (start, end) => {
+        const conds = [];
+        if (productIdNum) {
+          if (isMasterProduct) {
+            conds.push(eq(inventoryTransactions.masterProductId, productIdNum));
+          } else {
+            conds.push(eq(inventoryTransactions.productId, productIdNum));
+          }
+        } else if (productType && productType !== 'All') {
+          if (productType === 'Sub-Product') {
+            conds.push(eq(masterProductFG.subcategory, 'Sub-Product'));
+          } else {
+            conds.push(eq(masterProducts.productType, productType));
+          }
+        }
+
+        if (start) {
+          conds.push(gte(inventoryTransactions.createdAt, new Date(start)));
+        }
+
+        if (end) {
+          const e = new Date(end);
+          e.setHours(23, 59, 59, 999);
+          conds.push(lte(inventoryTransactions.createdAt, e));
+        }
+
+        return conds;
+      };
+
+      // 1. Calculate Opening Stock (Balance before startDate)
+      // Only do this if a specific product is selected, as running balance across mixed products is meaningless
+      let openingBalance = 0;
+
       if (productIdNum) {
+        // A. Calculate legitimate transaction history sum before start date
+        if (startDate) {
+          // Re-build just the product filters manually
+          const productConds = [];
+          if (isMasterProduct) {
+            productConds.push(eq(inventoryTransactions.masterProductId, productIdNum));
+          } else {
+            productConds.push(eq(inventoryTransactions.productId, productIdNum));
+          }
+
+          const preResult = await db
+            .select({
+              totalQuantity: sql`SUM(${inventoryTransactions.quantity})`
+            })
+            .from(inventoryTransactions)
+            .leftJoin(products, eq(inventoryTransactions.productId, products.productId))
+            .leftJoin(
+              masterProducts,
+              sql`COALESCE(${products.masterProductId}, ${inventoryTransactions.masterProductId}) = ${masterProducts.masterProductId}`
+            )
+            .where(and(
+              ...productConds,
+              lt(inventoryTransactions.createdAt, new Date(startDate))
+            ));
+
+          if (preResult.length > 0 && preResult[0].totalQuantity) {
+            openingBalance = Number(preResult[0].totalQuantity);
+          }
+        }
+
+        // B. Calculate "Drift" or "Implied Initial Stock" by comparing Total History vs Current Master Stock
+        // This fixes the mismatch where actual stock exists but no "Initial Stock" transaction was ever recorded.
+        // Formula: ImpliedInit = CurrentStock - Sum(All_Transactions)
+
+        // i. Fetch Current Official Stock
+        let currentOfficialStock = 0;
+        if (product) {
+          currentOfficialStock = Number(product.availableQuantity || 0);
+        }
+
+        // ii. Fetch Sum of ALL transactions (Lifetime)
+        const productCondsAll = [];
         if (isMasterProduct) {
-          // For master products (RM/PM), filter by masterProductId directly in inventory_transactions
-          conditions.push(eq(inventoryTransactions.masterProductId, productIdNum));
+          productCondsAll.push(eq(inventoryTransactions.masterProductId, productIdNum));
         } else {
-          conditions.push(eq(inventoryTransactions.productId, productIdNum));
+          productCondsAll.push(eq(inventoryTransactions.productId, productIdNum));
         }
-      } else if (productType && productType !== 'All') {
-        if (productType === 'Sub-Product') {
-          conditions.push(eq(masterProductFG.subcategory, 'Sub-Product'));
-        } else {
-          conditions.push(eq(masterProducts.productType, productType));
+
+        const lifetimeResult = await db
+          .select({
+            totalQuantity: sql`SUM(${inventoryTransactions.quantity})`
+          })
+          .from(inventoryTransactions)
+          .where(and(...productCondsAll));
+
+        const lifetimeSum = lifetimeResult.length > 0 ? Number(lifetimeResult[0].totalQuantity || 0) : 0;
+
+        // iii. Calculate Drift
+        const discrepancy = currentOfficialStock - lifetimeSum;
+
+        // iv. Apply Drift to Opening Balance
+        // If there's a discrepancy, it means there was pre-existing stock not captured in transactions.
+        // We treat this as an "Implied Opening Balance" constant.
+        if (Math.abs(discrepancy) > 0.001) {
+          openingBalance += discrepancy;
         }
       }
 
-      if (startDate) {
-        conditions.push(gte(inventoryTransactions.createdAt, new Date(startDate)));
-      }
-
-      if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        conditions.push(lte(inventoryTransactions.createdAt, end));
-      }
+      // 2. Fetch Transactions for the Report Period
+      const reportConditions = buildConditions(startDate, endDate);
 
       // Fetch inventory transactions with enriched references
       // For FG: join via products.masterProductId
@@ -1214,12 +1293,16 @@ export class ReportsService {
             eq(inventoryTransactions.referenceType, 'Discard')
           )
         )
-        .where(conditions.length > 0 ? and(...conditions) : undefined)
-        .orderBy(desc(inventoryTransactions.createdAt), desc(inventoryTransactions.transactionId));
+        .where(reportConditions.length > 0 ? and(...reportConditions) : undefined)
+        // IMPORTANT: Sort ASCENDING for running balance calculation
+        .orderBy(inventoryTransactions.createdAt, inventoryTransactions.transactionId);
 
       const transactions = await query;
 
-      const formattedTransactions = transactions.map(
+      // 3. Process Transactions & Calculate Running Balance
+      let currentRunningBalance = openingBalance;
+
+      const processedTransactions = transactions.map(
         ({ tx, inward, order, customer, batch, discard, p, mp, supplier, fg }) => {
           const quantity = Number(tx.quantity);
           const isInward = quantity > 0;
@@ -1284,10 +1367,15 @@ export class ReportsService {
 
           const cr = isInward ? quantity : 0;
           const dr = isOutward ? Math.abs(quantity) : 0;
-          const balance = tx.balanceAfter || 0;
 
-          // Formula: Available Stock = Balance + DR - CR
-          const preTransactionStock = balance + dr - cr;
+          // DYNAMIC BALANCE CALCULATION
+          // Update running balance
+          currentRunningBalance += quantity;
+          const balance = currentRunningBalance;
+
+          // Formula: Available Stock = Balance + DR - CR (reversing logic for display if needed?)
+          // No, with running balance: Balance BEFORE = Balance - Quantity
+          const preTransactionStock = balance - quantity;
 
           return {
             transactionId: Number(tx.transactionId),
@@ -1297,15 +1385,18 @@ export class ReportsService {
             batchType: batch?.batchType, // Return batch type (MTS/MTO)
             inward: cr,
             outward: dr,
-            balance,
-            stockBefore: preTransactionStock, // Initially set to individual pre-tx stock
+            balance, // Use the dynamically calculated balance
+            stockBefore: preTransactionStock,
             transactionType: transitionType,
             productCategory: category,
             notes: tx.notes || '',
+            originalSnapshotBalance: tx.balanceAfter // (Optional debugging)
           };
         }
       );
 
+      // Reverse list to show Newest First (standard report format)
+      processedTransactions.reverse();
 
 
       return {
@@ -1319,7 +1410,7 @@ export class ReportsService {
             pmDetails: product.masterProduct?.pmDetails,
           }
           : null,
-        transactions: formattedTransactions,
+        transactions: processedTransactions,
         bom: bom.map(b => ({
           rawMaterialName:
             b.rawMaterial?.masterProduct?.masterProductName || b.rawMaterial?.productName,
