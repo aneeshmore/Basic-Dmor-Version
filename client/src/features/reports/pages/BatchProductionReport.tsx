@@ -75,25 +75,28 @@ const BatchProductionReport = () => {
   }, []);
 
   // ... (existing helper function and useEffects) ...
-  // Helper to get current week start (Sunday) and end (Saturday)
-  const getCurrentWeekRange = () => {
+  // Helper to get current month range
+  const getDefaultDateRange = () => {
     const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 (Sun) to 6 (Sat)
-    const diffToSun = dayOfWeek;
-    const sunday = new Date(now);
-    sunday.setDate(now.getDate() - diffToSun);
+    const start = new Date(now.getFullYear(), now.getMonth(), 1); // 1st of current month
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of current month
 
-    const saturday = new Date(sunday);
-    saturday.setDate(sunday.getDate() + 6);
+    // Use manual formatting to YYYY-MM-DD to use local time to avoid timezone issues with toISOString
+    const formatLocal = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
     return {
-      start: sunday.toISOString().split('T')[0],
-      end: saturday.toISOString().split('T')[0],
+      start: formatLocal(start),
+      end: formatLocal(end),
     };
   };
 
-  const [startDate, setStartDate] = useState(getCurrentWeekRange().start);
-  const [endDate, setEndDate] = useState(getCurrentWeekRange().end);
+  const [startDate, setStartDate] = useState(getDefaultDateRange().start);
+  const [endDate, setEndDate] = useState(getDefaultDateRange().end);
 
   const fetchData = React.useCallback(async () => {
     try {
@@ -752,7 +755,7 @@ const BatchProductionReport = () => {
       },
       title: {
         display: true,
-        text: 'Weekly Production Schedule & Activity',
+        text: 'Production Schedule & Activity',
         font: { size: 16, weight: 'bold' as const },
         color: 'var(--text-primary)',
         padding: { bottom: 20 },
@@ -1006,10 +1009,19 @@ const BatchProductionReport = () => {
 
       {
         accessorKey: 'startedAt',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Start Date" />,
         cell: ({ row }) => (
           <div className="text-[var(--text-secondary)] whitespace-nowrap">
-            {formatDate(row.original.startedAt)}
+            {formatDate(row.original.startedAt || row.original.scheduledDate)}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'completedAt',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="End Date" />,
+        cell: ({ row }) => (
+          <div className="text-[var(--text-secondary)] whitespace-nowrap">
+            {row.original.completedAt ? formatDate(row.original.completedAt) : '-'}
           </div>
         ),
       },
@@ -1358,7 +1370,6 @@ const BatchProductionReport = () => {
                     <thead className="bg-[var(--color-neutral-100)] text-[var(--text-secondary)]">
                       <tr>
                         <th className="px-4 py-2">Sub Product</th>
-                        <th className="px-4 py-2 text-right">Batch Qty</th>
                         <th className="px-4 py-2 text-right">Actual Qty</th>
                       </tr>
                     </thead>
@@ -1379,13 +1390,6 @@ const BatchProductionReport = () => {
                           <tr key={sub.subProductId}>
                             <td className="px-4 py-2 text-[var(--text-primary)]">
                               {sub.productName}
-                            </td>
-                            <td className="px-4 py-2 text-right text-[var(--text-secondary)]">
-                              {sub.batchQty !== null &&
-                                sub.batchQty !== undefined &&
-                                sub.batchQty !== '-'
-                                ? sub.batchQty
-                                : '-'}
                             </td>
                             <td className="px-4 py-2 text-right text-[var(--text-secondary)]">
                               {sub.actualQty}
