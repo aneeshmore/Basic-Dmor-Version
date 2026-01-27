@@ -211,10 +211,17 @@ const ProductDevelopment = () => {
     // Formula: (Total Cost Invested / 100) * FG Density
     // Using 100 as base divider for percentage sum normalization
     if (theoreticalDensity > 0) {
-      const costPerLtr = (totalCostInvested / 100) * theoreticalDensity;
+      let costPerLtr = (totalCostInvested / 100) * theoreticalDensity;
+
+      // Adjust for Water Percentage if present
+      const waterPer = parseFloat(perPercent) || 0;
+      if (waterPer > 0) {
+        costPerLtr = costPerLtr / ((waterPer + 100) / 100);
+      }
+
       setProductionCost(costPerLtr.toFixed(2));
     }
-  }, [theoreticalDensity, addedItems, rmMasterProducts]);
+  }, [theoreticalDensity, addedItems, rmMasterProducts, perPercent]);
 
   const loadData = async () => {
     try {
