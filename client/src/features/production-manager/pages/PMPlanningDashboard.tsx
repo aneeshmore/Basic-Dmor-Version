@@ -317,7 +317,7 @@ export default function PMPlanningDashboard() {
         <StatCard
           icon={<BarChart3 className="w-5 h-5" />}
           label="Production Weight"
-          value={`${stats.totalWeight.toFixed(0)} kg`}
+          value={`${stats.totalWeight.toFixed(2)} kg`}
           color="secondary"
         />
       </div>
@@ -440,8 +440,8 @@ function ViewToggle({ active, onClick, children, icon }: ViewToggleProps) {
     <button
       onClick={onClick}
       className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${active
-          ? 'bg-[var(--primary)] text-white shadow-sm'
-          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+        ? 'bg-[var(--primary)] text-white shadow-sm'
+        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
         }`}
     >
       {icon}
@@ -471,8 +471,8 @@ function TabButton({ active, onClick, children, color }: TabButtonProps) {
     <button
       onClick={onClick}
       className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${active
-          ? activeColor + ' shadow-sm'
-          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+        ? activeColor + ' shadow-sm'
+        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
         }`}
     >
       {children}
@@ -562,8 +562,8 @@ function ProductCard({
   return (
     <div
       className={`bg-[var(--surface)] rounded-xl border transition-all overflow-hidden ${isExpanded
-          ? 'border-[var(--primary)]/40 shadow-lg shadow-[var(--primary)]/5'
-          : 'border-[var(--border)] hover:border-[var(--border-hover)]'
+        ? 'border-[var(--primary)]/40 shadow-lg shadow-[var(--primary)]/5'
+        : 'border-[var(--border)] hover:border-[var(--border-hover)]'
         }`}
     >
       {/* Header Row */}
@@ -615,8 +615,8 @@ function ProductCard({
             <p className="text-xs text-[var(--text-tertiary)] uppercase">Available</p>
             <p
               className={`text-lg font-bold ${group.totalAvailableQty >= group.totalOrderQty
-                  ? 'text-[var(--success)]'
-                  : 'text-[var(--danger)]'
+                ? 'text-[var(--success)]'
+                : 'text-[var(--danger)]'
                 }`}
             >
               {group.totalAvailableQty}
@@ -629,7 +629,7 @@ function ProductCard({
           <div>
             <p className="text-xs text-[var(--text-tertiary)] uppercase">Weight</p>
             <p className="text-lg font-bold text-[var(--text-primary)]">
-              {group.totalProductionWeight.toFixed(0)} kg
+              {group.totalProductionWeight.toFixed(2)} kg
             </p>
           </div>
         </div>
@@ -725,8 +725,8 @@ function ProductCard({
                         <p className="text-[10px] text-[var(--text-tertiary)] uppercase">Avail</p>
                         <p
                           className={`font-medium ${product.availableQty >= product.totalOrderQty
-                              ? 'text-[var(--success)]'
-                              : 'text-[var(--danger)]'
+                            ? 'text-[var(--success)]'
+                            : 'text-[var(--danger)]'
                             }`}
                         >
                           {product.availableQty}
@@ -787,8 +787,8 @@ function ProductCard({
                       <div
                         key={idx}
                         className={`flex items-center justify-between p-3 rounded-lg border ${isAvailable
-                            ? 'bg-[var(--success)]/5 border-[var(--success)]/20'
-                            : 'bg-[var(--danger)]/5 border-[var(--danger)]/20'
+                          ? 'bg-[var(--success)]/5 border-[var(--success)]/20'
+                          : 'bg-[var(--danger)]/5 border-[var(--danger)]/20'
                           }`}
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">

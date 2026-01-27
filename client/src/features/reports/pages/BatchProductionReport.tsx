@@ -107,7 +107,19 @@ const BatchProductionReport = () => {
         startDate,
         endDate
       );
-      setData(result);
+      // Sort by Batch Number (Natural Sort) - Latest First (Descending)
+      if (Array.isArray(result)) {
+        result.sort((a, b) => {
+          const batchA = a.batchNo ? String(a.batchNo) : '';
+          const batchB = b.batchNo ? String(b.batchNo) : '';
+          // Descending order: compare B to A
+          return batchB.localeCompare(batchA, undefined, { numeric: true, sensitivity: 'base' });
+        });
+        setData(result);
+      } else {
+        console.warn('BatchProductionReport: API returned non-array data', result);
+        setData([]);
+      }
     } catch (error) {
       console.error('Failed to fetch batch production report:', error);
       setData([]);
