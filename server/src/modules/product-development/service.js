@@ -23,6 +23,7 @@ export class ProductDevelopmentService {
     // Use provided status or default to 'Draft'/'Incomplete'
     const status = data.status || 'Draft';
     const mixingRatioPart = data.mixingRatioPart ? String(data.mixingRatioPart) : null;
+    const calculationBasis = data.calculationBasis || 'Ltr'; // Default to Ltr if not provided
 
     // Calculate density from materials if materials are provided (always override)
     if (materials.length > 0) {
@@ -65,7 +66,9 @@ export class ProductDevelopmentService {
       density,
       materialsCount: materials.length,
       status,
+      status,
       mixingRatioPart,
+      calculationBasis,
     });
 
     if (isNaN(masterProductId)) {
@@ -112,6 +115,7 @@ export class ProductDevelopmentService {
           productionHours: hours,
           percentageValue: perPercent,
           mixingRatioPart,
+          calculationBasis,
           status,
           notes,
           createdBy,
@@ -137,6 +141,7 @@ export class ProductDevelopmentService {
           productionHours: hours,
           percentageValue: perPercent,
           mixingRatioPart,
+          calculationBasis,
           status,
           notes,
           createdBy,

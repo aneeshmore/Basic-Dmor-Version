@@ -27,6 +27,7 @@ export const productDevelopment = appSchema.table('product_development', {
   percentageValue: numeric('percentage_value', { precision: 5, scale: 2 }),
   productionHours: numeric('production_hours', { precision: 8, scale: 2 }),
   mixingRatioPart: numeric('mixing_ratio_part', { precision: 10, scale: 4 }), // Stores '2' or '1' ratio part
+  calculationBasis: varchar('calculation_basis', { length: 10 }).default('Ltr'), // 'Ltr' or 'Kg'
 
   // Status
   status: varchar('status', { length: 20 }).default('Draft'),

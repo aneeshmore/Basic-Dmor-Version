@@ -94,6 +94,7 @@ const ProductDevelopment = () => {
   const [productionCost, setProductionCost] = useState<string>(''); // Renamed from hours
   const [perPercent, setPerPercent] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
+  const [calculationBasis, setCalculationBasis] = useState<string>('Ltr');
 
   // RM Selection State
   const [selectedRmId, setSelectedRmId] = useState<number | ''>('');
@@ -211,17 +212,22 @@ const ProductDevelopment = () => {
     // Formula: (Total Cost Invested / 100) * FG Density
     // Using 100 as base divider for percentage sum normalization
     if (theoreticalDensity > 0) {
-      let costPerLtr = (totalCostInvested / 100) * theoreticalDensity;
+      let costBase = (totalCostInvested / 100);
 
       // Adjust for Water Percentage if present
       const waterPer = parseFloat(perPercent) || 0;
       if (waterPer > 0) {
-        costPerLtr = costPerLtr / ((waterPer + 100) / 100);
+        costBase = costBase / ((waterPer + 100) / 100);
       }
 
-      setProductionCost(costPerLtr.toFixed(2));
+      let finalCost = costBase;
+      if (calculationBasis === 'Ltr') {
+        finalCost = costBase * theoreticalDensity;
+      }
+
+      setProductionCost(finalCost.toFixed(2));
     }
-  }, [theoreticalDensity, addedItems, rmMasterProducts, perPercent]);
+  }, [theoreticalDensity, addedItems, rmMasterProducts, perPercent, calculationBasis]);
 
   const loadData = async () => {
     try {
@@ -281,10 +287,9 @@ const ProductDevelopment = () => {
         }
 
         // Set form fields from saved data
-        setDensity(devData.density || '');
-        setViscosity(devData.viscosity || '');
         setProductionCost(devData.productionHours || ''); // Map productionHours back to cost
         setPerPercent(devData.percentageValue || '');
+        setCalculationBasis(devData.calculationBasis || 'Ltr');
         setNotes(devData.notes || '');
 
         showToast.success('Loaded saved product development recipe');
@@ -337,6 +342,7 @@ const ProductDevelopment = () => {
         setViscosity('');
         setProductionCost('');
         setPerPercent('');
+        setCalculationBasis('Ltr');
         setNotes('');
       }
     } catch (error) {
@@ -355,6 +361,7 @@ const ProductDevelopment = () => {
       setViscosity('');
       setProductionCost('');
       setPerPercent('');
+      setCalculationBasis('Ltr');
       setNotes('');
     }
 
@@ -614,6 +621,7 @@ const ProductDevelopment = () => {
       viscosity: parseFloat(viscosity) || 0,
       hours: parseFloat(productionCost), // Send cost as 'hours' to match backend schema repurposing
       perPercent: parseInt(perPercent) || 0,
+      calculationBasis,
 
       materials: addedItems,
       status: status, // Send calculated status
@@ -788,6 +796,7 @@ const ProductDevelopment = () => {
               min="0"
               max="100"
             />
+
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="relative z-10">
@@ -815,15 +824,45 @@ const ProductDevelopment = () => {
               type="number"
               step="0.01"
             />
-            <Input
-              label="Production Cost/Ltr (Auto-Calculated)"
-              value={productionCost}
-              onChange={e => setProductionCost(e.target.value)}
-              placeholder="Cost/Ltr"
-              type="number"
-              readOnly
-              className="bg-gray-50"
-            />
+            <div className="space-y-4">
+              <div className="relative z-10">
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                  Calculation Basis
+                </label>
+                <div className="flex rounded-md shadow-sm" role="group">
+                  <button
+                    type="button"
+                    onClick={() => setCalculationBasis('Ltr')}
+                    className={`px-4 py-2 text-sm font-medium border border-[var(--border-color)] rounded-l-lg focus:z-10 focus:ring-2 focus:ring-[var(--primary)] ${calculationBasis === 'Ltr'
+                        ? 'bg-[var(--primary)] text-white'
+                        : 'bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
+                      }`}
+                  >
+                    Per Ltr
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCalculationBasis('Kg')}
+                    className={`px-4 py-2 text-sm font-medium border border-l-0 border-[var(--border-color)] rounded-r-lg focus:z-10 focus:ring-2 focus:ring-[var(--primary)] ${calculationBasis === 'Kg'
+                        ? 'bg-[var(--primary)] text-white'
+                        : 'bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
+                      }`}
+                  >
+                    Per Kg
+                  </button>
+                </div>
+              </div>
+
+              <Input
+                label={`Production Cost / ${calculationBasis} (Auto-Calculated)`}
+                value={productionCost}
+                onChange={e => setProductionCost(e.target.value)}
+                placeholder={`Cost / ${calculationBasis}`}
+                type="number"
+                readOnly
+                className="bg-gray-50"
+              />
+            </div>
           </div>
         </div>
 
