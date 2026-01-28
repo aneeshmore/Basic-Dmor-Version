@@ -1075,6 +1075,80 @@ export class ProductionManagerService {
         actualTimeHours = (diffMs / (1000 * 60 * 60)).toFixed(2);
       }
 
+      // PRE-VALIDATION: Check extra materials stock BEFORE updating batch
+      let extraMaterials = [];
+      if (completionData.materials && completionData.materials.length > 0) {
+        extraMaterials = completionData.materials.filter(m => m.isAdditional === true);
+
+        if (extraMaterials.length > 0) {
+          logger.info('Validating stock for extra materials', { count: extraMaterials.length });
+
+          const materialsToCheck = extraMaterials.map(m => ({
+            materialId: m.materialId,
+            requiredQuantity: parseFloat(m.actualQuantity) || 0,
+          }));
+
+          const insufficientMaterials =
+            await this.repo.checkMultipleMaterialsStock(materialsToCheck);
+
+          if (insufficientMaterials.length > 0) {
+            const errorDetails = insufficientMaterials
+              .map(
+                m =>
+                  `${m.materialName}: Required ${m.required.toFixed(3)} kg, Available ${m.available.toFixed(3)} kg`
+              )
+              .join(', ');
+
+            logger.warn('Insufficient stock for extra materials', { insufficientMaterials });
+
+            throw new AppError(
+              `Cannot complete batch: Insufficient stock for extra materials. ${errorDetails}`,
+              400
+            );
+          }
+        }
+      }
+
+      // PRE-VALIDATION: Check output SKUs constraints
+      if (completionData.outputSkus && completionData.outputSkus.length > 0) {
+        // Validate that at least one SKU has producedUnits > 0
+        const hasValidOutput = completionData.outputSkus.some(
+          sku => parseInt(sku.producedUnits) > 0
+        );
+
+        if (!hasValidOutput) {
+          throw new AppError(
+            'Please enter at least one SKU quantity greater than 0 in Finished Goods Output',
+            400
+          );
+        }
+
+        // Validate total output weight is within ±5% of actual batch weight
+        const actualBatchWeight =
+          completionData.actualQuantity && completionData.actualDensity
+            ? parseFloat(completionData.actualQuantity) * parseFloat(completionData.actualDensity)
+            : parseFloat(completionData.actualQuantity) || 0;
+
+        let totalOutputWeight = 0;
+
+        for (const sku of completionData.outputSkus) {
+          // const units = parseInt(sku.producedUnits) || 0;
+          const weight = parseFloat(sku.weightKg) || 0;
+          totalOutputWeight += weight;
+        }
+
+        const tolerance = actualBatchWeight * 0.05; // 5% tolerance
+        const minWeight = actualBatchWeight - tolerance;
+        const maxWeight = actualBatchWeight + tolerance;
+
+        if (totalOutputWeight > maxWeight) {
+          throw new AppError(
+            `Total output weight (${totalOutputWeight.toFixed(2)} kg) cannot exceed +5% of actual batch weight (${actualBatchWeight.toFixed(2)} kg). Maximum allowed: ${maxWeight.toFixed(2)} kg`,
+            400
+          );
+        }
+      }
+
       // 2. Calculate actual weight
       const actualWeightKg =
         completionData.actualQuantity && completionData.actualDensity
@@ -1104,115 +1178,39 @@ export class ProductionManagerService {
       logger.info('Batch completed', { batchId, batchNo: completedBatch?.batchNo });
 
       // 4. Handle materials at completion
-      // - Planned materials (isAdditional = false): Already deducted at batch start, don't touch them
-      // - Extra materials (isAdditional = true): Validate stock and deduct now
-      if (completionData.materials && completionData.materials.length > 0) {
-        // Filter extra materials (isAdditional = true)
-        const extraMaterials = completionData.materials.filter(m => m.isAdditional === true);
+      if (extraMaterials.length > 0) {
+        logger.info('Processing extra materials at completion', { count: extraMaterials.length });
 
-        if (extraMaterials.length > 0) {
-          logger.info('Processing extra materials at completion', { count: extraMaterials.length });
+        // Deduct stock and create batch_materials records for extra materials
+        // Stock check already passed in validation
+        for (const mat of extraMaterials) {
+          const qty = parseFloat(mat.actualQuantity) || 0;
 
-          // Prepare materials for stock check (map to expected format)
-          const materialsToCheck = extraMaterials.map(m => ({
-            materialId: m.materialId,
-            requiredQuantity: parseFloat(m.actualQuantity) || 0,
-          }));
+          // Reserve (deduct) from raw material stock
+          await this.repo.reserveRawMaterial(mat.materialId, qty, batchId, performedBy);
+          logger.info('Extra material stock deducted', {
+            materialId: mat.materialId,
+            quantity: qty,
+          });
 
-          // VALIDATION: Check if ALL extra materials have sufficient stock
-          const insufficientMaterials =
-            await this.repo.checkMultipleMaterialsStock(materialsToCheck);
-
-          if (insufficientMaterials.length > 0) {
-            const errorDetails = insufficientMaterials
-              .map(
-                m =>
-                  `${m.materialName}: Required ${m.required.toFixed(3)} kg, Available ${m.available.toFixed(3)} kg`
-              )
-              .join(', ');
-
-            logger.warn('Insufficient stock for extra materials', { insufficientMaterials });
-
-            throw new AppError(
-              `Cannot complete batch: Insufficient stock for extra materials. ${errorDetails}`,
-              400
-            );
-          }
-
-          logger.info('Stock validation passed for extra materials');
-
-          // Deduct stock and create batch_materials records for extra materials
-          for (const mat of extraMaterials) {
-            const qty = parseFloat(mat.actualQuantity) || 0;
-
-            // Reserve (deduct) from raw material stock
-            await this.repo.reserveRawMaterial(mat.materialId, qty, batchId, performedBy);
-            logger.info('Extra material stock deducted', {
+          // Add to batch_materials table
+          await this.repo.addMaterialsToBatch(batchId, [
+            {
               materialId: mat.materialId,
-              quantity: qty,
-            });
-
-            // Add to batch_materials table
-            await this.repo.addMaterialsToBatch(batchId, [
-              {
-                materialId: mat.materialId,
-                requiredQuantity: qty,
-                isAdditional: true,
-              },
-            ]);
-            logger.info('Extra material added to batch_materials', {
-              materialId: mat.materialId,
-              quantity: qty,
-            });
-          }
+              requiredQuantity: qty,
+              isAdditional: true,
+            },
+          ]);
+          logger.info('Extra material added to batch_materials', {
+            materialId: mat.materialId,
+            quantity: qty,
+          });
         }
-
-        logger.info('Material processing complete', {
-          planned: completionData.materials.filter(m => !m.isAdditional).length,
-          extra: extraMaterials.length,
-        });
       }
 
       // 4b. Update Finished Goods Output (Actual Production)
       if (completionData.outputSkus && completionData.outputSkus.length > 0) {
-        // Validate that at least one SKU has producedUnits > 0
-        const hasValidOutput = completionData.outputSkus.some(
-          sku => parseInt(sku.producedUnits) > 0
-        );
-
-        if (!hasValidOutput) {
-          throw new AppError(
-            'Please enter at least one SKU quantity greater than 0 in Finished Goods Output',
-            400
-          );
-        }
-
-        // Validate total output weight is within ±5% of actual batch weight
-        // If actualDensity is provided, actualQuantity is interpreted as volume (L)
-        // and we compute weight = volume * density. Otherwise treat actualQuantity as weight (kg).
-        const actualBatchWeight =
-          completionData.actualQuantity && completionData.actualDensity
-            ? parseFloat(completionData.actualQuantity) * parseFloat(completionData.actualDensity)
-            : parseFloat(completionData.actualQuantity) || 0;
-
-        let totalOutputWeight = 0;
-
-        for (const sku of completionData.outputSkus) {
-          const units = parseInt(sku.producedUnits) || 0;
-          const weight = parseFloat(sku.weightKg) || 0;
-          totalOutputWeight += weight;
-        }
-
-        const tolerance = actualBatchWeight * 0.05; // 5% tolerance
-        const minWeight = actualBatchWeight - tolerance;
-        const maxWeight = actualBatchWeight + tolerance;
-
-        if (totalOutputWeight > maxWeight) {
-          throw new AppError(
-            `Total output weight (${totalOutputWeight.toFixed(2)} kg) cannot exceed +5% of actual batch weight (${actualBatchWeight.toFixed(2)} kg). Maximum allowed: ${maxWeight.toFixed(2)} kg`,
-            400
-          );
-        }
+        // Validations already done
 
         logger.info('Updating finished goods output', { count: completionData.outputSkus.length });
 
