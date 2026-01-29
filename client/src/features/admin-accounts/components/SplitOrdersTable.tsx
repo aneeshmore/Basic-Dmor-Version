@@ -138,6 +138,13 @@ export const SplitOrdersTable: React.FC<SplitOrdersTableProps> = ({
         ),
       },
       {
+        header: 'Area',
+        accessorKey: 'area',
+        cell: info => (
+          <span className="text-[var(--text-primary)]">{decodeHtml(info.getValue() as string) || '-'}</span>
+        ),
+      },
+      {
         header: 'Location',
         accessorKey: 'location',
         cell: info => (

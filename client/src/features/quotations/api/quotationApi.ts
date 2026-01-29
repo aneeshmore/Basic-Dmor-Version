@@ -29,6 +29,7 @@ export interface QuotationRecord {
   createdBy?: number;
   createdAt: string;
   updatedAt: string;
+  salesPersonName?: string;
 }
 
 export const quotationApi = {

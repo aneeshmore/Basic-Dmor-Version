@@ -133,6 +133,13 @@ export function CancelledOrdersDataTable({ data, title, icon }: CancelledOrdersD
         ),
       },
       {
+        accessorKey: 'area',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Area" />,
+        cell: ({ row }) => (
+          <span className="text-[var(--text-secondary)]">{row.original.area || '-'}</span>
+        ),
+      },
+      {
         accessorKey: 'location',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Location" />,
         cell: ({ row }) => (

@@ -5,6 +5,7 @@ export interface AdminOrder {
   orderNumber: string;
   customerName: string;
   location: string;
+  area: string;
   salesPersonName: string;
   orderCreatedDate: string;
   timeSpan: string;

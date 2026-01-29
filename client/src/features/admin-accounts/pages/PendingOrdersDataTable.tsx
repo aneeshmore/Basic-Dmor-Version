@@ -211,6 +211,13 @@ export function PendingOrdersDataTable({
         ),
       },
       {
+        accessorKey: 'area',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Area" />,
+        cell: ({ row }) => (
+          <span className="text-[var(--text-secondary)]">{decodeHtml(row.original.area) || '-'}</span>
+        ),
+      },
+      {
         accessorKey: 'location',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Location" />,
         cell: ({ row }) => (

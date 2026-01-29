@@ -1,5 +1,5 @@
 import db from '../../db/index.js';
-import { quotations } from '../../db/schema/index.js';
+import { quotations, employees } from '../../db/schema/index.js';
 import { eq, desc, and } from 'drizzle-orm';
 
 export class QuotationsRepository {
@@ -9,13 +9,27 @@ export class QuotationsRepository {
   }
 
   async findAll(createdBy = null) {
-    let query = db.select().from(quotations);
+    let query = db
+      .select({
+        ...quotations,
+        salesPersonName: employees.firstName,
+        salesPersonLastName: employees.lastName,
+      })
+      .from(quotations)
+      .leftJoin(employees, eq(quotations.createdBy, employees.employeeId));
 
     if (createdBy) {
       query = query.where(eq(quotations.createdBy, createdBy));
     }
 
-    return await query.orderBy(desc(quotations.createdAt));
+    const results = await query.orderBy(desc(quotations.createdAt));
+
+    return results.map(row => ({
+      ...row,
+      salesPersonName: row.salesPersonName
+        ? `${row.salesPersonName} ${row.salesPersonLastName}`
+        : 'Unknown',
+    }));
   }
 
   async findById(id) {
@@ -30,11 +44,23 @@ export class QuotationsRepository {
       conditions.push(eq(quotations.createdBy, createdBy));
     }
 
-    return await db
-      .select()
+    const results = await db
+      .select({
+        ...quotations,
+        salesPersonName: employees.firstName,
+        salesPersonLastName: employees.lastName,
+      })
       .from(quotations)
+      .leftJoin(employees, eq(quotations.createdBy, employees.employeeId))
       .where(and(...conditions))
       .orderBy(desc(quotations.createdAt));
+
+    return results.map(row => ({
+      ...row,
+      salesPersonName: row.salesPersonName
+        ? `${row.salesPersonName} ${row.salesPersonLastName}`
+        : 'Unknown',
+    }));
   }
 
   async updateStatus(id, status, rejectionRemark = null) {

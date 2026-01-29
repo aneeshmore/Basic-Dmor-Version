@@ -258,6 +258,16 @@ const QuotationMasterPage: React.FC = () => {
         ),
       },
       {
+        accessorKey: 'salesPersonName',
+        header: 'Sales Person',
+        enableColumnFilter: true,
+        cell: ({ row }) => (
+          <div className="text-[var(--text-secondary)] truncate max-w-[150px]" title={row.original.salesPersonName}>
+            {row.original.salesPersonName || '-'}
+          </div>
+        ),
+      },
+      {
         header: 'Items',
         cell: ({ row }) => {
           const items = row.original.content?.items || [];

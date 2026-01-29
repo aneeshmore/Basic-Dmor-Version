@@ -5,6 +5,7 @@ export class AdminAccountOrderDTO {
     this.orderUuid = order.orderUuid;
     this.customerName = customer?.companyName || 'Unknown';
     this.location = customer?.location || customer?.address || 'Unknown';
+    this.area = customer?.area || '';
     this.salesPersonName = salesPerson
       ? `${salesPerson.firstName} ${salesPerson.lastName}`
       : 'Unknown';
