@@ -126,8 +126,9 @@ const MaterialInwardReport = () => {
       'Type',
       'Supplier',
       'Bill No',
+      'Inward Qty',
       'Unit Price',
-      'Available Qty',
+      // 'Available Qty',
       'Total Cost',
     ];
 
@@ -137,8 +138,9 @@ const MaterialInwardReport = () => {
       item.productType || '-',
       item.supplierName || '-',
       item.billNo || '-',
+      item.quantity !== undefined ? item.quantity : '-',
       item.unitPrice ? `Rs. ${Number(item.unitPrice).toFixed(2)}` : '-',
-      item.balanceQty !== undefined ? item.balanceQty : '-',
+      // item.balanceQty !== undefined ? item.balanceQty : '-',
       item.balanceQty !== undefined && item.unitPrice
         ? `Rs. ${(item.balanceQty * Number(item.unitPrice)).toFixed(2)}`
         : '-',
@@ -170,8 +172,9 @@ const MaterialInwardReport = () => {
       'Type',
       'Supplier',
       'Bill No',
+      'Inward Qty',
       'Unit Price',
-      'Available Qty',
+      // 'Available Qty',
       'Total Cost',
       'Notes',
     ];
@@ -182,8 +185,9 @@ const MaterialInwardReport = () => {
       item.productType || '-',
       item.supplierName || '-',
       item.billNo || '-',
+      item.quantity ? Number(item.quantity).toFixed(2) : '-',
       item.unitPrice ? Number(item.unitPrice).toFixed(2) : '-',
-      item.balanceQty || '-',
+      // item.balanceQty || '-',
       item.balanceQty !== undefined && item.unitPrice
         ? (item.balanceQty * Number(item.unitPrice)).toFixed(2)
         : '-',
@@ -522,16 +526,27 @@ const MaterialInwardReport = () => {
           </div>
         ),
       },
-
       {
-        id: 'balanceQty',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Available Qty" />,
+        accessorKey: 'quantity',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Inward Qty" />,
         cell: ({ row }) => (
-          <div className="text-right font-semibold text-[var(--color-primary-600)]">
-            {row.original.balanceQty !== undefined ? row.original.balanceQty : '-'}
+          <div className="text-right font-semibold text-[var(--text-primary)]">
+            {row.original.quantity !== undefined
+              ? Number(row.original.quantity).toFixed(2)
+              : '-'}
           </div>
         ),
       },
+
+      // {
+      //   id: 'balanceQty',
+      //   header: ({ column }) => <DataTableColumnHeader column={column} title="Available Qty" />,
+      //   cell: ({ row }) => (
+      //     <div className="text-right font-semibold text-[var(--color-primary-600)]">
+      //       {row.original.balanceQty !== undefined ? row.original.balanceQty : '-'}
+      //     </div>
+      //   ),
+      // },
       {
         accessorKey: 'unitPrice',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Unit Price" />,
