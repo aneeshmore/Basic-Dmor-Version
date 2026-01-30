@@ -108,12 +108,14 @@ export class AdminAccountsService {
         const { customers: customer, employees: salesperson, orders: order } = full;
         const customerName = customer ? customer.companyName : 'Customer';
 
-        // Notify Salesperson & Others (PMs, Admins)
+        // Notify Customer Creator (Priority) or Order Salesperson (Fallback)
+        const recipientId = customer?.createdBy || salesperson?.employeeId;
+
         await this.notificationsService.createOrderStatusNotification(
           orderId,
           customerName,
           'Accepted',
-          salesperson?.employeeId,
+          recipientId,
           order?.orderNumber
         );
 
@@ -262,11 +264,13 @@ export class AdminAccountsService {
       const { customers: customer, employees: salesperson, orders: order } = full;
       const customerName = customer ? customer.companyName : 'Customer';
 
+      const recipientId = customer?.createdBy || salesperson?.employeeId;
+
       await this.notificationsService.createOrderStatusNotification(
         orderId,
         customerName,
         'On Hold',
-        salesperson?.employeeId,
+        recipientId,
         order?.orderNumber
       );
     } catch (err) {
@@ -305,11 +309,13 @@ export class AdminAccountsService {
       const { customers: customer, employees: salesperson, orders: order } = full;
       const customerName = customer ? customer.companyName : 'Customer';
 
+      const recipientId = customer?.createdBy || salesperson?.employeeId;
+
       await this.notificationsService.createOrderStatusNotification(
         orderId,
         customerName,
         'Rejected',
-        salesperson?.employeeId,
+        recipientId,
         order?.orderNumber
       );
     } catch (err) {
