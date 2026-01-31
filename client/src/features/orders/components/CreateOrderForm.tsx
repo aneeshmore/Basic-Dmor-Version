@@ -18,7 +18,7 @@ import {
 import { Input, Button, Modal, Select } from '@/components/ui';
 import UpdateConfirmModal from './UpdateConfirmModal';
 import SearchableSelect from '@/components/ui/SearchableSelect';
-import { useCreateOrder } from '../hooks/useOrders';
+import { useCreateOrder, useUpdateOrder } from '../hooks/useOrders';
 import { showToast } from '@/utils/toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { decodeHtml } from '@/utils/stringUtils';
@@ -77,6 +77,8 @@ interface OrderDetailLine {
 interface CreateOrderFormProps {
   onSuccess?: () => void;
   viewMode?: 'orders' | 'quotations';
+  editingOrder?: OrderWithDetails | null;
+  onCancelEdit?: () => void;
 }
 
 interface ValidationTooltipProps {
@@ -104,8 +106,16 @@ const ValidationTooltip: React.FC<ValidationTooltipProps> = ({ message }) => (
 // COMPONENT
 // =====================
 
-const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode = 'orders' }) => {
-  const { createOrder, loading } = useCreateOrder();
+const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode = 'orders', editingOrder, onCancelEdit }) => {
+  const { createOrder, loading: createLoading } = useCreateOrder();
+  const { updateOrder, loading: updateLoading } = useUpdateOrder(); // Assuming useUpdateOrder exists or will be added
+  const [loading, setLoading] = useState(false);
+
+  // Sync loading state
+  useEffect(() => {
+    setLoading(createLoading || updateLoading);
+  }, [createLoading, updateLoading]);
+
   const { user } = useAuth();
 
   // Refs for auto-focus
@@ -240,10 +250,40 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
       setQuotationsList(response.data?.data || []);
     } catch (error) {
       console.error('Failed to fetch quotations:', error);
-    } finally {
       setQuotationsLoading(false);
     }
   }, []);
+
+
+  // =====================
+  // EDIT ORDER EFFECT
+  // =====================
+  useEffect(() => {
+    if (editingOrder && viewMode === 'orders') {
+      setCustomerId(editingOrder.customerId);
+      setCompanyName(editingOrder.companyName || editingOrder.customerName || '');
+      setSalesPersonId(editingOrder.salespersonId || '');
+      setPriority((editingOrder.priority as any) || 'Normal');
+      setDeliveryAddress(editingOrder.deliveryAddress || '');
+      setRemarks(editingOrder.remarks || '');
+
+      if (editingOrder.orderDetails && editingOrder.orderDetails.length > 0) {
+        setOrderDetails(editingOrder.orderDetails.map(d => ({
+          productId: d.productId,
+          quantity: d.quantity,
+          unitPrice: Number(d.unitPrice),
+          discount: d.discount || 0
+        })));
+      }
+
+      // Auto-validate form
+      setValidationErrors({
+        customerId: false,
+        salesPersonId: false,
+        items: editingOrder.orderDetails.map(() => ({ productId: false, quantity: false }))
+      });
+    }
+  }, [editingOrder, viewMode]);
 
   // =====================
   // DATA FETCHING
@@ -781,50 +821,64 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
 
       const validDetails = orderDetails.filter(d => d.productId > 0 && d.quantity > 0);
 
+      // Common Payload
       const orderPayload: any = {
         customerId: Number(customerId),
         salespersonId: Number(salesPersonId),
         priority,
-        status: 'Pending',
-        orderDate: new Date().toISOString(),
-        paymentCleared: false,
+        // status: 'Pending', // Status should not be reset on update usually, or depends on requirements. For new orders it is Pending.
+        // For update, we might want to keep existing status or validated it's pending.
+        orderDate: editingOrder ? editingOrder.orderDate : new Date().toISOString(),
+        paymentCleared: editingOrder ? (editingOrder as any).paymentCleared : false,
         orderDetails: validDetails.map(item => ({
           productId: item.productId,
           quantity: item.quantity,
           unitPrice: Number(item.unitPrice),
           discount: item.discount || 0,
         })),
+        deliveryAddress: deliveryAddress?.trim() || null,
+        remarks: remarks?.trim() || null
       };
 
-      if (deliveryAddress?.trim()) {
-        orderPayload.deliveryAddress = deliveryAddress.trim();
-      }
-      if (remarks?.trim()) {
-        orderPayload.remarks = remarks.trim();
+      if (!editingOrder) {
+        orderPayload.status = 'Pending';
       }
 
-      console.log('Creating order with payload:', orderPayload);
+      let result;
+      if (editingOrder) {
+        result = await updateOrder(editingOrder.orderId, orderPayload);
+        showToast.success('Order updated successfully!');
+      } else {
+        result = await createOrder(orderPayload);
+        setLastCreatedOrder(result);
+        showToast.success('Order created successfully!');
+      }
 
-      const result = await createOrder(orderPayload);
-
-      console.log('Order created successfully:', result);
-      setLastCreatedOrder(result);
-
-      showToast.success('Order created successfully!');
+      setSubmitting(false);
       setShowConfirmation(false);
 
-      resetForm();
+      if (onSuccess) onSuccess();
 
-      if (onSuccess) {
-        setTimeout(() => onSuccess(), 1000);
+      // If updating, maybe we want to close edit mode?
+      if (editingOrder && onCancelEdit) {
+        onCancelEdit();
+      } else if (!editingOrder) {
+        // Reset form only if creating new
+        handleClearAll();
       }
-    } catch (error) {
-      console.error('Error creating order:', error);
-      showToast.error('Failed to create order. Please try again.');
-    } finally {
+
+    } catch (error: any) {
+      console.error('Submit failed:', error);
+      showToast.error(error.message || 'Failed to submit order');
       setSubmitting(false);
+      setShowConfirmation(false);
     }
   };
+
+  // Old handleConfirmSubmit was here, replacing it with unified one.
+  // We need to remove the old implementation below.
+
+
 
   const resetForm = useCallback(() => {
     setCustomerId('');
@@ -1464,7 +1518,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
         <Modal
           isOpen={true}
           onClose={() => setShowConfirmation(false)}
-          title="Confirm Order Creation"
+          title={editingOrder ? "Confirm Order Update" : "Confirm Order Creation"}
           size="lg"
         >
           <div className="space-y-4">
@@ -1535,7 +1589,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                 Cancel
               </Button>
               <Button variant="primary" onClick={handleConfirmSubmit} disabled={submitting}>
-                {submitting ? 'Creating...' : 'Confirm & Create'}
+                {submitting ? (editingOrder ? 'Updating...' : 'Creating...') : (editingOrder ? 'Confirm & Update' : 'Confirm & Create')}
               </Button>
             </div>
           </div>
@@ -2154,10 +2208,20 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                   type="submit"
                   disabled={loading || submitting || !isFormValid}
                   className="shadow-lg min-w-[180px]"
-                  title={!isFormValid ? 'Please fill in all required fields' : 'Create order'}
+                  title={!isFormValid ? 'Please fill in all required fields' : (editingOrder ? 'Update Order' : 'Create Order')}
                 >
-                  {loading || submitting ? 'Creating...' : 'Create Order'}
+                  {loading || submitting ? (editingOrder ? 'Updating...' : 'Creating...') : (editingOrder ? 'Update Order' : 'Create Order')}
                 </Button>
+                {editingOrder && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={onCancelEdit}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    Cancel
+                  </Button>
+                )}
               </div>
             )}
           </div>

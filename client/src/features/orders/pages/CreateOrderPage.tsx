@@ -15,6 +15,8 @@ import { QuotationData } from '@/features/quotations/types';
 import { companyApi } from '@/features/company/api/companyApi';
 import { decodeHtml } from '@/utils/stringUtils';
 
+import { Edit as EditIcon } from 'lucide-react';
+
 const formatDisplayOrderId = (orderId: number, dateString: string) => {
   if (!dateString) return `ORD-${orderId}`;
   const date = new Date(dateString);
@@ -34,6 +36,9 @@ const CreateOrderPage: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDetails | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
 
+  // Edit State
+  const [editingOrder, setEditingOrder] = useState<OrderWithDetails | null>(null);
+
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
@@ -52,7 +57,26 @@ const CreateOrderPage: React.FC = () => {
 
   const handleSuccess = () => {
     fetchOrders();
+    setEditingOrder(null);
   };
+
+  const handleEditOrder = useCallback(async (order: Order) => {
+    try {
+      showToast.loading('Loading order for editing...');
+      const fullOrder = await ordersApi.getById(order.orderId);
+      setEditingOrder(fullOrder);
+      showToast.dismiss();
+      // Scroll to top to show form
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+      console.error('Failed to load order for editing:', error);
+      showToast.error('Failed to load order details');
+    }
+  }, []);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingOrder(null);
+  }, []);
 
   const columns: ColumnDef<Order>[] = [
     {
@@ -221,6 +245,18 @@ const CreateOrderPage: React.FC = () => {
                 Invoice
               </Button>
             )}
+            {(order.status === 'Pending' || order.status === 'Rejected') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleEditOrder(order)}
+                title="Edit Order"
+                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 ml-1"
+              >
+                <EditIcon size={14} className="mr-1.5" />
+                Edit
+              </Button>
+            )}
           </>
         );
       },
@@ -319,11 +355,13 @@ const CreateOrderPage: React.FC = () => {
         {/* Header with Mode Toggle */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <PageHeader
-            title={viewMode === 'orders' ? 'Create New Order' : 'Create Quotation'}
+            title={editingOrder ? 'Edit Order' : (viewMode === 'orders' ? 'Create New Order' : 'Create Quotation')}
             description={
-              viewMode === 'orders'
-                ? 'Fill in the order details and confirm to create a new order'
-                : 'Create quotations for customer approval before placing orders'
+              editingOrder
+                ? `Editing Order ${editingOrder.orderNumber || formatDisplayOrderId(editingOrder.orderId, editingOrder.orderDate)}`
+                : (viewMode === 'orders'
+                  ? 'Fill in the order details and confirm to create a new order'
+                  : 'Create quotations for customer approval before placing orders')
             }
           />
 
@@ -336,7 +374,12 @@ const CreateOrderPage: React.FC = () => {
         <ModeIndicatorBanner viewMode={viewMode} /> */}
 
         {/* Form Component */}
-        <CreateOrderForm onSuccess={handleSuccess} viewMode={viewMode} />
+        <CreateOrderForm
+          onSuccess={handleSuccess}
+          viewMode={viewMode}
+          editingOrder={editingOrder}
+          onCancelEdit={handleCancelEdit}
+        />
 
         {/* Orders Table - Only show in orders mode */}
         {viewMode === 'orders' && (

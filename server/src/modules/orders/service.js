@@ -321,6 +321,16 @@ export class OrdersService {
       throw new AppError('Order not found', 404);
     }
 
+    // Check status - only allow editing if Pending or Rejected
+    // "Accepted" orders are locked for general edits (but PM can update delivery date via specific endpoints)
+    const allowedStatuses = ['Pending', 'Rejected'];
+    if (!allowedStatuses.includes(existing.status)) {
+      throw new AppError(
+        `Cannot edit order in '${existing.status}' status. Only Pending or Rejected orders can be edited.`,
+        400
+      );
+    }
+
     // Map priority field name if present
     const mappedData = { ...updateData };
     if (mappedData.priority) {
