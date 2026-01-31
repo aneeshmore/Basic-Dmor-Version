@@ -197,6 +197,7 @@ export class ProductionManagerService {
             viscosity: devData?.viscosity || batchData.viscosity || null,
             waterPercentage: devData?.waterPercentage || batchData.waterPercentage || null,
             status: 'In Progress', // Started batches are In Progress (not just Scheduled)
+            startedAt: new Date(),
             supervisorId: batchData.supervisorId,
             labourNames: batchData.labourNames || null,
             createdBy: performedBy,

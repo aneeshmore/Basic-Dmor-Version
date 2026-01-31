@@ -54,6 +54,8 @@ export interface Batch {
   density?: number;
   waterPercentage?: number;
   viscosity?: number;
+  startedAt?: string;
+  createdAt?: string;
 }
 
 export interface BatchMaterial {

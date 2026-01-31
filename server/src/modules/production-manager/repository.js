@@ -548,6 +548,7 @@ export class ProductionManagerRepository {
         labourNames: productionBatch.labourNames,
         timeRequired: productionBatch.timeRequiredHours,
         createdAt: productionBatch.createdAt,
+        startedAt: productionBatch.startedAt,
       })
       .from(productionBatch)
       .leftJoin(masterProducts, eq(productionBatch.masterProductId, masterProducts.masterProductId))

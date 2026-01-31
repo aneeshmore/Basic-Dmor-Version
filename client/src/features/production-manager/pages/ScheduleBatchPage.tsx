@@ -2582,6 +2582,7 @@ export default function ScheduleBatchPage() {
               <thead className="bg-[var(--surface-highlight)] text-[var(--text-secondary)] font-semibold uppercase text-xs">
                 <tr>
                   <th className="px-4 py-3">Batch ID</th>
+                  <th className="px-4 py-3">Start Date</th>
                   <th className="px-4 py-3">Product Name</th>
                   <th className="px-4 py-3">Supervisor</th>
                   <th className="px-4 py-3">Labor</th>
@@ -2608,6 +2609,15 @@ export default function ScheduleBatchPage() {
                       return (
                         <tr key={batch.batchId} className="hover:bg-[var(--surface-hover)]">
                           <td className="px-4 py-3 font-medium">{batch.batchNo}</td>
+                          <td className="px-4 py-3 text-sm">
+                            {(batch.startedAt || batch.createdAt)
+                              ? new Date(batch.startedAt || batch.createdAt || '').toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })
+                              : '-'}
+                          </td>
                           <td className="px-4 py-3 min-w-[150px]">{batch.masterProductName}</td>
                           <td className="px-4 py-3">{batch.supervisorName || 'N/A'}</td>
                           <td className="px-4 py-3">{labor}</td>
