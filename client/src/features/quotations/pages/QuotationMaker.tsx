@@ -30,6 +30,7 @@ import { inventoryApi } from '@/features/inventory/api/inventoryApi';
 import { Customer } from '@/features/masters/types';
 import { Employee } from '@/features/employees/types';
 import UpdateConfirmModal from '@/features/orders/components/UpdateConfirmModal';
+import { QuotationHistoryTable } from '../components/QuotationHistoryTable';
 
 
 
@@ -366,6 +367,7 @@ const QuotationMaker = () => {
     };
 
     fetchData();
+    fetchQuotations();
   }, []);
 
   // Auto-sync rates from product master when products are loaded (especially useful for edit mode)
@@ -1211,6 +1213,24 @@ const QuotationMaker = () => {
                 </div>
               </div>
             </div>
+            {/* Quotation History Table */}
+            <div className="bg-[var(--surface)] p-6 rounded-lg lg:col-span-3 max-w-4xl mx-auto w-full mt-6">
+              <QuotationHistoryTable
+                data={quotationsList.filter(q => q.status !== 'Converted')}
+                onView={(record) => {
+                  setData({
+                    ...INITIAL_DATA,
+                    ...record.content,
+                    status: record.status, // Ensure status is preserved from record
+                  });
+                  setEditQuotationId(record.quotationId);
+                  setIsEditMode(true);
+                  // Scroll to top
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
+            </div>
+
             {/* Footer Branding */}
             <div className="mt-4 text-center">
               <p className="text-[7pt] text-gray-400 italic">

@@ -250,6 +250,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
       setQuotationsList(response.data?.data || []);
     } catch (error) {
       console.error('Failed to fetch quotations:', error);
+    } finally {
       setQuotationsLoading(false);
     }
   }, []);
