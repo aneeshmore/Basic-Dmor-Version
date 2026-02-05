@@ -106,7 +106,12 @@ const ValidationTooltip: React.FC<ValidationTooltipProps> = ({ message }) => (
 // COMPONENT
 // =====================
 
-const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode = 'orders', editingOrder, onCancelEdit }) => {
+const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
+  onSuccess,
+  viewMode = 'orders',
+  editingOrder,
+  onCancelEdit,
+}) => {
   const { createOrder, loading: createLoading } = useCreateOrder();
   const { updateOrder, loading: updateLoading } = useUpdateOrder(); // Assuming useUpdateOrder exists or will be added
   const [loading, setLoading] = useState(false);
@@ -216,14 +221,12 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
         label: t.description,
       }));
 
-    // Add placeholder if no options
     if (options.length === 0) {
       return [{ value: '', label: 'No payment terms available' }];
     }
     return [{ value: '', label: 'Select payment terms...' }, ...options];
   }, [tncList]);
 
-  // Delivery terms options from TNC
   const deliveryTermsOptions = useMemo(() => {
     const options = tncList
       .filter(t => {
@@ -235,7 +238,6 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
         label: t.description,
       }));
 
-    // Add placeholder if no options
     if (options.length === 0) {
       return [{ value: '', label: 'No delivery terms available' }];
     }
@@ -247,13 +249,40 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
     try {
       setQuotationsLoading(true);
       const response = await quotationApi.getAll();
-      setQuotationsList(response.data?.data || []);
+      const data = response.data?.data || response.data || [];
+      setQuotationsList(data);
     } catch (error) {
       console.error('Failed to fetch quotations:', error);
-      setQuotationsLoading(false);
+    } finally {
+      setQuotationsLoading(false); // ensure loading state resets
     }
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    if (viewMode === 'quotations') {
+      const fetch = async () => {
+        try {
+          setQuotationsLoading(true);
+          const response = await quotationApi.getAll();
+          const data = response.data?.data || response.data || [];
+          if (isMounted) setQuotationsList(data);
+        } catch (error) {
+          console.error('Failed to fetch quotations:', error);
+          if (isMounted) setQuotationsList([]);
+        } finally {
+          if (isMounted) setQuotationsLoading(false);
+        }
+      };
+
+      fetch();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [viewMode]);
 
   // =====================
   // EDIT ORDER EFFECT
@@ -268,19 +297,21 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
       setRemarks(editingOrder.remarks || '');
 
       if (editingOrder.orderDetails && editingOrder.orderDetails.length > 0) {
-        setOrderDetails(editingOrder.orderDetails.map(d => ({
-          productId: d.productId,
-          quantity: d.quantity,
-          unitPrice: Number(d.unitPrice),
-          discount: d.discount || 0
-        })));
+        setOrderDetails(
+          editingOrder.orderDetails.map(d => ({
+            productId: d.productId,
+            quantity: d.quantity,
+            unitPrice: Number(d.unitPrice),
+            discount: d.discount || 0,
+          }))
+        );
       }
 
       // Auto-validate form
       setValidationErrors({
         customerId: false,
         salesPersonId: false,
-        items: editingOrder.orderDetails.map(() => ({ productId: false, quantity: false }))
+        items: editingOrder.orderDetails.map(() => ({ productId: false, quantity: false })),
       });
     }
   }, [editingOrder, viewMode]);
@@ -307,10 +338,6 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
 
         // Handle Active Customers Response
         if (customersRes) {
-          // Normalize response structure
-          // Case 1: Axios response with data property { success, data: [] }
-          // Case 2: Direct body { success, data: [] }
-          // Case 3: Direct array []
           let rawData: unknown = customersRes.data || customersRes;
 
           if (
@@ -377,10 +404,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
     };
 
     fetchData();
-    fetchData();
   }, [user, fetchQuotations]);
-
-
 
   // =====================
   // HELPER FUNCTIONS
@@ -665,52 +689,55 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
   // CUSTOMER SELECTION HANDLER
   // =====================
 
-  const handleCustomerChange = useCallback((id: number) => {
-    setCustomerId(id);
-    setValidationErrors(prev => ({ ...prev, customerId: false }));
+  const handleCustomerChange = useCallback(
+    (id: number) => {
+      setCustomerId(id);
+      setValidationErrors(prev => ({ ...prev, customerId: false }));
 
-    // For Dealers selecting themselves, strict priority to user profile data
-    if (user?.Role === 'Dealer' && id === user.EmployeeID) {
-      setCompanyName(user.companyName || '');
-      // Enforce user profile address as primary
-      if (user.address) {
-        setDeliveryAddress(user.address);
-        // We do strictly what user requested: deliveryAddress = company address from dealer user
-        // If user has address, we STOP here and don't look up customer record address.
-        return;
-      }
-      // Only fallback to customer record if user profile address is missing
-    } else {
-      setCompanyName(getCompanyName(id));
-    }
-
-    const customer = customers.find(c => (c.customerId || c.CustomerID) === id);
-    if (customer) {
-      // If we are here as a Dealer, it means user.address was missing, so we use customer record
-      // If we are NOT a Dealer, we always use customer record
-
-      // Construct full address from components
-      const addressParts = [
-        customer.address || customer.Address,
-        customer.area || customer.Area,
-        customer.location || customer.Location,
-        customer.pinCode || customer.Pincode
-      ].filter(part => part && part.trim());
-
-      setDeliveryAddress(addressParts.join(', '));
-
-      // Auto-populate sales person from customer
-      const customerSalesPersonId = customer.SalesPersonID || customer.salesPersonId;
-      if (customerSalesPersonId) {
-        setSalesPersonId(customerSalesPersonId);
-        // Clear sales person error since it's auto-populated
-        setValidationErrors(prev => ({ ...prev, salesPersonId: false }));
+      // For Dealers selecting themselves, strict priority to user profile data
+      if (user?.Role === 'Dealer' && id === user.EmployeeID) {
+        setCompanyName(user.companyName || '');
+        // Enforce user profile address as primary
+        if (user.address) {
+          setDeliveryAddress(user.address);
+          // We do strictly what user requested: deliveryAddress = company address from dealer user
+          // If user has address, we STOP here and don't look up customer record address.
+          return;
+        }
+        // Only fallback to customer record if user profile address is missing
       } else {
-        // If customer has no sales person, clear the field
-        setSalesPersonId('');
+        setCompanyName(getCompanyName(id));
       }
-    }
-  }, [customers, getCompanyName, user]);
+
+      const customer = customers.find(c => (c.customerId || c.CustomerID) === id);
+      if (customer) {
+        // If we are here as a Dealer, it means user.address was missing, so we use customer record
+        // If we are NOT a Dealer, we always use customer record
+
+        // Construct full address from components
+        const addressParts = [
+          customer.address || customer.Address,
+          customer.area || customer.Area,
+          customer.location || customer.Location,
+          customer.pinCode || customer.Pincode,
+        ].filter(part => part && part.trim());
+
+        setDeliveryAddress(addressParts.join(', '));
+
+        // Auto-populate sales person from customer
+        const customerSalesPersonId = customer.SalesPersonID || customer.salesPersonId;
+        if (customerSalesPersonId) {
+          setSalesPersonId(customerSalesPersonId);
+          // Clear sales person error since it's auto-populated
+          setValidationErrors(prev => ({ ...prev, salesPersonId: false }));
+        } else {
+          // If customer has no sales person, clear the field
+          setSalesPersonId('');
+        }
+      }
+    },
+    [customers, getCompanyName, user]
+  );
 
   // Auto-fill for Dealer Role
   useEffect(() => {
@@ -726,7 +753,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
         userCompanyName: user.companyName,
         userAddress: user.address,
         userCustomerId: user.customerId, // Access new field directly
-        totalCustomers: customers.length
+        totalCustomers: customers.length,
       });
 
       // 2. Pre-fill Company Name from Dealer Profile
@@ -744,7 +771,9 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
       // PRIORITY 2: Match by Company Name (Fallback)
       else if (customers.length > 0 && dealerCompanyName) {
         const matchingCustomer = customers.find(
-          c => (c.companyName || c.CompanyName || '').trim().toLowerCase() === dealerCompanyName.toLowerCase()
+          c =>
+            (c.companyName || c.CompanyName || '').trim().toLowerCase() ===
+            dealerCompanyName.toLowerCase()
         );
 
         if (matchingCustomer) {
@@ -760,7 +789,9 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
       } else {
         // Fallback: Try to find address from matching customer record
         const currentCustId = backendCustomerId || customerId;
-        const matchingCustomer = customers.find(c => (c.customerId || c.CustomerID) === currentCustId);
+        const matchingCustomer = customers.find(
+          c => (c.customerId || c.CustomerID) === currentCustId
+        );
 
         if (matchingCustomer) {
           const addressParts = [
@@ -837,7 +868,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
           discount: item.discount || 0,
         })),
         deliveryAddress: deliveryAddress?.trim() || null,
-        remarks: remarks?.trim() || null
+        remarks: remarks?.trim() || null,
       };
 
       if (!editingOrder) {
@@ -866,7 +897,6 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
         // Reset form only if creating new
         handleClearAll();
       }
-
     } catch (error: any) {
       console.error('Submit failed:', error);
       showToast.error(error.message || 'Failed to submit order');
@@ -877,8 +907,6 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
 
   // Old handleConfirmSubmit was here, replacing it with unified one.
   // We need to remove the old implementation below.
-
-
 
   const resetForm = useCallback(() => {
     setCustomerId('');
@@ -1335,13 +1363,17 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
         header: ({ column }) => <DataTableColumnHeader column={column} title="Customer" />,
         enableColumnFilter: true,
         enableSorting: true,
-        cell: ({ row }) => <span className="font-medium">{decodeHtml(row.original.buyerName) || '-'}</span>,
+        cell: ({ row }) => (
+          <span className="font-medium">{decodeHtml(row.original.buyerName) || '-'}</span>
+        ),
       },
       {
         accessorKey: 'salesPerson',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Sales Person" />,
         cell: ({ row }) => {
-          const name = decodeHtml(row.original.content?.salespersonName || row.original.content?.otherRef) || '-';
+          const name =
+            decodeHtml(row.original.content?.salespersonName || row.original.content?.otherRef) ||
+            '-';
           return <span className="font-medium">{name}</span>;
         },
       },
@@ -1518,7 +1550,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
         <Modal
           isOpen={true}
           onClose={() => setShowConfirmation(false)}
-          title={editingOrder ? "Confirm Order Update" : "Confirm Order Creation"}
+          title={editingOrder ? 'Confirm Order Update' : 'Confirm Order Creation'}
           size="lg"
         >
           <div className="space-y-4">
@@ -1589,7 +1621,13 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                 Cancel
               </Button>
               <Button variant="primary" onClick={handleConfirmSubmit} disabled={submitting}>
-                {submitting ? (editingOrder ? 'Updating...' : 'Creating...') : (editingOrder ? 'Confirm & Update' : 'Confirm & Create')}
+                {submitting
+                  ? editingOrder
+                    ? 'Updating...'
+                    : 'Creating...'
+                  : editingOrder
+                    ? 'Confirm & Update'
+                    : 'Confirm & Create'}
               </Button>
             </div>
           </div>
@@ -1731,7 +1769,9 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                       // If Dealer, ensure their own entry is in the list
                       if (user?.Role === 'Dealer') {
                         const dealerId = user.EmployeeID;
-                        const exists = customers.some(c => (c.customerId || c.CustomerID) === dealerId);
+                        const exists = customers.some(
+                          c => (c.customerId || c.CustomerID) === dealerId
+                        );
 
                         const list = customers.map(c => ({
                           id: c.customerId || c.CustomerID || 0,
@@ -1745,7 +1785,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                             id: dealerId,
                             label: user.companyName || 'My Company',
                             subLabel: `${user.FirstName || ''} ${user.LastName || ''}`.trim(),
-                            value: dealerId
+                            value: dealerId,
                           });
                         }
                         return list;
@@ -1784,11 +1824,14 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                       // If Dealer, ensure their own entry is in the list
                       if (user?.Role === 'Dealer') {
                         const dealerId = user.EmployeeID;
-                        const exists = salesPersonEmployees.some(e => (e.employeeId || e.EmployeeID) === dealerId);
+                        const exists = salesPersonEmployees.some(
+                          e => (e.employeeId || e.EmployeeID) === dealerId
+                        );
 
                         const list = salesPersonEmployees.map(e => ({
                           id: e.employeeId || e.EmployeeID || 0,
-                          label: `${e.firstName || e.FirstName} ${e.lastName || e.LastName || ''}`.trim(),
+                          label:
+                            `${e.firstName || e.FirstName} ${e.lastName || e.LastName || ''}`.trim(),
                           value: e.employeeId || e.EmployeeID,
                         }));
 
@@ -1796,7 +1839,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                           list.unshift({
                             id: dealerId,
                             label: `${user.FirstName || ''} ${user.LastName || ''}`.trim(),
-                            value: dealerId
+                            value: dealerId,
                           });
                         }
                         return list;
@@ -1815,10 +1858,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                       setValidationErrors(prev => ({ ...prev, salesPersonId: false }));
                     }}
                     disabled={
-                      dataLoading ||
-                      isSalesPerson ||
-                      !!customerId ||
-                      user?.Role === 'Dealer'
+                      dataLoading || isSalesPerson || !!customerId || user?.Role === 'Dealer'
                     }
                     placeholder={
                       dataLoading
@@ -1892,10 +1932,11 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
           {(() => {
             const orderItemsContent = (
               <div
-                className={`bg-[var(--surface)] p-6 rounded-lg flex flex-col transition-all duration-300 ${isOrderItemsFullScreen
-                  ? 'fixed inset-0 rounded-none overflow-auto'
-                  : 'lg:col-span-2'
-                  }`}
+                className={`bg-[var(--surface)] p-6 rounded-lg flex flex-col transition-all duration-300 ${
+                  isOrderItemsFullScreen
+                    ? 'fixed inset-0 rounded-none overflow-auto'
+                    : 'lg:col-span-2'
+                }`}
                 style={isOrderItemsFullScreen ? { zIndex: 999999, isolation: 'isolate' } : {}}
               >
                 {/* Header with Expand Button */}
@@ -1941,10 +1982,11 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                       <div
                         key={index}
                         data-item-card
-                        className={`border rounded-lg p-4 transition-all ${isComplete
-                          ? 'border-[var(--success)]/50 bg-[var(--success)]/5'
-                          : 'border-[var(--border)] bg-[var(--surface-secondary)]'
-                          } hover:border-[var(--primary)] hover:shadow-md`}
+                        className={`border rounded-lg p-4 transition-all ${
+                          isComplete
+                            ? 'border-[var(--success)]/50 bg-[var(--success)]/5'
+                            : 'border-[var(--border)] bg-[var(--surface-secondary)]'
+                        } hover:border-[var(--primary)] hover:shadow-md`}
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-2">
@@ -2051,10 +2093,11 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                                 Line Total
                               </label>
                               <div
-                                className={`px-3 py-2 border rounded-lg font-semibold ${isComplete
-                                  ? 'border-[var(--success)] bg-[var(--success)]/10 text-[var(--success)]'
-                                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]'
-                                  }`}
+                                className={`px-3 py-2 border rounded-lg font-semibold ${
+                                  isComplete
+                                    ? 'border-[var(--success)] bg-[var(--success)]/10 text-[var(--success)]'
+                                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]'
+                                }`}
                               >
                                 ₹{calculateLineTotal(item).toFixed(2)}
                               </div>
@@ -2208,9 +2251,21 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                   type="submit"
                   disabled={loading || submitting || !isFormValid}
                   className="shadow-lg min-w-[180px]"
-                  title={!isFormValid ? 'Please fill in all required fields' : (editingOrder ? 'Update Order' : 'Create Order')}
+                  title={
+                    !isFormValid
+                      ? 'Please fill in all required fields'
+                      : editingOrder
+                        ? 'Update Order'
+                        : 'Create Order'
+                  }
                 >
-                  {loading || submitting ? (editingOrder ? 'Updating...' : 'Creating...') : (editingOrder ? 'Update Order' : 'Create Order')}
+                  {loading || submitting
+                    ? editingOrder
+                      ? 'Updating...'
+                      : 'Creating...'
+                    : editingOrder
+                      ? 'Update Order'
+                      : 'Create Order'}
                 </Button>
                 {editingOrder && (
                   <Button
@@ -2234,49 +2289,52 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
       </form>
 
       {/* Quotations Table - Only show in Quotations mode */}
-      {viewMode === 'quotations' &&
-        quotationsList.filter(q => q.status !== 'Converted').length > 0 && (
-          <div className="mt-8 bg-[var(--surface)] rounded-xl border border-[var(--border)] overflow-hidden shadow-sm animate-fade-in">
-            <div className="p-4 border-b border-[var(--border)] bg-gradient-to-r from-purple-50 to-indigo-50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-                    My Quotations
-                  </h3>
-                  <p className="text-sm text-[var(--text-secondary)]">
-                    View status and manage your quotations
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
-                  <span>
-                    {quotationsList.filter(q => q.status !== 'Converted').length} quotations
-                  </span>
-                </div>
+
+      {/* Quotations Table - Only show in Quotations mode */}
+      {viewMode === 'quotations' && (
+        <div className="mt-8 bg-[var(--surface)] rounded-xl border border-[var(--border)] overflow-hidden shadow-sm animate-fade-in">
+          {/* Header */}
+          <div className="p-4 border-b border-[var(--border)] bg-gradient-to-r from-purple-50 to-indigo-50">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-[var(--text-primary)]">My Quotations</h3>
+                <p className="text-sm text-[var(--text-secondary)]">
+                  View status and manage your quotations
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
+                <span>{quotationsList.length} quotations</span>
               </div>
             </div>
-            <div className="p-4">
-              {quotationsLoading ? (
-                <div className="flex justify-center py-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-[var(--text-secondary)]">Loading quotations...</span>
-                  </div>
-                </div>
-              ) : (
-                <DataTable
-                  columns={quotationsColumns}
-                  data={quotationsList
-                    .filter(q => q.status !== 'Converted')
-                    .sort(
-                      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                    )}
-                  searchPlaceholder="Search quotations..."
-                />
-              )}
-            </div>
           </div>
-        )}
+
+          {/* Body */}
+          <div className="p-4">
+            {/* Loading State */}
+            {quotationsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-[var(--text-secondary)]">Loading quotations...</span>
+                </div>
+              </div>
+            ) : quotationsList.filter(q => q.status !== 'Converted').length === 0 ? (
+              <p className="text-center text-[var(--text-secondary)] py-8">No quotations found.</p>
+            ) : (
+              <DataTable
+                columns={quotationsColumns}
+                data={quotationsList
+                  .filter(q => q.status !== 'Converted')
+                  .sort(
+                    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                  )}
+                searchPlaceholder="Search quotations..."
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Quotation Preview Modal */}
       {showPreviewModal && previewQuotation && (
@@ -2304,12 +2362,13 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSuccess, viewMode =
                 <span className="text-[var(--text-secondary)]">Status:</span>
                 <Badge
                   variant={previewQuotation.status === 'Rejected' ? 'destructive' : 'secondary'}
-                  className={`ml-2 ${previewQuotation.status === 'Approved'
-                    ? 'bg-green-100 text-green-800'
-                    : previewQuotation.status === 'Pending'
-                      ? 'bg-orange-100 text-orange-800'
-                      : ''
-                    }`}
+                  className={`ml-2 ${
+                    previewQuotation.status === 'Approved'
+                      ? 'bg-green-100 text-green-800'
+                      : previewQuotation.status === 'Pending'
+                        ? 'bg-orange-100 text-orange-800'
+                        : ''
+                  }`}
                 >
                   {previewQuotation.status}
                 </Badge>

@@ -1,10 +1,3 @@
-/**
- * Permission-aware route wrapper
- *
- * Checks if the current user has permission to access a route.
- * Auto-redirects to dashboard if unauthorized.
- */
-
 import { ReactNode, Suspense, useEffect, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';

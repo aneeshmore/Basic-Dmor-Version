@@ -212,7 +212,7 @@ const ProductDevelopment = () => {
     // Formula: (Total Cost Invested / 100) * FG Density
     // Using 100 as base divider for percentage sum normalization
     if (theoreticalDensity > 0) {
-      let costBase = (totalCostInvested / 100);
+      let costBase = totalCostInvested / 100;
 
       // Adjust for Water Percentage if present
       const waterPer = parseFloat(perPercent) || 0;
@@ -567,16 +567,6 @@ const ProductDevelopment = () => {
     return (totalPigmentVolume / totalVolume) * 100;
   };
 
-  /**
-   * Calculate CPVC (Critical Pigment Volume Concentration)
-   *
-   * CPVC is material-dependent and not directly calculable from formulation data.
-   * For typical alkyd/QD resin systems with Calcite + Talc + Rutile TiO₂:
-   * - CPVC range: 50-55%
-   * - Using 52% as the standard value
-   *
-   * The PVC should always be less than CPVC to ensure a glossy, durable finish.
-   */
   const calculateCPVC = () => {
     // Check if we have any Extenders in the formulation
     const hasExtenders = addedItems.some(item => {
@@ -604,7 +594,7 @@ const ProductDevelopment = () => {
     }
 
     // Validate Water Percentage
-    const waterPercentValue = parseInt(perPercent) || 0;
+    const waterPercentValue = parseFloat(perPercent) || 0;
     if (waterPercentValue > 100) {
       showToast.error('Water Percentage cannot be greater than 100');
       return;
@@ -620,7 +610,7 @@ const ProductDevelopment = () => {
       density: parseFloat(density),
       viscosity: parseFloat(viscosity) || 0,
       hours: parseFloat(productionCost), // Send cost as 'hours' to match backend schema repurposing
-      perPercent: parseInt(perPercent) || 0,
+      perPercent: parseFloat(perPercent) || 0,
       calculationBasis,
 
       materials: addedItems,
@@ -792,14 +782,13 @@ const ProductDevelopment = () => {
               }}
               placeholder="Water Percentage"
               type="number"
-              step="1"
+              step="0.001"
               min="0"
               max="100"
             />
-
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-min">
+            <div className="relative min-w-0">
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                 Add Raw Material
               </label>
@@ -808,24 +797,25 @@ const ProductDevelopment = () => {
                 value={selectedRmId}
                 onChange={val => handleAddItem(val ?? '')}
                 placeholder={
-                  !selectedMasterProductId
-                    ? 'Select Master Product first...'
-                    : 'Search and add...'
+                  !selectedMasterProductId ? 'Select Master Product first...' : 'Search and add...'
                 }
                 disabled={!selectedMasterProductId}
                 className="w-full"
               />
             </div>
-            <Input
-              label="Density"
-              value={density}
-              onChange={e => setDensity(e.target.value)}
-              placeholder="Density"
-              type="number"
-              step="0.01"
-            />
-            <div className="space-y-4">
-              <div className="relative z-10">
+            <div className="min-w-0">
+              <Input
+                label="Density"
+                value={density}
+                onChange={e => setDensity(e.target.value)}
+                placeholder="Density"
+                type="number"
+                step="0.01"
+              />
+            </div>
+
+            <div className="space-y-4 min-w-0">
+              <div className="relative min-w-0">
                 <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                   Calculation Basis
                 </label>
@@ -833,20 +823,22 @@ const ProductDevelopment = () => {
                   <button
                     type="button"
                     onClick={() => setCalculationBasis('Ltr')}
-                    className={`px-4 py-2 text-sm font-medium border border-[var(--border-color)] rounded-l-lg focus:z-10 focus:ring-2 focus:ring-[var(--primary)] ${calculationBasis === 'Ltr'
+                    className={`px-4 py-2 text-sm font-medium border border-[var(--border-color)] rounded-l-lg focus:z-10 focus:ring-2 focus:ring-[var(--primary)] ${
+                      calculationBasis === 'Ltr'
                         ? 'bg-[var(--primary)] text-white'
                         : 'bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
-                      }`}
+                    }`}
                   >
                     Per Ltr
                   </button>
                   <button
                     type="button"
                     onClick={() => setCalculationBasis('Kg')}
-                    className={`px-4 py-2 text-sm font-medium border border-l-0 border-[var(--border-color)] rounded-r-lg focus:z-10 focus:ring-2 focus:ring-[var(--primary)] ${calculationBasis === 'Kg'
+                    className={`px-4 py-2 text-sm font-medium border border-l-0 border-[var(--border-color)] rounded-r-lg focus:z-10 focus:ring-2 focus:ring-[var(--primary)] ${
+                      calculationBasis === 'Kg'
                         ? 'bg-[var(--primary)] text-white'
                         : 'bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
-                      }`}
+                    }`}
                   >
                     Per Kg
                   </button>
@@ -954,14 +946,14 @@ const ProductDevelopment = () => {
                               onKeyDown={e => {
                                 handleInputKeyDown(e, addedItems.indexOf(item), 'percentage');
 
-
                                 if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                                   e.preventDefault();
                                 }
                               }}
                               data-row-index={addedItems.indexOf(item)}
                               data-column="percentage"
-                              step="1"
+                              step="0.001"
+                              min="0"
                               className="w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent outline-none transition-all"
                             />
                           </td>
@@ -990,7 +982,6 @@ const ProductDevelopment = () => {
                               }
                               onKeyDown={e => {
                                 handleInputKeyDown(e, addedItems.indexOf(item), 'waitingTime');
-
 
                                 if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                                   e.preventDefault();

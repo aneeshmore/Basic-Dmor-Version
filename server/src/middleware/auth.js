@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import jwt from 'jsonwebtoken';
 import { UnauthorizedError, ForbiddenError } from '../utils/AppError.js';
 import logger from '../config/logger.js';
@@ -45,7 +46,6 @@ export const authenticate = (req, res, next) => {
 
     // Verify token
     const decoded = jwt.verify(token, JWT_SECRET);
-
 
     // Add user info to request object
     req.user = {
