@@ -474,7 +474,10 @@ const NotificationsPage = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-[var(--surface)] p-4 rounded-lg border border-[var(--border)] shadow-sm flex items-center gap-4">
+        <div
+          onClick={() => setActiveTab('pending')}
+          className="bg-[var(--surface)] p-4 rounded-lg border border-[var(--border)] shadow-sm flex items-center gap-4 cursor-pointer transition-shadow hover:shadow-md"
+        >
           <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-full text-orange-600 dark:text-orange-400">
             <Clock />
           </div>
@@ -483,7 +486,11 @@ const NotificationsPage = () => {
             <p className="text-2xl font-bold text-[var(--text-primary)]">{stats.pending}</p>
           </div>
         </div>
-        <div className="bg-[var(--surface)] p-4 rounded-lg border border-[var(--border)] shadow-sm flex items-center gap-4">
+
+        <div
+          onClick={() => setActiveTab('accepted')}
+          className="bg-[var(--surface)] p-4 rounded-lg border border-[var(--border)] shadow-sm flex items-center gap-4 cursor-pointer transition-shadow hover:shadow-md"
+        >
           <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400">
             <CheckSquare />
           </div>
@@ -492,7 +499,11 @@ const NotificationsPage = () => {
             <p className="text-2xl font-bold text-[var(--text-primary)]">{stats.accepted}</p>
           </div>
         </div>
-        <div className="bg-[var(--surface)] p-4 rounded-lg border border-[var(--border)] shadow-sm flex items-center gap-4">
+
+        <div
+          onClick={() => setActiveTab('dispatch')}
+          className="bg-[var(--surface)] p-4 rounded-lg border border-[var(--border)] shadow-sm flex items-center gap-4 cursor-pointer transition-shadow hover:shadow-md"
+        >
           <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full text-green-600 dark:text-green-400">
             <Truck />
           </div>
@@ -501,7 +512,11 @@ const NotificationsPage = () => {
             <p className="text-2xl font-bold text-[var(--text-primary)]">{stats.dispatch}</p>
           </div>
         </div>
-        <div className="bg-[var(--surface)] p-4 rounded-lg border border-[var(--border)] shadow-sm flex items-center gap-4">
+
+        <div
+          onClick={() => setActiveTab('low-stock')}
+          className="bg-[var(--surface)] p-4 rounded-lg border border-[var(--border)] shadow-sm flex items-center gap-4 cursor-pointer transition-shadow hover:shadow-md"
+        >
           <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full text-red-600 dark:text-red-400">
             <AlertTriangle />
           </div>
