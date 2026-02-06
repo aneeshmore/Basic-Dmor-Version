@@ -24,7 +24,7 @@ export const productDevelopment = appSchema.table('product_development', {
   // Formula Details
   density: numeric('density', { precision: 12, scale: 3 }),
   viscosity: numeric('viscosity', { precision: 12, scale: 3 }),
-  percentageValue: numeric('percentage_value', { precision: 8, scale: 3 }),
+  percentageValue: numeric('percentage_value', { precision: 8, scale: 4 }),
   productionHours: numeric('production_hours', { precision: 8, scale: 2 }),
   mixingRatioPart: numeric('mixing_ratio_part', { precision: 10, scale: 4 }), // Stores '2' or '1' ratio part
   calculationBasis: varchar('calculation_basis', { length: 10 }).default('Ltr'), // 'Ltr' or 'Kg'
@@ -55,7 +55,7 @@ export const productDevelopmentMaterials = appSchema.table('product_development_
     .references(() => masterProducts.masterProductId),
 
   // Composition
-  percentage: numeric('percentage', { precision: 8, scale: 3 }).notNull(),
+  percentage: numeric('percentage', { precision: 8, scale: 4 }).notNull(),
   totalPercentage: numeric('total_percentage', { precision: 8, scale: 3 }), // User entered total %
   sequence: integer('sequence').notNull(),
   waitingTime: integer('waiting_time').default(0), // Time in minutes

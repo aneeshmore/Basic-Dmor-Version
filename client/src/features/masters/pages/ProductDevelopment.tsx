@@ -276,7 +276,7 @@ const ProductDevelopment = () => {
                 productId: item.materialId,
                 productName: rmDetails?.masterProductName || 'Unknown Material',
                 // Format percentage to 3 decimal places
-                percentage: parseFloat(String(item.percentage || '0')).toFixed(3),
+                percentage: parseFloat(String(item.percentage || '0')).toFixed(4),
 
                 sequence: item.sequence,
                 waitingTime: item.waitingTime || 0,
@@ -317,11 +317,11 @@ const ProductDevelopment = () => {
               'Unknown Material',
             percentage:
               typeof (item.PercentageRequired ?? item.percentageRequired ?? item.percentage) ===
-              'number'
+                'number'
                 ? (item.PercentageRequired ?? item.percentageRequired ?? item.percentage).toString()
                 : String(
-                    item.PercentageRequired ?? item.percentageRequired ?? item.percentage ?? ''
-                  ),
+                  item.PercentageRequired ?? item.percentageRequired ?? item.percentage ?? ''
+                ),
 
             sequence: item.Sequence || item.sequence || index + 1,
             waitingTime: item.WaitingTime || item.waitingTime || 0,
@@ -337,13 +337,13 @@ const ProductDevelopment = () => {
         if (totalPercent > 0 && totalPercent <= 1.05) {
           mappedItems = mappedItems.map(item => ({
             ...item,
-            percentage: (parseFloat(String(item.percentage ?? '0')) * 100).toFixed(3),
+            percentage: (parseFloat(String(item.percentage ?? '0')) * 100).toFixed(4),
           }));
         } else {
           // Ensure all percentages are formatted to 3 decimal places
           mappedItems = mappedItems.map(item => ({
             ...item,
-            percentage: parseFloat(String(item.percentage ?? '0')).toFixed(3),
+            percentage: parseFloat(String(item.percentage ?? '0')).toFixed(4),
           }));
         }
 
@@ -624,7 +624,7 @@ const ProductDevelopment = () => {
 
       materials: addedItems.map(item => ({
         ...item,
-        percentage: parseFloat(parseFloat(String(item.percentage)).toFixed(3)) || 0, // Format to 3 decimal places
+        percentage: parseFloat(parseFloat(String(item.percentage)).toFixed(4)) || 0, // Format to 3 decimal places
         sequence: typeof item.sequence === 'string' ? parseInt(item.sequence) : item.sequence,
         waitingTime:
           typeof item.waitingTime === 'string' ? parseFloat(item.waitingTime) : item.waitingTime,
@@ -681,7 +681,7 @@ const ProductDevelopment = () => {
       const newItems = data.map((item: any) => ({
         ...item,
         id: Date.now() + Math.random(),
-        percentage: parseFloat(String(item.percentage || '0')).toFixed(3), // Format to 3 decimal places
+        percentage: parseFloat(String(item.percentage || '0')).toFixed(4), // Format to 3 decimal places
       }));
 
       setAddedItems(newItems);
@@ -841,22 +841,20 @@ const ProductDevelopment = () => {
                   <button
                     type="button"
                     onClick={() => setCalculationBasis('Ltr')}
-                    className={`px-4 py-2 text-sm font-medium border border-[var(--border-color)] rounded-l-lg focus:z-10 focus:ring-2 focus:ring-[var(--primary)] ${
-                      calculationBasis === 'Ltr'
+                    className={`px-4 py-2 text-sm font-medium border border-[var(--border-color)] rounded-l-lg focus:z-10 focus:ring-2 focus:ring-[var(--primary)] ${calculationBasis === 'Ltr'
                         ? 'bg-[var(--primary)] text-white'
                         : 'bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
-                    }`}
+                      }`}
                   >
                     Per Ltr
                   </button>
                   <button
                     type="button"
                     onClick={() => setCalculationBasis('Kg')}
-                    className={`px-4 py-2 text-sm font-medium border border-l-0 border-[var(--border-color)] rounded-r-lg focus:z-10 focus:ring-2 focus:ring-[var(--primary)] ${
-                      calculationBasis === 'Kg'
+                    className={`px-4 py-2 text-sm font-medium border border-l-0 border-[var(--border-color)] rounded-r-lg focus:z-10 focus:ring-2 focus:ring-[var(--primary)] ${calculationBasis === 'Kg'
                         ? 'bg-[var(--primary)] text-white'
                         : 'bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
-                    }`}
+                      }`}
                   >
                     Per Kg
                   </button>
@@ -972,7 +970,7 @@ const ProductDevelopment = () => {
                                 } else if (/^\d*\.?\d*$/.test(value)) {
                                   // Check decimal places
                                   const parts = value.split('.');
-                                  if (parts[1] && parts[1].length > 3) {
+                                  if (parts[1] && parts[1].length > 4) {
                                     // Don't update if more than 3 decimal places
                                     return;
                                   }
@@ -983,7 +981,7 @@ const ProductDevelopment = () => {
                                 // Format on blur to exactly 3 decimal places
                                 const value = e.target.value;
                                 if (value && !isNaN(parseFloat(value))) {
-                                  const formatted = parseFloat(value).toFixed(3);
+                                  const formatted = parseFloat(value).toFixed(4);
                                   handleUpdateItem(item.id, 'percentage', formatted);
                                 } else if (value === '') {
                                   handleUpdateItem(item.id, 'percentage', '');
@@ -1062,7 +1060,7 @@ const ProductDevelopment = () => {
                           : 'text-red-500'
                       }
                     >
-                      {totalPercentage.toFixed(3)}%
+                      {totalPercentage.toFixed(4)}%
                     </span>
                   </td>
                   <td className="px-4 py-3">{calculateTotalSolid().toFixed(3)}</td>
