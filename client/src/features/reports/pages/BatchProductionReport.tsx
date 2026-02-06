@@ -68,7 +68,7 @@ const BatchProductionReport = () => {
           setCompanyInfo((res.data as any).data || res.data);
         }
       } catch (err) {
-        console.error("Failed to fetch company info", err);
+        console.error('Failed to fetch company info', err);
       }
     };
     fetchCompanyInfo();
@@ -156,373 +156,243 @@ const BatchProductionReport = () => {
     return parseFloat(num.toFixed(3)).toString();
   };
 
-
-
   type RGBColor = [number, number, number];
 
-  const handleDownloadBatch = React.useCallback((batch: BatchProductionReportItem) => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.width;
-    const pageHeight = doc.internal.pageSize.height;
-    const margin = 14;
+  const handleDownloadBatch = React.useCallback(
+    (batch: BatchProductionReportItem) => {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      const pageHeight = doc.internal.pageSize.height;
+      const margin = 14;
 
-    // colors from Preview (Tailwind classes approximation)
-    const colorSuccess: RGBColor = [16, 185, 129]; // Emerald 500
-    const colorGray100: RGBColor = [243, 244, 246]; // Gray 100
-    const colorGray700: RGBColor = [55, 65, 81]; // Gray 700
+      // colors from Preview (Tailwind classes approximation)
+      const colorSuccess: RGBColor = [16, 185, 129]; // Emerald 500
+      const colorGray100: RGBColor = [243, 244, 246]; // Gray 100
+      const colorGray700: RGBColor = [55, 65, 81]; // Gray 700
 
-    // 1. Header: Company Info + Title
-    const headerEndY = addPdfHeader(doc, companyInfo, `Batch Production Report: ${batch.batchNo}`);
+      // 1. Header: Company Info + Title
+      const headerEndY = addPdfHeader(
+        doc,
+        companyInfo,
+        `Batch Production Report: ${batch.batchNo}`
+      );
 
-    // 2. Info Block - Reorganized Layout
+      // 2. Info Block - Reorganized Layout
 
-    // Use autoTable for layout precision on the text block to match Preview's alignment
-    // Left Info Block
-    const infoData = [
-      [`Batch No:`, `${batch.batchNo}${batch.productName ? ' / ' + batch.productName : ''}`],
-      [`Supervisor:`, batch.supervisor || '-'],
-      [`Labours:`, batch.labourNames || '-'],
-      [`Date:`, formatDate(new Date().toISOString())],
-      [
-        `Start Date-Time:`,
-        formatDateTime(batch.startedAt),
-      ],
-      [
-        `End Date-Time:`,
-        formatDateTime(batch.completedAt),
-      ],
-      [
-        `Total Time:`,
-        (() => {
-          if (!batch.actualTimeHours) return batch.timeRequired || '-';
-          const hours = Math.floor(parseFloat(batch.actualTimeHours));
-          const minutes = Math.round((parseFloat(batch.actualTimeHours) - hours) * 60);
-          return `${hours} Hrs ${minutes} Min`;
-        })(),
-      ],
-    ];
-
-    autoTable(doc, {
-      startY: headerEndY + 5,
-      margin: { left: margin },
-      body: infoData,
-      theme: 'plain',
-      styles: {
-        fontSize: 10,
-        cellPadding: 1.5,
-        font: 'helvetica',
-        textColor: colorGray700,
-      },
-      columnStyles: {
-        0: { cellWidth: 35, fontStyle: 'bold' },
-        1: { cellWidth: 60 },
-      },
-      tableWidth: 95, // Occupy left side
-    });
-
-    const infoBlockFinalY = (doc as any).lastAutoTable.finalY;
-
-    // 3. Right Side: Quality & Variance Analysis Table
-    // Calculate variance values
-    const stdDensity = batch.density ? parseFloat(batch.density) : 0;
-    const actDensity = batch.actualDensity ? parseFloat(batch.actualDensity) : 0;
-    const densityVariance = actDensity - stdDensity;
-
-    const stdViscosity = batch.viscosity ? parseFloat(batch.viscosity) : 0;
-    const actViscosity = batch.actualViscosity ? parseFloat(batch.actualViscosity) : 0;
-    const viscosityVariance = actViscosity - stdViscosity;
-
-    // --- CALCULATIONS FOR TABLES (Moved up for use in Quality Table) ---
-
-    // 1. Ingredients Calculation (Left Table)
-    const allIngredients = (batch.rawMaterials || []).filter(rm => rm.productType !== 'PM');
-    const regularIngredients = allIngredients.filter(rm => !rm.isAdditional);
-    const additionalIngredients = allIngredients.filter(rm => rm.isAdditional);
-    const ingredients = [...regularIngredients, ...additionalIngredients];
-
-    // Total Actual Weight from Ingredients (Sum of Actual Qty)
-    const totalActualWeight = ingredients.reduce(
-      (sum, rm) => sum + parseFloat(rm.actualQty || rm.percentage || '0'),
-      0
-    );
-    const totalPercentage = ingredients.reduce(
-      (sum, rm) => sum + parseFloat(rm.percentage || '0'),
-      0
-    );
-
-    // 2. Sub Products Calculation (Right Table / Shade Table)
-    const filteredSubProducts = (batch.subProducts || []).filter(sp => {
-      const actQty = parseFloat(sp.actualQty || '0');
-      const batchQty = parseFloat(sp.batchQty || '0');
-      return actQty > 0 || batchQty > 0;
-    });
-
-    // Total LTR from Sub Products
-    const totalLtr = (batch.subProducts || []).reduce((s, x) => {
-      const qty = parseFloat(x.actualQty || '0');
-      const capacity = x.capacity ? parseFloat(x.capacity.toString()) : 0;
-      return s + qty * capacity;
-    }, 0);
-
-    const totalBatchQty = filteredSubProducts.reduce(
-      (s, x) => s + (parseFloat(x.batchQty || '0') || 0),
-      0
-    );
-    const totalSubActualQty = filteredSubProducts.reduce(
-      (s, x) => s + (parseFloat(x.actualQty || '0') || 0),
-      0
-    );
-    const totalKg = (batch.subProducts || []).reduce((s, x) => {
-      const actualQty = parseFloat(x.actualQty || '0');
-      const plannedQty = parseFloat(x.batchQty || '0');
-
-      const effQty = actualQty > 0 ? actualQty : plannedQty;
-
-      const capacity = x.capacity ? parseFloat(x.capacity.toString()) : 0;
-      const ltr = effQty * capacity;
-      // Use fillingDensity or fallback to batch density for weight calc
-      const density = parseFloat(x.fillingDensity?.toString() || '0') || parseFloat(batch.packingDensity || batch.actualDensity || batch.density || '0');
-
-      return s + ltr * density;
-    }, 0);
-
-    // Calculate total weight for Quality Table
-    // Standard = Total of Actual Column from Ingredients Table
-    const stdTotalWeight = totalActualWeight;
-
-    // Actual = Total of LTR Column in Shade Table * Actual Density
-    const actTotalWeight = totalLtr * actDensity;
-    const totalWeightVariance = actTotalWeight - stdTotalWeight;
-
-    // Header for Quality Table
-    const rightTableX = 115;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0); // Black
-    const qualityTitleY = headerEndY + 5; // Align with left info block start
-    doc.text('Quality & Variance Analysis', rightTableX, qualityTitleY);
-
-    autoTable(doc, {
-      startY: qualityTitleY + 4, // Start table below title
-      margin: { left: rightTableX }, // Align to right side
-      head: [['Parameter', 'Standard ', 'Actual', 'Variance']],
-      body: [
-        ['Density', stdDensity.toFixed(2), actDensity.toFixed(2), densityVariance.toFixed(2)],
+      // Use autoTable for layout precision on the text block to match Preview's alignment
+      // Left Info Block
+      const infoData = [
+        [`Batch No:`, `${batch.batchNo}${batch.productName ? ' / ' + batch.productName : ''}`],
+        [`Supervisor:`, batch.supervisor || '-'],
+        [`Labours:`, batch.labourNames || '-'],
+        [`Date:`, formatDate(new Date().toISOString())],
+        [`Start Date-Time:`, formatDateTime(batch.startedAt)],
+        [`End Date-Time:`, formatDateTime(batch.completedAt)],
         [
-          'Viscosity',
-          stdViscosity > 0 ? stdViscosity.toString() : '-',
-          actViscosity > 0 ? actViscosity.toString() : '-',
-          viscosityVariance !== 0 ? viscosityVariance.toFixed(2) : '0.00',
+          `Total Time:`,
+          (() => {
+            if (!batch.actualTimeHours) return batch.timeRequired || '-';
+            const hours = Math.floor(parseFloat(batch.actualTimeHours));
+            const minutes = Math.round((parseFloat(batch.actualTimeHours) - hours) * 60);
+            return `${hours} Hrs ${minutes} Min`;
+          })(),
         ],
-        [
-          'Total Weight (Kg)',
-          stdTotalWeight.toFixed(2),
-          actTotalWeight.toFixed(2),
-          totalWeightVariance.toFixed(2),
-        ],
-      ],
-      theme: 'grid',
-      styles: {
-        fontSize: 8,
-        cellPadding: 2,
-        lineColor: [229, 231, 235], // Gray 200
-        lineWidth: 0.1,
-        textColor: colorGray700,
-      },
-      headStyles: {
-        fillColor: colorGray100,
-        textColor: [0, 0, 0],
-        fontStyle: 'bold',
-        fontSize: 8,
-        lineWidth: 0.1,
-        lineColor: [229, 231, 235],
-      },
-      columnStyles: {
-        0: { cellWidth: 25 },
-        1: { cellWidth: 20, halign: 'right' },
-        2: { cellWidth: 15, halign: 'right' },
-        3: { cellWidth: 15, halign: 'right' },
-      },
-      tableWidth: 80, // Tweak width to fit
-    });
-
-    let currentY = Math.max(infoBlockFinalY, (doc as any).lastAutoTable.finalY) + 10;
-
-    // 3. Tables Section - Side by Side
-    // Separate regular and additional materials
-    // Ingredients Body and Totals - Already calculated above
-    const ingredientsBody = ingredients.map((rm, index) => [
-      index + 1,
-      rm.rawMaterialName,
-      formatNumber(rm.percentage),
-      formatNumber(rm.actualQty || rm.percentage),
-    ]);
-
-    // Sub Products Body - Using calculated filtered list
-    const subProductsBody = filteredSubProducts.map(sp => {
-      const actualQty = parseFloat(sp.actualQty || '0');
-      const plannedQty = parseFloat(sp.batchQty || '0');
-      const effQty = actualQty > 0 ? actualQty : plannedQty;
-
-      const capacity = sp.capacity ? parseFloat(sp.capacity.toString()) : 0;
-      const ltr = effQty * capacity;
-      // Use fillingDensity or fallback to batch density for weight calc
-      const productDensity = parseFloat(sp.fillingDensity?.toString() || '0');
-      const density = productDensity > 0
-        ? productDensity
-        : parseFloat(batch.packingDensity || batch.actualDensity || batch.density || '0');
-
-      const kg = ltr * density;
-
-      return [
-        sp.productName,
-        formatNumber(sp.batchQty), // Planned Qty
-        formatNumber(sp.actualQty), // Actual Qty
-        capacity > 0 ? formatNumber(ltr) : '', // Blank if 0 in preview image
-        capacity > 0 ? formatNumber(kg) : '', // Blank if 0 in preview image
       ];
-    });
-
-    const tableY = currentY;
-    const gap = 10;
-    const tableWidth = (pageWidth - margin * 2 - gap) / 2;
-
-    // Left Table: Ingredients
-    autoTable(doc, {
-      startY: tableY,
-      margin: { left: margin },
-      head: [['Seq', 'Product', 'Percentage (%)', 'Actual']],
-      body: ingredientsBody,
-      theme: 'grid',
-      styles: {
-        fontSize: 8,
-        cellPadding: 2,
-        lineColor: [229, 231, 235],
-        lineWidth: 0.1,
-        textColor: colorGray700,
-      },
-      headStyles: {
-        fillColor: colorGray100,
-        textColor: [0, 0, 0],
-        fontStyle: 'bold',
-        lineWidth: 0.1,
-        lineColor: [229, 231, 235],
-      },
-      columnStyles: {
-        0: { cellWidth: 10, halign: 'center' },
-        1: { cellWidth: 'auto' },
-        2: { cellWidth: 25, halign: 'right' },
-        3: { cellWidth: 20, halign: 'right' },
-      },
-      tableWidth: tableWidth,
-      foot: [['', 'Total', formatNumber(totalPercentage), formatNumber(totalActualWeight)]],
-      footStyles: {
-        fillColor: colorSuccess, // Green
-        textColor: [255, 255, 255], // White
-        fontStyle: 'bold',
-        lineWidth: 0.1,
-        lineColor: [229, 231, 235],
-      },
-      showFoot: 'lastPage',
-      didParseCell: data => {
-        if (data.section === 'body') {
-          const rm = ingredients[data.row.index];
-          // Bold styling for additional materials
-          if (rm && rm.isAdditional) {
-            data.cell.styles.fontStyle = 'bold';
-          }
-        }
-        // Custom Footer Styling alignment
-        if (data.section === 'foot') {
-          data.cell.styles.halign = data.column.index > 1 ? 'right' : 'left';
-          if (data.column.index === 0) {
-            data.cell.styles.halign = 'center';
-          }
-        }
-      },
-    });
-
-    const leftTableFinalY = (doc as any).lastAutoTable.finalY;
-
-    // Right Table: Sub Products
-    autoTable(doc, {
-      startY: tableY,
-      margin: { left: margin + tableWidth + gap },
-      head: [['Shade', 'QTY', 'ACT QTY', 'LTR', 'KG']],
-      body: subProductsBody,
-      theme: 'grid',
-      styles: {
-        fontSize: 8,
-        cellPadding: 2,
-        lineColor: [229, 231, 235],
-        lineWidth: 0.1,
-        textColor: colorGray700,
-      },
-      headStyles: {
-        fillColor: colorGray100,
-        textColor: [0, 0, 0],
-        fontStyle: 'bold',
-        lineWidth: 0.1,
-        lineColor: [229, 231, 235],
-      },
-      columnStyles: {
-        0: { cellWidth: 'auto' }, // Shade
-        1: { cellWidth: 15, halign: 'right' }, // QTY
-        2: { cellWidth: 15, halign: 'right' }, // ACT QTY
-        3: { cellWidth: 15, halign: 'right' }, // LTR
-        4: { cellWidth: 15, halign: 'right' }, // KG
-      },
-      tableWidth: tableWidth,
-      foot: [
-        [
-          'Total',
-          formatNumber(totalBatchQty),
-          formatNumber(totalSubActualQty),
-          formatNumber(totalLtr),
-          formatNumber(totalKg),
-        ],
-      ],
-      footStyles: {
-        fillColor: colorSuccess, // Green
-        textColor: [255, 255, 255], // White
-        fontStyle: 'bold',
-        lineWidth: 0.1,
-        lineColor: [229, 231, 235],
-      },
-      showFoot: 'lastPage',
-    });
-
-    const rightTableFinalY = (doc as any).lastAutoTable.finalY;
-    let nextY = Math.max(leftTableFinalY, rightTableFinalY) + 10;
-
-    // Packaging Materials Table (Below the split columns, full width or centered)
-    // Matches the "Based on Actual Output" table in Preview
-    // Filter to only show materials with actualQty > 0
-    const filteredPackagingMaterials = (batch.packagingMaterials || []).filter(pm => {
-      const qty =
-        typeof pm.actualQty === 'number' ? pm.actualQty : parseFloat(String(pm.actualQty || '0'));
-      return qty > 0;
-    });
-
-    if (filteredPackagingMaterials.length > 0) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      doc.text('Packaging Materials Used (Based on Actual Output)', margin, nextY - 2);
-
-      const packagingBody = filteredPackagingMaterials.map(pm => [
-        pm.packagingName,
-        formatNumber(pm.actualQty),
-      ]);
-
-      const totalPlannedPM = filteredPackagingMaterials.reduce((sum, pm) => sum + pm.plannedQty, 0);
-      const totalActualPM = filteredPackagingMaterials.reduce((sum, pm) => sum + pm.actualQty, 0);
 
       autoTable(doc, {
-        startY: nextY,
+        startY: headerEndY + 5,
         margin: { left: margin },
-        head: [['Packaging Name', 'Actual Qty']],
-        body: packagingBody,
+        body: infoData,
+        theme: 'plain',
+        styles: {
+          fontSize: 10,
+          cellPadding: 1.5,
+          font: 'helvetica',
+          textColor: colorGray700,
+        },
+        columnStyles: {
+          0: { cellWidth: 35, fontStyle: 'bold' },
+          1: { cellWidth: 60 },
+        },
+        tableWidth: 95, // Occupy left side
+      });
+
+      const infoBlockFinalY = (doc as any).lastAutoTable.finalY;
+
+      // 3. Right Side: Quality & Variance Analysis Table
+      // Calculate variance values
+      const stdDensity = batch.density ? parseFloat(batch.density) : 0;
+      const actDensity = batch.actualDensity ? parseFloat(batch.actualDensity) : 0;
+      const densityVariance = actDensity - stdDensity;
+
+      const stdViscosity = batch.viscosity ? parseFloat(batch.viscosity) : 0;
+      const actViscosity = batch.actualViscosity ? parseFloat(batch.actualViscosity) : 0;
+      const viscosityVariance = actViscosity - stdViscosity;
+
+      // --- CALCULATIONS FOR TABLES (Moved up for use in Quality Table) ---
+
+      // 1. Ingredients Calculation (Left Table)
+      const allIngredients = (batch.rawMaterials || []).filter(rm => rm.productType !== 'PM');
+      const regularIngredients = allIngredients.filter(rm => !rm.isAdditional);
+      const additionalIngredients = allIngredients.filter(rm => rm.isAdditional);
+      const ingredients = [...regularIngredients, ...additionalIngredients];
+
+      // Total Actual Weight from Ingredients (Sum of Actual Qty)
+      const totalActualWeight = ingredients.reduce(
+        (sum, rm) => sum + parseFloat(rm.actualQty || rm.percentage || '0'),
+        0
+      );
+      const totalPercentage = ingredients.reduce(
+        (sum, rm) => sum + parseFloat(rm.percentage || '0'),
+        0
+      );
+
+      // 2. Sub Products Calculation (Right Table / Shade Table)
+      const filteredSubProducts = (batch.subProducts || []).filter(sp => {
+        const actQty = parseFloat(sp.actualQty || '0');
+        const batchQty = parseFloat(sp.batchQty || '0');
+        return actQty > 0 || batchQty > 0;
+      });
+
+      // Total LTR from Sub Products
+      const totalLtr = (batch.subProducts || []).reduce((s, x) => {
+        const qty = parseFloat(x.actualQty || '0');
+        const capacity = x.capacity ? parseFloat(x.capacity.toString()) : 0;
+        return s + qty * capacity;
+      }, 0);
+
+      const totalBatchQty = filteredSubProducts.reduce(
+        (s, x) => s + (parseFloat(x.batchQty || '0') || 0),
+        0
+      );
+      const totalSubActualQty = filteredSubProducts.reduce(
+        (s, x) => s + (parseFloat(x.actualQty || '0') || 0),
+        0
+      );
+      const totalKg = (batch.subProducts || []).reduce((s, x) => {
+        const actualQty = parseFloat(x.actualQty || '0');
+        const plannedQty = parseFloat(x.batchQty || '0');
+
+        const effQty = actualQty > 0 ? actualQty : plannedQty;
+
+        const capacity = x.capacity ? parseFloat(x.capacity.toString()) : 0;
+        const ltr = effQty * capacity;
+        // Use fillingDensity or fallback to batch density for weight calc
+        const density =
+          parseFloat(x.fillingDensity?.toString() || '0') ||
+          parseFloat(batch.packingDensity || batch.actualDensity || batch.density || '0');
+
+        return s + ltr * density;
+      }, 0);
+
+      // Calculate total weight for Quality Table
+      // Standard = Total of Actual Column from Ingredients Table
+      const stdTotalWeight = totalActualWeight;
+
+      // Actual = Total of LTR Column in Shade Table * Actual Density
+      const actTotalWeight = totalLtr * actDensity;
+      const totalWeightVariance = actTotalWeight - stdTotalWeight;
+
+      // Header for Quality Table
+      const rightTableX = 115;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0); // Black
+      const qualityTitleY = headerEndY + 5; // Align with left info block start
+      doc.text('Quality & Variance Analysis', rightTableX, qualityTitleY);
+
+      autoTable(doc, {
+        startY: qualityTitleY + 4, // Start table below title
+        margin: { left: rightTableX }, // Align to right side
+        head: [['Parameter', 'Standard ', 'Actual', 'Variance']],
+        body: [
+          ['Density', stdDensity.toFixed(2), actDensity.toFixed(2), densityVariance.toFixed(2)],
+          [
+            'Viscosity',
+            stdViscosity > 0 ? stdViscosity.toString() : '-',
+            actViscosity > 0 ? actViscosity.toString() : '-',
+            viscosityVariance !== 0 ? viscosityVariance.toFixed(2) : '0.00',
+          ],
+          [
+            'Total Weight (Kg)',
+            stdTotalWeight.toFixed(2),
+            actTotalWeight.toFixed(2),
+            totalWeightVariance.toFixed(2),
+          ],
+        ],
+        theme: 'grid',
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+          lineColor: [229, 231, 235], // Gray 200
+          lineWidth: 0.1,
+          textColor: colorGray700,
+        },
+        headStyles: {
+          fillColor: colorGray100,
+          textColor: [0, 0, 0],
+          fontStyle: 'bold',
+          fontSize: 8,
+          lineWidth: 0.1,
+          lineColor: [229, 231, 235],
+        },
+        columnStyles: {
+          0: { cellWidth: 25 },
+          1: { cellWidth: 20, halign: 'right' },
+          2: { cellWidth: 15, halign: 'right' },
+          3: { cellWidth: 15, halign: 'right' },
+        },
+        tableWidth: 80, // Tweak width to fit
+      });
+
+      let currentY = Math.max(infoBlockFinalY, (doc as any).lastAutoTable.finalY) + 10;
+
+      // 3. Tables Section - Side by Side
+      // Separate regular and additional materials
+      // Ingredients Body and Totals - Already calculated above
+      const ingredientsBody = ingredients.map((rm, index) => [
+        index + 1,
+        rm.rawMaterialName,
+        formatNumber(rm.percentage),
+        formatNumber(rm.actualQty || rm.percentage),
+      ]);
+
+      // Sub Products Body - Using calculated filtered list
+      const subProductsBody = filteredSubProducts.map(sp => {
+        const actualQty = parseFloat(sp.actualQty || '0');
+        const plannedQty = parseFloat(sp.batchQty || '0');
+        const effQty = actualQty > 0 ? actualQty : plannedQty;
+
+        const capacity = sp.capacity ? parseFloat(sp.capacity.toString()) : 0;
+        const ltr = effQty * capacity;
+        // Use fillingDensity or fallback to batch density for weight calc
+        const productDensity = parseFloat(sp.fillingDensity?.toString() || '0');
+        const density =
+          productDensity > 0
+            ? productDensity
+            : parseFloat(batch.packingDensity || batch.actualDensity || batch.density || '0');
+
+        const kg = ltr * density;
+
+        return [
+          sp.productName,
+          formatNumber(sp.batchQty), // Planned Qty
+          formatNumber(sp.actualQty), // Actual Qty
+          capacity > 0 ? formatNumber(ltr) : '', // Blank if 0 in preview image
+          capacity > 0 ? formatNumber(kg) : '', // Blank if 0 in preview image
+        ];
+      });
+
+      const tableY = currentY;
+      const gap = 10;
+      const tableWidth = (pageWidth - margin * 2 - gap) / 2;
+
+      // Left Table: Ingredients
+      autoTable(doc, {
+        startY: tableY,
+        margin: { left: margin },
+        head: [['Seq', 'Product', 'Percentage (%)', 'Actual']],
+        body: ingredientsBody,
         theme: 'grid',
         styles: {
           fontSize: 8,
@@ -539,12 +409,79 @@ const BatchProductionReport = () => {
           lineColor: [229, 231, 235],
         },
         columnStyles: {
-          0: { cellWidth: 'auto' },
-          1: { cellWidth: 30, halign: 'right' },
+          0: { cellWidth: 10, halign: 'center' },
+          1: { cellWidth: 'auto' },
+          2: { cellWidth: 25, halign: 'right' },
+          3: { cellWidth: 20, halign: 'right' },
         },
-        // We can make this table same width as page or smaller. Let's make it full width relative to margins
-        tableWidth: pageWidth - margin * 2,
-        foot: [['Total', formatNumber(totalActualPM)]],
+        tableWidth: tableWidth,
+        foot: [['', 'Total', formatNumber(totalPercentage), formatNumber(totalActualWeight)]],
+        footStyles: {
+          fillColor: colorSuccess, // Green
+          textColor: [255, 255, 255], // White
+          fontStyle: 'bold',
+          lineWidth: 0.1,
+          lineColor: [229, 231, 235],
+        },
+        showFoot: 'lastPage',
+        didParseCell: data => {
+          if (data.section === 'body') {
+            const rm = ingredients[data.row.index];
+            // Bold styling for additional materials
+            if (rm && rm.isAdditional) {
+              data.cell.styles.fontStyle = 'bold';
+            }
+          }
+          // Custom Footer Styling alignment
+          if (data.section === 'foot') {
+            data.cell.styles.halign = data.column.index > 1 ? 'right' : 'left';
+            if (data.column.index === 0) {
+              data.cell.styles.halign = 'center';
+            }
+          }
+        },
+      });
+
+      const leftTableFinalY = (doc as any).lastAutoTable.finalY;
+
+      // Right Table: Sub Products
+      autoTable(doc, {
+        startY: tableY,
+        margin: { left: margin + tableWidth + gap },
+        head: [['Shade', 'QTY', 'ACT QTY', 'LTR', 'KG']],
+        body: subProductsBody,
+        theme: 'grid',
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+          lineColor: [229, 231, 235],
+          lineWidth: 0.1,
+          textColor: colorGray700,
+        },
+        headStyles: {
+          fillColor: colorGray100,
+          textColor: [0, 0, 0],
+          fontStyle: 'bold',
+          lineWidth: 0.1,
+          lineColor: [229, 231, 235],
+        },
+        columnStyles: {
+          0: { cellWidth: 'auto' }, // Shade
+          1: { cellWidth: 15, halign: 'right' }, // QTY
+          2: { cellWidth: 15, halign: 'right' }, // ACT QTY
+          3: { cellWidth: 15, halign: 'right' }, // LTR
+          4: { cellWidth: 15, halign: 'right' }, // KG
+        },
+        tableWidth: tableWidth,
+        foot: [
+          [
+            'Total',
+            formatNumber(totalBatchQty),
+            formatNumber(totalSubActualQty),
+            formatNumber(totalLtr),
+            formatNumber(totalKg),
+          ],
+        ],
         footStyles: {
           fillColor: colorSuccess, // Green
           textColor: [255, 255, 255], // White
@@ -555,50 +492,118 @@ const BatchProductionReport = () => {
         showFoot: 'lastPage',
       });
 
-      nextY = (doc as any).lastAutoTable.finalY + 10;
-    }
+      const rightTableFinalY = (doc as any).lastAutoTable.finalY;
+      let nextY = Math.max(leftTableFinalY, rightTableFinalY) + 10;
 
-    // 4. Footer: Remark & Signs
-    // Ensure we don't fall off the page - simplistic check
-    if (nextY > 250) {
-      doc.addPage();
-      nextY = 20;
-    }
+      // Packaging Materials Table (Below the split columns, full width or centered)
+      // Matches the "Based on Actual Output" table in Preview
+      // Filter to only show materials with actualQty > 0
+      const filteredPackagingMaterials = (batch.packagingMaterials || []).filter(pm => {
+        const qty =
+          typeof pm.actualQty === 'number' ? pm.actualQty : parseFloat(String(pm.actualQty || '0'));
+        return qty > 0;
+      });
 
-    currentY = nextY;
+      if (filteredPackagingMaterials.length > 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Packaging Materials Used (Based on Actual Output)', margin, nextY - 2);
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10); // Reset font size
-    doc.setTextColor(0, 0, 0);
-    doc.text('Production Remark :', margin, currentY);
+        const packagingBody = filteredPackagingMaterials.map(pm => [
+          pm.packagingName,
+          formatNumber(pm.actualQty),
+        ]);
 
-    doc.setLineWidth(0.5);
-    doc.line(margin, currentY + 2, pageWidth - margin, currentY + 2); // Underline
+        const totalPlannedPM = filteredPackagingMaterials.reduce(
+          (sum, pm) => sum + pm.plannedQty,
+          0
+        );
+        const totalActualPM = filteredPackagingMaterials.reduce((sum, pm) => sum + pm.actualQty, 0);
 
-    currentY += 8;
-    doc.setFont('helvetica', 'normal');
-    // Split text to fit width
-    const remarks = doc.splitTextToSize(batch.productionRemarks || '-', pageWidth - margin * 2);
-    doc.text(remarks, margin, currentY);
+        autoTable(doc, {
+          startY: nextY,
+          margin: { left: margin },
+          head: [['Packaging Name', 'Actual Qty']],
+          body: packagingBody,
+          theme: 'grid',
+          styles: {
+            fontSize: 8,
+            cellPadding: 2,
+            lineColor: [229, 231, 235],
+            lineWidth: 0.1,
+            textColor: colorGray700,
+          },
+          headStyles: {
+            fillColor: colorGray100,
+            textColor: [0, 0, 0],
+            fontStyle: 'bold',
+            lineWidth: 0.1,
+            lineColor: [229, 231, 235],
+          },
+          columnStyles: {
+            0: { cellWidth: 'auto' },
+            1: { cellWidth: 30, halign: 'right' },
+          },
+          // We can make this table same width as page or smaller. Let's make it full width relative to margins
+          tableWidth: pageWidth - margin * 2,
+          foot: [['Total', formatNumber(totalActualPM)]],
+          footStyles: {
+            fillColor: colorSuccess, // Green
+            textColor: [255, 255, 255], // White
+            fontStyle: 'bold',
+            lineWidth: 0.1,
+            lineColor: [229, 231, 235],
+          },
+          showFoot: 'lastPage',
+        });
 
-    currentY += 20; // Space for signatures
+        nextY = (doc as any).lastAutoTable.finalY + 10;
+      }
 
-    // Signatures
-    doc.setFont('helvetica', 'bold');
-    doc.text('Labours Sign :-', 40, currentY);
-    doc.text('Superviser Sign :-', 140, currentY);
+      // 4. Footer: Remark & Signs
+      // Ensure we don't fall off the page - simplistic check
+      if (nextY > 250) {
+        doc.addPage();
+        nextY = 20;
+      }
 
-    currentY += 6;
-    doc.setFont('helvetica', 'normal');
-    const labourName = batch.labourNames ? batch.labourNames.split(',')[0] : '';
-    doc.text(labourName || '', 40, currentY);
-    doc.text(batch.supervisor || '', 140, currentY);
+      currentY = nextY;
 
-    // Save PDF
-    addPdfFooter(doc);
-    doc.save(`Batch_Report_${batch.batchNo}.pdf`);
-    showToast.success(`Downloaded report for batch ${batch.batchNo}`);
-  }, [companyInfo]);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10); // Reset font size
+      doc.setTextColor(0, 0, 0);
+      doc.text('Production Remark :', margin, currentY);
+
+      doc.setLineWidth(0.5);
+      doc.line(margin, currentY + 2, pageWidth - margin, currentY + 2); // Underline
+
+      currentY += 8;
+      doc.setFont('helvetica', 'normal');
+      // Split text to fit width
+      const remarks = doc.splitTextToSize(batch.productionRemarks || '-', pageWidth - margin * 2);
+      doc.text(remarks, margin, currentY);
+
+      currentY += 20; // Space for signatures
+
+      // Signatures
+      doc.setFont('helvetica', 'bold');
+      doc.text('Labours Sign :-', 40, currentY);
+      doc.text('Superviser Sign :-', 140, currentY);
+
+      currentY += 6;
+      doc.setFont('helvetica', 'normal');
+      const labourName = batch.labourNames ? batch.labourNames.split(',')[0] : '';
+      doc.text(labourName || '', 40, currentY);
+      doc.text(batch.supervisor || '', 140, currentY);
+
+      // Save PDF
+      addPdfFooter(doc);
+      doc.save(`Batch_Report_${batch.batchNo}.pdf`);
+      showToast.success(`Downloaded report for batch ${batch.batchNo}`);
+    },
+    [companyInfo]
+  );
 
   const handleExportAll = () => {
     if (data.length === 0) {
@@ -1121,12 +1126,13 @@ const BatchProductionReport = () => {
             <div className="flex justify-center">
               <Badge
                 variant="outline"
-                className={`${isPositive
-                  ? 'bg-green-600 text-white hover:bg-green-700'
-                  : isNegative
-                    ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                  } border-none rounded-sm px-1.5`}
+                className={`${
+                  isPositive
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : isNegative
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                } border-none rounded-sm px-1.5`}
               >
                 {isPositive ? '+' : ''}
                 {diff.toFixed(3)}
@@ -1209,10 +1215,11 @@ const BatchProductionReport = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div
             onClick={() => setStatusFilter('All')}
-            className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === 'All'
-              ? 'ring-2 ring-[var(--primary)] border-[var(--primary)] bg-[var(--primary-50)]'
-              : 'border-gray-100 bg-white'
-              }`}
+            className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${
+              statusFilter === 'All'
+                ? 'ring-2 ring-[var(--primary)] border-[var(--primary)] bg-[var(--primary-50)]'
+                : 'border-gray-100 bg-white'
+            }`}
           >
             <div className="flex justify-between items-start">
               <div>
@@ -1222,10 +1229,11 @@ const BatchProductionReport = () => {
                 <p className="text-3xl font-bold text-gray-900 mt-2">{stats.total}</p>
               </div>
               <div
-                className={`p-2 rounded-lg ${statusFilter === 'All'
-                  ? 'bg-[var(--primary)] text-white'
-                  : 'bg-gray-50 text-gray-400'
-                  }`}
+                className={`p-2 rounded-lg ${
+                  statusFilter === 'All'
+                    ? 'bg-[var(--primary)] text-white'
+                    : 'bg-gray-50 text-gray-400'
+                }`}
               >
                 <Layers className="w-6 h-6" />
               </div>
@@ -1234,10 +1242,11 @@ const BatchProductionReport = () => {
 
           <div
             onClick={() => setStatusFilter('In Progress')}
-            className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === 'In Progress'
-              ? 'ring-2 ring-blue-500 border-blue-500 bg-blue-50'
-              : 'border-blue-100 bg-blue-50/30'
-              }`}
+            className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${
+              statusFilter === 'In Progress'
+                ? 'ring-2 ring-blue-500 border-blue-500 bg-blue-50'
+                : 'border-blue-100 bg-blue-50/30'
+            }`}
           >
             <div className="flex justify-between items-start">
               <div>
@@ -1247,10 +1256,11 @@ const BatchProductionReport = () => {
                 <p className="text-3xl font-bold text-blue-700 mt-2">{stats.inProgress}</p>
               </div>
               <div
-                className={`p-2 rounded-lg ${statusFilter === 'In Progress'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-blue-100 text-blue-600'
-                  }`}
+                className={`p-2 rounded-lg ${
+                  statusFilter === 'In Progress'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-blue-100 text-blue-600'
+                }`}
               >
                 <Loader className="w-6 h-6 animate-spin-slow" />
               </div>
@@ -1258,10 +1268,11 @@ const BatchProductionReport = () => {
           </div>
           <div
             onClick={() => setStatusFilter('Completed')}
-            className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === 'Completed'
-              ? 'ring-2 ring-green-500 border-green-500 bg-green-50'
-              : 'border-green-100 bg-green-50/30'
-              }`}
+            className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${
+              statusFilter === 'Completed'
+                ? 'ring-2 ring-green-500 border-green-500 bg-green-50'
+                : 'border-green-100 bg-green-50/30'
+            }`}
           >
             <div className="flex justify-between items-start">
               <div>
@@ -1271,10 +1282,11 @@ const BatchProductionReport = () => {
                 <p className="text-3xl font-bold text-green-700 mt-2">{stats.completed}</p>
               </div>
               <div
-                className={`p-2 rounded-lg ${statusFilter === 'Completed'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-green-100 text-green-600'
-                  }`}
+                className={`p-2 rounded-lg ${
+                  statusFilter === 'Completed'
+                    ? 'bg-green-500 text-white'
+                    : 'bg-green-100 text-green-600'
+                }`}
               >
                 <CheckCircle className="w-6 h-6" />
               </div>
@@ -1282,10 +1294,11 @@ const BatchProductionReport = () => {
           </div>
           <div
             onClick={() => setStatusFilter('Cancelled')}
-            className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === 'Cancelled'
-              ? 'ring-2 ring-red-500 border-red-500 bg-red-50'
-              : 'border-red-100 bg-red-50/30'
-              }`}
+            className={`card p-4 border shadow-sm hover:shadow-md transition-all cursor-pointer ${
+              statusFilter === 'Cancelled'
+                ? 'ring-2 ring-red-500 border-red-500 bg-red-50'
+                : 'border-red-100 bg-red-50/30'
+            }`}
           >
             <div className="flex justify-between items-start">
               <div>
@@ -1295,10 +1308,9 @@ const BatchProductionReport = () => {
                 <p className="text-3xl font-bold text-red-700 mt-2">{stats.cancelled}</p>
               </div>
               <div
-                className={`p-2 rounded-lg ${statusFilter === 'Cancelled'
-                  ? 'bg-red-500 text-white'
-                  : 'bg-red-100 text-red-600'
-                  }`}
+                className={`p-2 rounded-lg ${
+                  statusFilter === 'Cancelled' ? 'bg-red-500 text-white' : 'bg-red-100 text-red-600'
+                }`}
               >
                 <XCircle className="w-6 h-6" />
               </div>
@@ -1335,10 +1347,11 @@ const BatchProductionReport = () => {
             size="sm"
             variant={statusFilter === status ? 'primary' : 'secondary'}
             onClick={() => setStatusFilter(status)}
-            className={`min-w-[100px] transition-all duration-200 ${statusFilter === status
-              ? 'bg-[var(--primary)] text-white shadow-md transform scale-105'
-              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-              }`}
+            className={`min-w-[100px] transition-all duration-200 ${
+              statusFilter === status
+                ? 'bg-[var(--primary)] text-white shadow-md transform scale-105'
+                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+            }`}
           >
             {status}
           </Button>
@@ -1367,17 +1380,17 @@ const BatchProductionReport = () => {
                   Sub-Products (Batch Variants)
                 </h4>
                 {row.original.subProducts &&
-                  row.original.subProducts.filter(sub => {
-                    const actQty =
-                      typeof sub.actualQty === 'number'
-                        ? sub.actualQty
-                        : parseFloat(sub.actualQty || '0');
-                    const batchQty =
-                      typeof sub.batchQty === 'number'
-                        ? sub.batchQty
-                        : parseFloat(sub.batchQty || '0');
-                    return actQty > 0 || batchQty > 0;
-                  }).length > 0 ? (
+                row.original.subProducts.filter(sub => {
+                  const actQty =
+                    typeof sub.actualQty === 'number'
+                      ? sub.actualQty
+                      : parseFloat(sub.actualQty || '0');
+                  const batchQty =
+                    typeof sub.batchQty === 'number'
+                      ? sub.batchQty
+                      : parseFloat(sub.batchQty || '0');
+                  return actQty > 0 || batchQty > 0;
+                }).length > 0 ? (
                   <table className="w-full text-sm text-left bg-[var(--surface)] rounded-lg border border-[var(--border)]">
                     <thead className="bg-[var(--color-neutral-100)] text-[var(--text-secondary)]">
                       <tr>
@@ -1540,15 +1553,11 @@ const BatchProductionReport = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-gray-600">Start Date-Time:</span>
-                  <span className="text-gray-900">
-                    {formatDateTime(previewBatch.startedAt)}
-                  </span>
+                  <span className="text-gray-900">{formatDateTime(previewBatch.startedAt)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-gray-600">End Date-Time:</span>
-                  <span className="text-gray-900">
-                    {formatDateTime(previewBatch.completedAt)}
-                  </span>
+                  <span className="text-gray-900">{formatDateTime(previewBatch.completedAt)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold text-gray-600">Total Time:</span>
@@ -1696,16 +1705,24 @@ const BatchProductionReport = () => {
                             const isWater = rm.rawMaterialName.toLowerCase().includes('water');
                             return (
                               <tr key={`add-${idx}`}>
-                                <td className={`border border-gray-300 px-2 py-1 text-center ${isWater ? 'font-bold' : ''}`}>
+                                <td
+                                  className={`border border-gray-300 px-2 py-1 text-center ${isWater ? 'font-bold' : ''}`}
+                                >
                                   {regular.length + idx + 1}
                                 </td>
-                                <td className={`border border-gray-300 px-2 py-1 ${isWater ? 'font-bold' : ''}`}>
+                                <td
+                                  className={`border border-gray-300 px-2 py-1 ${isWater ? 'font-bold' : ''}`}
+                                >
                                   {rm.rawMaterialName}
                                 </td>
-                                <td className={`border border-gray-300 px-2 py-1 text-right ${isWater ? 'font-bold' : ''}`}>
+                                <td
+                                  className={`border border-gray-300 px-2 py-1 text-right ${isWater ? 'font-bold' : ''}`}
+                                >
                                   {formatNumberForPreview(rm.percentage)}
                                 </td>
-                                <td className={`border border-gray-300 px-2 py-1 text-right ${isWater ? 'font-bold' : ''}`}>
+                                <td
+                                  className={`border border-gray-300 px-2 py-1 text-right ${isWater ? 'font-bold' : ''}`}
+                                >
                                   {formatNumberForPreview(rm.actualQty || rm.percentage)}
                                 </td>
                               </tr>
@@ -1745,18 +1762,18 @@ const BatchProductionReport = () => {
                   </thead>
                   <tbody>
                     {previewBatch.subProducts &&
-                      previewBatch.subProducts.filter(sp => {
-                        // Only show SKUs with actualQty > 0 OR batchQty > 0
-                        const actQty =
-                          typeof sp.actualQty === 'number'
-                            ? sp.actualQty
-                            : parseFloat(sp.actualQty || '0');
-                        const batchQty =
-                          typeof sp.batchQty === 'number'
-                            ? sp.batchQty
-                            : parseFloat(sp.batchQty || '0');
-                        return actQty > 0 || batchQty > 0;
-                      }).length > 0 ? (
+                    previewBatch.subProducts.filter(sp => {
+                      // Only show SKUs with actualQty > 0 OR batchQty > 0
+                      const actQty =
+                        typeof sp.actualQty === 'number'
+                          ? sp.actualQty
+                          : parseFloat(sp.actualQty || '0');
+                      const batchQty =
+                        typeof sp.batchQty === 'number'
+                          ? sp.batchQty
+                          : parseFloat(sp.batchQty || '0');
+                      return actQty > 0 || batchQty > 0;
+                    }).length > 0 ? (
                       previewBatch.subProducts
                         .filter(sp => {
                           const actQty =

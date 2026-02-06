@@ -8,14 +8,29 @@ export const formatDisplayOrderId = (orderId: number, dateString?: string) => {
 };
 
 const ones = [
-  '', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
-  'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen',
-  'seventeen', 'eighteen', 'nineteen'
+  '',
+  'one',
+  'two',
+  'three',
+  'four',
+  'five',
+  'six',
+  'seven',
+  'eight',
+  'nine',
+  'ten',
+  'eleven',
+  'twelve',
+  'thirteen',
+  'fourteen',
+  'fifteen',
+  'sixteen',
+  'seventeen',
+  'eighteen',
+  'nineteen',
 ];
 
-const tens = [
-  '', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'
-];
+const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
 
 const thousands = ['', 'thousand', 'million', 'billion'];
 
@@ -129,4 +144,31 @@ export const formatCurrency = (amount: number | string | undefined | null) => {
     currency: 'INR',
     maximumFractionDigits: 0,
   }).format(num);
+};
+
+/**
+ * Format decimal values for display.
+ * - If `precision` is provided (number), the value will be shown with that many decimals using `toFixed`.
+ * - If value is a string, it will be returned as-is (preserves exact stored value).
+ * - If value is a number and no precision provided, it will be converted to string without forcing fixed decimals.
+ */
+export const formatDecimalDisplay = (
+  value: number | string | null | undefined,
+  options?: { precision?: number | null; placeholder?: string }
+) => {
+  const placeholder = options?.placeholder ?? '--';
+  if (value === null || value === undefined || value === '') return placeholder;
+
+  // Preserve exact string representation when available
+  if (typeof value === 'string') return value;
+
+  // If precision explicitly requested, format accordingly
+  if (options && typeof options.precision === 'number') {
+    const n = Number(value);
+    if (isNaN(n)) return placeholder;
+    return n.toFixed(options.precision);
+  }
+
+  // Default: return canonical string form of the number without forcing decimals
+  return String(value);
 };

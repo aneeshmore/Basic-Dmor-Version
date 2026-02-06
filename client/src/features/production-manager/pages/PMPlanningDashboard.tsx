@@ -293,12 +293,13 @@ export default function PMPlanningDashboard() {
       />
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           icon={<Package className="w-5 h-5" />}
           label="Total Products"
           value={stats.totalProducts}
           color="primary"
+          onClick={() => setActiveTab('all')}
         />
         <StatCard
           icon={<Factory className="w-5 h-5" />}
@@ -319,14 +320,15 @@ export default function PMPlanningDashboard() {
           label="Production Weight"
           value={`${stats.totalWeight.toFixed(2)} kg`}
           color="secondary"
+          onClick={() => setActiveTab('production')}
         />
       </div>
 
       {/* Action Bar */}
-      <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4">
-        <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
+      <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-3 sm:p-4">
+        <div className="flex flex-col gap-3 sm:gap-4">
           {/* Tab Buttons */}
-          <div className="flex items-center gap-1 p-1 bg-[var(--surface-secondary)] rounded-lg">
+          <div className="flex flex-wrap items-center gap-1 p-1 bg-[var(--surface-secondary)] rounded-lg w-full overflow-x-auto">
             <TabButton active={activeTab === 'all'} onClick={() => setActiveTab('all')}>
               All ({groupedData.length})
             </TabButton>
@@ -349,15 +351,15 @@ export default function PMPlanningDashboard() {
           </div>
 
           {/* Search & Refresh */}
-          <div className="flex items-center gap-3">
-            <div className="relative">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="relative w-full sm:w-56">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
               <input
                 type="text"
                 placeholder="Search products..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-56 pl-9 pr-4 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all"
+                className="w-full pl-9 pr-4 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)] transition-all"
               />
             </div>
             <Button
@@ -411,8 +413,9 @@ function StatCard({ icon, label, value, color, onClick }: StatCardProps) {
 
   return (
     <div
-      className={`bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 transition-all ${onClick ? 'cursor-pointer hover:border-[var(--primary)] hover:shadow-md' : ''
-        }`}
+      className={`bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 transition-all ${
+        onClick ? 'cursor-pointer hover:border-[var(--primary)] hover:shadow-md' : ''
+      }`}
       onClick={onClick}
     >
       <div className="flex items-center gap-3">
@@ -439,10 +442,11 @@ function ViewToggle({ active, onClick, children, icon }: ViewToggleProps) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${active
-        ? 'bg-[var(--primary)] text-white shadow-sm'
-        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
-        }`}
+      className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+        active
+          ? 'bg-[var(--primary)] text-white shadow-sm'
+          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+      }`}
     >
       {icon}
       {children}
@@ -470,10 +474,11 @@ function TabButton({ active, onClick, children, color }: TabButtonProps) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${active
-        ? activeColor + ' shadow-sm'
-        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
-        }`}
+      className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+        active
+          ? activeColor + ' shadow-sm'
+          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+      }`}
     >
       {children}
     </button>
@@ -561,80 +566,91 @@ function ProductCard({
 
   return (
     <div
-      className={`bg-[var(--surface)] rounded-xl border transition-all overflow-hidden ${isExpanded
-        ? 'border-[var(--primary)]/40 shadow-lg shadow-[var(--primary)]/5'
-        : 'border-[var(--border)] hover:border-[var(--border-hover)]'
-        }`}
+      className={`bg-[var(--surface)] rounded-xl border transition-all overflow-hidden ${
+        isExpanded
+          ? 'border-[var(--primary)]/40 shadow-lg shadow-[var(--primary)]/5'
+          : 'border-[var(--border)] hover:border-[var(--border-hover)]'
+      }`}
     >
       {/* Header Row */}
       <div
-        className="flex items-center gap-4 p-4 cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
+        className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
         onClick={onToggle}
       >
-        <button className="p-1 rounded hover:bg-[var(--surface-secondary)] transition-colors">
-          {isExpanded ? (
-            <ChevronDown className="w-5 h-5 text-[var(--text-secondary)]" />
-          ) : (
-            <ChevronRight className="w-5 h-5 text-[var(--text-secondary)]" />
-          )}
-        </button>
-
-        <div
-          className={`w-1.5 h-12 rounded-full ${needsProduction ? 'bg-[var(--warning)]' : 'bg-[var(--success)]'
-            }`}
-        />
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-[var(--text-primary)] uppercase tracking-wide">
-              {group.masterProductName}
-            </h3>
-            {needsProduction ? (
-              <span className="px-2 py-0.5 text-xs font-medium bg-[var(--warning)]/10 text-[var(--warning)] rounded-full">
-                Production Needed
-              </span>
+        {/* Top row: Toggle, Title, Status Badge */}
+        <div className="flex items-center gap-3 sm:gap-4 w-full sm:flex-1">
+          <button className="p-1 rounded hover:bg-[var(--surface-secondary)] transition-colors flex-shrink-0">
+            {isExpanded ? (
+              <ChevronDown className="w-5 h-5 text-[var(--text-secondary)]" />
             ) : (
-              <span className="px-2 py-0.5 text-xs font-medium bg-[var(--success)]/10 text-[var(--success)] rounded-full">
-                Stock Available
-              </span>
+              <ChevronRight className="w-5 h-5 text-[var(--text-secondary)]" />
             )}
-          </div>
-          <div className="flex items-center gap-4 mt-1 text-sm text-[var(--text-secondary)]">
-            <span>{group.products.length} SKU(s)</span>
-            <span>•</span>
-            <span>{group.allOrderIds.length} Order(s)</span>
+          </button>
+
+          <div
+            className={`w-1.5 h-10 sm:h-12 rounded-full flex-shrink-0 ${
+              needsProduction ? 'bg-[var(--warning)]' : 'bg-[var(--success)]'
+            }`}
+          />
+
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+              <h3 className="font-semibold text-[var(--text-primary)] uppercase tracking-wide text-sm sm:text-base">
+                {group.masterProductName}
+              </h3>
+              {needsProduction ? (
+                <span className="px-2 py-0.5 text-xs font-medium bg-[var(--warning)]/10 text-[var(--warning)] rounded-full w-fit">
+                  Production Needed
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 text-xs font-medium bg-[var(--success)]/10 text-[var(--success)] rounded-full w-fit">
+                  Stock Available
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-4 mt-1 text-xs sm:text-sm text-[var(--text-secondary)]">
+              <span>{group.products.length} SKU(s)</span>
+              <span>•</span>
+              <span>{group.allOrderIds.length} Order(s)</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-6 text-center">
+        {/* Bottom row on mobile, inline on desktop: Metrics */}
+        <div className="flex items-center gap-2 sm:gap-4 text-center w-full sm:w-auto text-xs sm:text-base">
           <div>
-            <p className="text-xs text-[var(--text-tertiary)] uppercase">Ordered</p>
-            <p className="text-lg font-bold text-[var(--text-primary)]">{group.totalOrderQty}</p>
+            <p className="text-[10px] sm:text-xs text-[var(--text-tertiary)] uppercase">Ordered</p>
+            <p className="font-bold text-[var(--text-primary)]">{group.totalOrderQty}</p>
           </div>
           <div>
-            <p className="text-xs text-[var(--text-tertiary)] uppercase">Available</p>
+            <p className="text-[10px] sm:text-xs text-[var(--text-tertiary)] uppercase">
+              Available
+            </p>
             <p
-              className={`text-lg font-bold ${group.totalAvailableQty >= group.totalOrderQty
-                ? 'text-[var(--success)]'
-                : 'text-[var(--danger)]'
-                }`}
+              className={`font-bold ${
+                group.totalAvailableQty >= group.totalOrderQty
+                  ? 'text-[var(--success)]'
+                  : 'text-[var(--danger)]'
+              }`}
             >
               {group.totalAvailableQty}
             </p>
           </div>
           <div>
-            <p className="text-xs text-[var(--text-tertiary)] uppercase">To Produce</p>
-            <p className="text-lg font-bold text-[var(--primary)]">{group.totalProductionQty}</p>
+            <p className="text-[10px] sm:text-xs text-[var(--text-tertiary)] uppercase">
+              To Produce
+            </p>
+            <p className="font-bold text-[var(--primary)]">{group.totalProductionQty}</p>
           </div>
-          <div>
+          <div className="hidden sm:block">
             <p className="text-xs text-[var(--text-tertiary)] uppercase">Weight</p>
-            <p className="text-lg font-bold text-[var(--text-primary)]">
+            <p className="font-bold text-[var(--text-primary)]">
               {group.totalProductionWeight.toFixed(2)} kg
             </p>
           </div>
         </div>
 
-        <div className="w-28 text-center">
+        <div className="w-full sm:w-28 text-center text-xs sm:text-sm">
           {!group.feasibilityChecked ? (
             <span className="text-xs text-[var(--text-tertiary)]">Not checked</span>
           ) : group.feasible ? (
@@ -650,7 +666,10 @@ function ProductCard({
           )}
         </div>
 
-        <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+        <div
+          className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto"
+          onClick={e => e.stopPropagation()}
+        >
           {needsProduction ? (
             <>
               <Button
@@ -694,8 +713,8 @@ function ProductCard({
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="border-t border-[var(--border)] bg-[var(--surface-secondary)]/50 p-5">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="border-t border-[var(--border)] bg-[var(--surface-secondary)]/50 p-3 sm:p-5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* SKU Breakdown */}
             <div>
               <h4 className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)] mb-3">
@@ -706,7 +725,7 @@ function ProductCard({
                 {group.products.map(product => (
                   <div
                     key={product.productId}
-                    className="flex items-center justify-between p-3 bg-[var(--surface)] rounded-lg border border-[var(--border)]"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-3 bg-[var(--surface)] rounded-lg border border-[var(--border)]"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-[var(--text-primary)] text-sm truncate">
@@ -716,7 +735,7 @@ function ProductCard({
                         ID: {product.productId} • {product.packageCapacityKg || '-'} kg/unit
                       </p>
                     </div>
-                    <div className="flex items-center gap-4 text-sm ml-4">
+                    <div className="flex items-center gap-2 sm:gap-4 text-sm">
                       <div className="text-center">
                         <p className="text-[10px] text-[var(--text-tertiary)] uppercase">Order</p>
                         <p className="font-medium">{product.totalOrderQty}</p>
@@ -724,10 +743,11 @@ function ProductCard({
                       <div className="text-center">
                         <p className="text-[10px] text-[var(--text-tertiary)] uppercase">Avail</p>
                         <p
-                          className={`font-medium ${product.availableQty >= product.totalOrderQty
-                            ? 'text-[var(--success)]'
-                            : 'text-[var(--danger)]'
-                            }`}
+                          className={`font-medium ${
+                            product.availableQty >= product.totalOrderQty
+                              ? 'text-[var(--success)]'
+                              : 'text-[var(--danger)]'
+                          }`}
                         >
                           {product.availableQty}
                         </p>
@@ -786,10 +806,11 @@ function ProductCard({
                     return (
                       <div
                         key={idx}
-                        className={`flex items-center justify-between p-3 rounded-lg border ${isAvailable
-                          ? 'bg-[var(--success)]/5 border-[var(--success)]/20'
-                          : 'bg-[var(--danger)]/5 border-[var(--danger)]/20'
-                          }`}
+                        className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-3 rounded-lg border ${
+                          isAvailable
+                            ? 'bg-[var(--success)]/5 border-[var(--success)]/20'
+                            : 'bg-[var(--danger)]/5 border-[var(--danger)]/20'
+                        }`}
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           {isAvailable ? (
@@ -801,13 +822,14 @@ function ProductCard({
                             {material.materialName}
                           </span>
                         </div>
-                        <div className="flex items-center gap-4 text-sm ml-4">
+                        <div className="flex items-center gap-2 sm:gap-4 text-sm whitespace-nowrap">
                           <span className="font-medium">
                             {material.requiredQuantity.toFixed(1)} kg
                           </span>
                           <span
-                            className={`font-medium ${isAvailable ? 'text-[var(--success)]' : 'text-[var(--danger)]'
-                              }`}
+                            className={`font-medium ${
+                              isAvailable ? 'text-[var(--success)]' : 'text-[var(--danger)]'
+                            }`}
                           >
                             {isAvailable ? '✓' : `-${shortage.toFixed(1)} kg`}
                           </span>
@@ -822,10 +844,10 @@ function ProductCard({
 
           {/* Linked Orders */}
           {group.allOrderIds.length > 0 && (
-            <div className="mt-6 pt-4 border-t border-[var(--border)]">
-              <div className="flex items-center gap-2 text-sm">
-                <Layers className="w-4 h-4 text-[var(--text-tertiary)]" />
-                <span className="text-[var(--text-secondary)]">
+            <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-[var(--border)]">
+              <div className="flex items-start sm:items-center gap-2 text-xs sm:text-sm flex-col sm:flex-row">
+                <Layers className="w-4 h-4 text-[var(--text-tertiary)] flex-shrink-0" />
+                <span className="text-[var(--text-secondary)] break-words">
                   Linked Orders: {group.allOrderIds.map(id => `#${id}`).join(', ')}
                 </span>
               </div>
