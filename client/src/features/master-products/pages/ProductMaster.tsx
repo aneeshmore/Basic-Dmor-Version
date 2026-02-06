@@ -307,6 +307,7 @@ const ProductMaster = () => {
                   value: mp.masterProductId,
                 }))}
                 value={formData.MasterProductID}
+                disabled={!isEditing}
                 onChange={async val => {
                   if (!val) {
                     setFormData(prev => ({
@@ -362,7 +363,7 @@ const ProductMaster = () => {
                 }}
                 allowCustomValue={true}
                 required
-                disabled={!formData.MasterProductID}
+                disabled={!isEditing || !formData.MasterProductID}
               />
 
               {/* Packed In (PM Search) */}
@@ -375,6 +376,7 @@ const ProductMaster = () => {
                   value: mp.masterProductId,
                 }))}
                 value={formData.PackagingId}
+                disabled={!isEditing}
                 onChange={async val => {
                   setFormData(prev => ({ ...prev, PackagingId: val }));
                   // Logic for capacity is handled in backend
@@ -389,11 +391,14 @@ const ProductMaster = () => {
                 label="Min Stock Level"
                 type="number"
                 min="0"
-                value={formData.MinStockLevel ?? ''}
+                disabled={!isEditing}
+                value={
+                  isEditing && formData.MinStockLevel === 0 ? '' : (formData.MinStockLevel ?? 0)
+                }
                 onChange={e =>
                   setFormData(prev => ({
                     ...prev,
-                    MinStockLevel: Math.max(0, Number(e.target.value)),
+                    MinStockLevel: parseInt(e.target.value) || 0,
                   }))
                 }
                 placeholder="0"
@@ -404,7 +409,8 @@ const ProductMaster = () => {
                 type="number"
                 min="0"
                 step="0.01"
-                value={formData.SellingPrice ?? ''}
+                disabled={!isEditing}
+                value={isEditing && formData.SellingPrice === 0 ? '' : (formData.SellingPrice ?? 0)}
                 onChange={e =>
                   setFormData(prev => ({
                     ...prev,
@@ -419,7 +425,10 @@ const ProductMaster = () => {
                 type="number"
                 min="0"
                 step="0.01"
-                value={formData.IncentiveAmount ?? ''}
+                disabled={!isEditing}
+                value={
+                  isEditing && formData.IncentiveAmount === 0 ? '' : (formData.IncentiveAmount ?? 0)
+                }
                 onChange={e =>
                   setFormData(prev => ({
                     ...prev,

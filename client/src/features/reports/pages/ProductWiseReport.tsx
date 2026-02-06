@@ -45,7 +45,10 @@ const ProductWiseReport = () => {
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
 
   useEffect(() => {
-    companyApi.get().then(res => setCompanyInfo(res.data.data)).catch(console.error);
+    companyApi
+      .get()
+      .then(res => setCompanyInfo(res.data.data))
+      .catch(console.error);
   }, []);
 
   const [data, setData] = useState<StockReportItem[]>([]);
@@ -144,7 +147,9 @@ const ProductWiseReport = () => {
         const type =
           productTypeFilter === 'Sub-Product'
             ? 'Sub-Product'
-            : (productTypeFilter === 'All' ? undefined : (productTypeFilter as 'FG' | 'RM' | 'PM' | 'Sub-Product'));
+            : productTypeFilter === 'All'
+              ? undefined
+              : (productTypeFilter as 'FG' | 'RM' | 'PM' | 'Sub-Product');
 
         // Always fetch stock report for the list view
         // We filter by selectedProduct locally or via API if supported, but here acts as a search
@@ -206,13 +211,7 @@ const ProductWiseReport = () => {
     if (endDate) doc.text(`To: ${endDate}`, 14, startY + 25);
 
     // Define columns based on whether a specific product is selected
-    const tableColumn = [
-      'Product Name',
-      'Category',
-      'Avail. Qty',
-      'Total Inward',
-      'Total Outward',
-    ];
+    const tableColumn = ['Product Name', 'Category', 'Avail. Qty', 'Total Inward', 'Total Outward'];
 
     // Define rows
     const tableRows = (data as StockReportItem[]).map(item => [
@@ -235,8 +234,9 @@ const ProductWiseReport = () => {
     addPdfFooter(doc);
 
     // Save PDF
-    const fileName = `product_stock_report_${productTypeFilter}_${new Date().toISOString().split('T')[0]
-      }.pdf`;
+    const fileName = `product_stock_report_${productTypeFilter}_${
+      new Date().toISOString().split('T')[0]
+    }.pdf`;
 
     doc.save(fileName);
     showToast.success('Report exported successfully');
@@ -271,17 +271,20 @@ const ProductWiseReport = () => {
       {
         accessorKey: 'productType',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
-        cell: ({ row }) => <div className="text-[var(--text-primary)]">{row.original.productType}</div>,
+        cell: ({ row }) => (
+          <div className="text-[var(--text-primary)]">{row.original.productType}</div>
+        ),
       },
       {
         accessorKey: 'availableQuantity',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Available Qty" />,
         cell: ({ row }) => (
           <div
-            className={`font-bold ${row.original.availableQuantity <= (row.original.minStockLevel || 0)
-              ? 'text-red-600'
-              : 'text-green-600'
-              }`}
+            className={`font-bold ${
+              row.original.availableQuantity <= (row.original.minStockLevel || 0)
+                ? 'text-red-600'
+                : 'text-green-600'
+            }`}
           >
             {row.original.availableQuantity}
           </div>
@@ -312,7 +315,11 @@ const ProductWiseReport = () => {
           const date = row.original.updatedAt ? new Date(row.original.updatedAt) : null;
           return (
             <div className="text-center text-xs text-gray-500">
-              {date ? date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+              {date
+                ? date.toLocaleDateString() +
+                  ' ' +
+                  date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : '-'}
             </div>
           );
         },
@@ -382,12 +389,17 @@ const ProductWiseReport = () => {
                     setProductTypeFilter(type);
                     setSelectedProduct('');
                   }}
-                  className={`min-w-[3rem] transition-all duration-200 ${productTypeFilter === type
-                    ? 'bg-blue-600 text-white hover:bg-blue-700 border-none shadow-md'
-                    : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-                    }`}
+                  className={`min-w-[3rem] transition-all duration-200 ${
+                    productTypeFilter === type
+                      ? 'bg-blue-600 text-white hover:bg-blue-700 border-none shadow-md'
+                      : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                  }`}
                 >
-                  {type}
+                  {type === 'FG'
+                    ? 'FINISHED GOODS'
+                    : type === 'RM'
+                      ? 'RAW MATERIAL'
+                      : 'PACKING MATERIAL'}
                 </Button>
               ))}
             </div>
@@ -439,9 +451,7 @@ const ProductWiseReport = () => {
             <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold">
               Total Products
             </p>
-            <p className="text-xl font-bold text-purple-700 mt-1">
-              {data.length}
-            </p>
+            <p className="text-xl font-bold text-purple-700 mt-1">{data.length}</p>
           </div>
         </div>
       )}
