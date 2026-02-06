@@ -842,8 +842,8 @@ const ProductDevelopment = () => {
                     type="button"
                     onClick={() => setCalculationBasis('Ltr')}
                     className={`px-4 py-2 text-sm font-medium border border-[var(--border-color)] rounded-l-lg focus:z-10 focus:ring-2 focus:ring-[var(--primary)] ${calculationBasis === 'Ltr'
-                        ? 'bg-[var(--primary)] text-white'
-                        : 'bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
+                      ? 'bg-[var(--primary)] text-white'
+                      : 'bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                       }`}
                   >
                     Per Ltr
@@ -852,8 +852,8 @@ const ProductDevelopment = () => {
                     type="button"
                     onClick={() => setCalculationBasis('Kg')}
                     className={`px-4 py-2 text-sm font-medium border border-l-0 border-[var(--border-color)] rounded-r-lg focus:z-10 focus:ring-2 focus:ring-[var(--primary)] ${calculationBasis === 'Kg'
-                        ? 'bg-[var(--primary)] text-white'
-                        : 'bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
+                      ? 'bg-[var(--primary)] text-white'
+                      : 'bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                       }`}
                   >
                     Per Kg
@@ -867,7 +867,6 @@ const ProductDevelopment = () => {
                 onChange={e => setProductionCost(e.target.value)}
                 placeholder={`Cost / ${calculationBasis}`}
                 type="number"
-                readOnly
                 className="bg-gray-50"
               />
             </div>
@@ -1003,7 +1002,6 @@ const ProductDevelopment = () => {
                             <input
                               type="text"
                               value={solidWeight.toFixed(3)}
-                              readOnly
                               className="w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface-highlight)] text-[var(--text-secondary)] cursor-not-allowed outline-none"
                             />
                           </td>
@@ -1011,7 +1009,6 @@ const ProductDevelopment = () => {
                             <input
                               type="number"
                               value={item.sequence}
-                              readOnly
                               className="w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface-highlight)] text-[var(--text-secondary)] cursor-not-allowed outline-none"
                             />
                           </td>
