@@ -156,8 +156,8 @@ export class ProductDevelopmentService {
       const materialRecords = materials.map(m => ({
         developmentId: devRecord.developmentId,
         materialId: parseInt(m.productId), // Ensure integer
-        percentage: String(m.percentage),
-        totalPercentage: String(m.totalPercentage || 0),
+        percentage: String(parseFloat(m.percentage || 0).toFixed(3)), // Format to 3 decimal places
+        totalPercentage: String(parseFloat(m.totalPercentage || 0).toFixed(3)), // Format to 3 decimal places
         sequence: parseInt(m.sequence) || 0,
         waitingTime: parseInt(m.waitingTime) || 0,
         wtPerLtr: String(m.wtInLtr || 0),
@@ -230,9 +230,15 @@ export class ProductDevelopmentService {
       .where(eq(productDevelopmentMaterials.developmentId, record.developmentId))
       .orderBy(productDevelopmentMaterials.sequence);
 
+    // Format percentage values to 3 decimal places
+    const formattedMaterials = materials.map(m => ({
+      ...m,
+      percentage: String(parseFloat(m.percentage || 0).toFixed(3)),
+    }));
+
     return {
       ...record,
-      materials,
+      materials: formattedMaterials,
     };
   }
 }

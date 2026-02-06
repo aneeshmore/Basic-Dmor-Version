@@ -9,6 +9,7 @@ import { productDevelopmentApi } from '@/features/masters/api/productDevelopment
 import logger from '@/utils/logger';
 import { showToast } from '@/utils/toast';
 import { handleApiError } from '@/utils/errorHandler';
+import { formatDecimalDisplay } from '@/utils/formatters';
 import {
   DndContext,
   closestCenter,
@@ -416,7 +417,7 @@ const DoubleProductDevelopment = () => {
             // For hardener: Total % = Percent % × (hardenerTotal / 100)
             const baseTotal = calculateListTotalPercentage(baseItems);
             const hardenerTotal = 100 - baseTotal;
-            const totalPct = hardenerTotal > 0 ? (pct * hardenerTotal / 100) : 0;
+            const totalPct = hardenerTotal > 0 ? (pct * hardenerTotal) / 100 : 0;
             updatedItem.totalPercentage = totalPct.toFixed(3);
             updatedItem.wtInLtr = (totalPct / density).toFixed(3);
           } else {
@@ -482,22 +483,24 @@ const DoubleProductDevelopment = () => {
       const newBaseTotal = calculateListTotalPercentage(newItems);
       setBaseItems(newItems);
       // Recalculate hardener totalPercentages when base changes
-      setHardenerItems(prevHardener => prevHardener.map(item => {
-        const pct = parseFloat(item.percentage.toString()) || 0;
-        const hardenerTotal = 100 - newBaseTotal;
-        const totalPct = hardenerTotal > 0 ? (pct * hardenerTotal / 100) : 0;
-        const rmProduct = rmMasterProducts.find(rm => rm.masterProductId === item.productId);
-        const density =
-          rmProduct?.RMDensity && parseFloat(rmProduct.RMDensity.toString()) > 0
-            ? parseFloat(rmProduct.RMDensity.toString())
-            : 1;
-        return {
-          ...item,
-          totalPercentage: totalPct.toFixed(3),
-          wtInLtr: (totalPct / density).toFixed(3),
-          percentage: hardenerTotal > 0 ? ((totalPct / hardenerTotal) * 100).toFixed(3) : '0'
-        };
-      }));
+      setHardenerItems(prevHardener =>
+        prevHardener.map(item => {
+          const pct = parseFloat(item.percentage.toString()) || 0;
+          const hardenerTotal = 100 - newBaseTotal;
+          const totalPct = hardenerTotal > 0 ? (pct * hardenerTotal) / 100 : 0;
+          const rmProduct = rmMasterProducts.find(rm => rm.masterProductId === item.productId);
+          const density =
+            rmProduct?.RMDensity && parseFloat(rmProduct.RMDensity.toString()) > 0
+              ? parseFloat(rmProduct.RMDensity.toString())
+              : 1;
+          return {
+            ...item,
+            totalPercentage: totalPct.toFixed(3),
+            wtInLtr: (totalPct / density).toFixed(3),
+            percentage: hardenerTotal > 0 ? ((totalPct / hardenerTotal) * 100).toFixed(3) : '0',
+          };
+        })
+      );
     }
   };
 
@@ -702,7 +705,10 @@ const DoubleProductDevelopment = () => {
     const expectedHardenerTotal = Math.max(0, 100 - baseTotalForSave);
     if (linkedHardenerId && expectedHardenerTotal > 0) {
       // If hardener expected non-zero, ensure hardener has items and none have totalPercentage == 0
-      if (hardenerItems.length === 0 || hardenerItems.some(item => Number(item.totalPercentage) === 0)) {
+      if (
+        hardenerItems.length === 0 ||
+        hardenerItems.some(item => Number(item.totalPercentage) === 0)
+      ) {
         showToast.error('Set the hardener first');
         return;
       }
@@ -852,7 +858,7 @@ const DoubleProductDevelopment = () => {
           const pct = parseFloat(item.percentage.toString()) || 0;
           const baseTotal = calculateListTotalPercentage(baseItems);
           const hardenerTotal = 100 - baseTotal;
-          const totalPct = hardenerTotal > 0 ? (pct * hardenerTotal / 100) : 0;
+          const totalPct = hardenerTotal > 0 ? (pct * hardenerTotal) / 100 : 0;
           const rmProduct = rmMasterProducts.find(rm => rm.masterProductId === item.productId);
           const density =
             rmProduct?.RMDensity && parseFloat(rmProduct.RMDensity.toString()) > 0
@@ -991,7 +997,9 @@ const DoubleProductDevelopment = () => {
                               isHardener,
                               items
                             );
-                            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                            if (
+                              ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)
+                            ) {
                               e.preventDefault();
                             }
                           }}
@@ -1002,8 +1010,8 @@ const DoubleProductDevelopment = () => {
                           readOnly={isHardener}
                           className={
                             isHardener
-                              ? "w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface-highlight)] text-[var(--text-secondary)] cursor-not-allowed focus:outline-none"
-                              : "w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent outline-none transition-all"
+                              ? 'w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface-highlight)] text-[var(--text-secondary)] cursor-not-allowed focus:outline-none'
+                              : 'w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent outline-none transition-all'
                           }
                         />
                       </td>
@@ -1022,7 +1030,9 @@ const DoubleProductDevelopment = () => {
                               isHardener,
                               items
                             );
-                            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                            if (
+                              ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)
+                            ) {
                               e.preventDefault();
                             }
                           }}
@@ -1033,8 +1043,8 @@ const DoubleProductDevelopment = () => {
                           readOnly={isHardener}
                           className={
                             isHardener
-                              ? "w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface-highlight)] text-[var(--text-secondary)] cursor-not-allowed focus:outline-none"
-                              : "w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent outline-none transition-all"
+                              ? 'w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface-highlight)] text-[var(--text-secondary)] cursor-not-allowed focus:outline-none'
+                              : 'w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent outline-none transition-all'
                           }
                         />
                       </td>
@@ -1061,7 +1071,9 @@ const DoubleProductDevelopment = () => {
                               isHardener,
                               items
                             );
-                            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                            if (
+                              ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)
+                            ) {
                               e.preventDefault();
                             }
                           }}
@@ -1086,7 +1098,9 @@ const DoubleProductDevelopment = () => {
                               isHardener,
                               items
                             );
-                            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                            if (
+                              ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)
+                            ) {
                               e.preventDefault();
                             }
                           }}
@@ -1117,7 +1131,13 @@ const DoubleProductDevelopment = () => {
                 <td className="px-4 py-3">
                   <input
                     type="number"
-                    value={isHardener ? (100 - calculateListTotalPercentage(baseItemsForCalculation || [])).toFixed(3) : calculateListTotalPercentage(items).toFixed(3)}
+                    value={
+                      isHardener
+                        ? (
+                            100 - calculateListTotalPercentage(baseItemsForCalculation || [])
+                          ).toFixed(3)
+                        : calculateListTotalPercentage(items).toFixed(3)
+                    }
                     step="0.01"
                     readOnly
                     className="w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface-highlight)] text-[var(--text-secondary)] cursor-not-allowed font-bold"
@@ -1146,10 +1166,10 @@ const DoubleProductDevelopment = () => {
                       </td>
                       <td className="px-4 py-3 font-bold text-[var(--text-primary)]">
                         {(() => {
-                          const targetValue = (
-                            (parseFloat(ratioBase || '0') / (parseFloat(ratioHardener || '1') || 1)) *
-                            calculateTotalWtInLtr(hardenerItems)
-                          );
+                          const targetValue =
+                            (parseFloat(ratioBase || '0') /
+                              (parseFloat(ratioHardener || '1') || 1)) *
+                            calculateTotalWtInLtr(hardenerItems);
                           return targetValue.toFixed(3);
                         })()}
                       </td>
@@ -1158,10 +1178,10 @@ const DoubleProductDevelopment = () => {
                       </td>
                       <td className="px-4 py-3 font-bold text-[var(--text-primary)]">
                         {(() => {
-                          const targetValue = (
-                            (parseFloat(ratioBase || '0') / (parseFloat(ratioHardener || '1') || 1)) *
-                            calculateTotalWtInLtr(hardenerItems)
-                          );
+                          const targetValue =
+                            (parseFloat(ratioBase || '0') /
+                              (parseFloat(ratioHardener || '1') || 1)) *
+                            calculateTotalWtInLtr(hardenerItems);
                           const totalWtLtr = calculateTotalWtInLtr(items);
                           return (totalWtLtr - targetValue).toFixed(3);
                         })()}
@@ -1350,7 +1370,7 @@ const DoubleProductDevelopment = () => {
               <Input
                 value={ratioBase}
                 onChange={e => setRatioBase(e.target.value)}
-                onKeyDown={(e) => {
+                onKeyDown={e => {
                   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
                     e.preventDefault();
                   }
@@ -1362,7 +1382,7 @@ const DoubleProductDevelopment = () => {
               <Input
                 value={ratioHardener}
                 onChange={e => setRatioHardener(e.target.value)}
-                onKeyDown={(e) => {
+                onKeyDown={e => {
                   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
                     e.preventDefault();
                   }
@@ -1424,7 +1444,7 @@ const DoubleProductDevelopment = () => {
               hardenerItems,
               true,
               masterProducts.find(p => p.masterProductId === linkedHardenerId)?.masterProductName ||
-              '',
+                '',
               true,
               baseItems
             )}

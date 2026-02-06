@@ -173,7 +173,8 @@ const ProductDevelopment = () => {
     let totalVolume = 0;
 
     for (const item of addedItems) {
-      const mass = Number(item.percentage) || 0;
+      const mass = parseFloat(String(item.percentage ?? '0'));
+
       totalMass += mass;
 
       const rmProduct = rmMasterProducts.find(rm => rm.masterProductId === item.productId);
@@ -212,7 +213,7 @@ const ProductDevelopment = () => {
     // Formula: (Total Cost Invested / 100) * FG Density
     // Using 100 as base divider for percentage sum normalization
     if (theoreticalDensity > 0) {
-      let costBase = (totalCostInvested / 100);
+      let costBase = totalCostInvested / 100;
 
       // Adjust for Water Percentage if present
       const waterPer = parseFloat(perPercent) || 0;
@@ -274,8 +275,9 @@ const ProductDevelopment = () => {
                 id: Date.now() + index,
                 productId: item.materialId,
                 productName: rmDetails?.masterProductName || 'Unknown Material',
-                // Use direct value (assuming it was saved as correct scale)
-                percentage: Number(item.percentage),
+                // Format percentage to 3 decimal places
+                percentage: parseFloat(String(item.percentage || '0')).toFixed(3),
+
                 sequence: item.sequence,
                 waitingTime: item.waitingTime || 0,
               };
@@ -313,16 +315,21 @@ const ProductDevelopment = () => {
               item.RawMaterialName ||
               item.rawMaterialName ||
               'Unknown Material',
-            percentage: Number(
-              item.PercentageRequired || item.percentageRequired || item.percentage || 0
-            ),
+            percentage:
+              typeof (item.PercentageRequired ?? item.percentageRequired ?? item.percentage) ===
+              'number'
+                ? (item.PercentageRequired ?? item.percentageRequired ?? item.percentage).toString()
+                : String(
+                    item.PercentageRequired ?? item.percentageRequired ?? item.percentage ?? ''
+                  ),
+
             sequence: item.Sequence || item.sequence || index + 1,
             waitingTime: item.WaitingTime || item.waitingTime || 0,
           };
         });
 
         const totalPercent = mappedItems.reduce(
-          (sum, item) => sum + (Number(item.percentage) || 0),
+          (sum, item) => sum + parseFloat(String(item.percentage ?? '0')),
           0
         );
 
@@ -330,7 +337,13 @@ const ProductDevelopment = () => {
         if (totalPercent > 0 && totalPercent <= 1.05) {
           mappedItems = mappedItems.map(item => ({
             ...item,
-            percentage: Math.round((Number(item.percentage) || 0) * 100),
+            percentage: (parseFloat(String(item.percentage ?? '0')) * 100).toFixed(3),
+          }));
+        } else {
+          // Ensure all percentages are formatted to 3 decimal places
+          mappedItems = mappedItems.map(item => ({
+            ...item,
+            percentage: parseFloat(String(item.percentage ?? '0')).toFixed(3),
           }));
         }
 
@@ -423,17 +436,7 @@ const ProductDevelopment = () => {
     setAddedItems(prev =>
       prev.map(item => {
         if (item.id === id) {
-          let newValue = value;
-          // Strip leading zeros for number-like inputs
-          if (
-            typeof newValue === 'string' &&
-            newValue.length > 1 &&
-            newValue.startsWith('0') &&
-            newValue[1] !== '.'
-          ) {
-            newValue = newValue.substring(1);
-          }
-          return { ...item, [field]: newValue };
+          return { ...item, [field]: value }; // Just keep the value as-is!
         }
         return item;
       })
@@ -441,7 +444,10 @@ const ProductDevelopment = () => {
   };
 
   const calculateTotalPercentage = () => {
-    return addedItems.reduce((sum, item) => sum + (Number(item.percentage) || 0), 0);
+    return addedItems.reduce((sum, item) => {
+      const value = parseFloat(String(item.percentage || '0'));
+      return sum + (isNaN(value) ? 0 : value);
+    }, 0);
   };
 
   const calculateTotalVolume = () => {
@@ -451,7 +457,7 @@ const ProductDevelopment = () => {
       const rmProduct = rmMasterProducts.find(rm => rm.masterProductId === item.productId);
       if (rmProduct && rmProduct.RMDensity) {
         const density = Math.abs(parseFloat(rmProduct.RMDensity.toString())) || 1;
-        const weight = Math.max(0, Number(item.percentage) || 0); // percentage is the weight in formulation
+        const weight = Math.max(0, parseFloat(String(item.percentage ?? '0'))); // percentage is the weight in formulation
         // Total Volume = Σ(Weight / Density)
         totalVolume += weight / density;
       }
@@ -476,7 +482,7 @@ const ProductDevelopment = () => {
         // RMSolids defaults to 0 if not set (treats unknown materials as solvents)
         // This ensures solvents like Xylene (0% solids) are correctly excluded
         const solids = Math.max(0, Math.min(100, parseFloat((rmProduct.RMSolids ?? 0).toString())));
-        const weight = Math.max(0, Number(item.percentage) || 0);
+        const weight = Math.max(0, parseFloat(String(item.percentage ?? '0')));
 
         // sv = solids / density
         // where solids = weight * (solids% / 100)
@@ -498,16 +504,18 @@ const ProductDevelopment = () => {
     for (const item of addedItems) {
       const rmProduct = rmMasterProducts.find(rm => rm.masterProductId === item.productId);
       if (rmProduct) {
-        // RMSolids defaults to 0 if not set (treats unknown materials as solvents)
         const solids = Math.max(0, Math.min(100, parseFloat((rmProduct.RMSolids ?? 0).toString())));
-        const weight = Math.max(0, Number(item.percentage) || 0);
-        totalSolid += weight * (solids / 100);
+        const weight = parseFloat(String(item.percentage || '0'));
+
+        // Make sure weight is valid
+        if (!isNaN(weight) && weight > 0) {
+          totalSolid += weight * (solids / 100);
+        }
       }
     }
 
     return Math.max(0, totalSolid);
   };
-
   const calculateSolidVolumeRatio = () => {
     const totalVol = calculateTotalVolume();
     const solidVol = calculateSolidVolume();
@@ -541,7 +549,8 @@ const ProductDevelopment = () => {
       const rmProduct = rmMasterProducts.find(rm => rm.masterProductId === item.productId);
       if (!rmProduct) continue;
 
-      const weight = Number(item.percentage) || 0;
+      const weight = parseFloat(String(item.percentage ?? '0'));
+
       if (weight <= 0) continue;
 
       if (rmProduct.Subcategory === 'Extender') {
@@ -567,16 +576,6 @@ const ProductDevelopment = () => {
     return (totalPigmentVolume / totalVolume) * 100;
   };
 
-  /**
-   * Calculate CPVC (Critical Pigment Volume Concentration)
-   *
-   * CPVC is material-dependent and not directly calculable from formulation data.
-   * For typical alkyd/QD resin systems with Calcite + Talc + Rutile TiO₂:
-   * - CPVC range: 50-55%
-   * - Using 52% as the standard value
-   *
-   * The PVC should always be less than CPVC to ensure a glossy, durable finish.
-   */
   const calculateCPVC = () => {
     // Check if we have any Extenders in the formulation
     const hasExtenders = addedItems.some(item => {
@@ -604,7 +603,7 @@ const ProductDevelopment = () => {
     }
 
     // Validate Water Percentage
-    const waterPercentValue = parseInt(perPercent) || 0;
+    const waterPercentValue = parseFloat(perPercent) || 0;
     if (waterPercentValue > 100) {
       showToast.error('Water Percentage cannot be greater than 100');
       return;
@@ -620,10 +619,16 @@ const ProductDevelopment = () => {
       density: parseFloat(density),
       viscosity: parseFloat(viscosity) || 0,
       hours: parseFloat(productionCost), // Send cost as 'hours' to match backend schema repurposing
-      perPercent: parseInt(perPercent) || 0,
+      perPercent: parseFloat(perPercent) || 0,
       calculationBasis,
 
-      materials: addedItems,
+      materials: addedItems.map(item => ({
+        ...item,
+        percentage: parseFloat(parseFloat(String(item.percentage)).toFixed(3)) || 0, // Format to 3 decimal places
+        sequence: typeof item.sequence === 'string' ? parseInt(item.sequence) : item.sequence,
+        waitingTime:
+          typeof item.waitingTime === 'string' ? parseFloat(item.waitingTime) : item.waitingTime,
+      })),
       status: status, // Send calculated status
       notes: notes,
     };
@@ -676,6 +681,7 @@ const ProductDevelopment = () => {
       const newItems = data.map((item: any) => ({
         ...item,
         id: Date.now() + Math.random(),
+        percentage: parseFloat(String(item.percentage || '0')).toFixed(3), // Format to 3 decimal places
       }));
 
       setAddedItems(newItems);
@@ -773,14 +779,18 @@ const ProductDevelopment = () => {
                 const value = e.target.value;
                 if (value === '') {
                   setPerPercent('');
-                } else {
-                  const numValue = Number(value);
-                  // Clamp between 0 and 100
-                  if (numValue < 0) {
-                    setPerPercent('0');
-                  } else if (numValue > 100) {
-                    setPerPercent('100');
-                  } else {
+                } else if (/^\d*\.?\d*$/.test(value)) {
+                  const numValue = parseFloat(value);
+                  if (!isNaN(numValue)) {
+                    if (numValue < 0) {
+                      setPerPercent('0');
+                    } else if (numValue > 100) {
+                      setPerPercent('100');
+                    } else {
+                      setPerPercent(value);
+                    }
+                  } else if (value.endsWith('.')) {
+                    // Allow typing decimal point
                     setPerPercent(value);
                   }
                 }
@@ -791,15 +801,12 @@ const ProductDevelopment = () => {
                 }
               }}
               placeholder="Water Percentage"
-              type="number"
-              step="1"
-              min="0"
-              max="100"
+              type="text"
+              inputMode="decimal"
             />
-
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-min">
+            <div className="relative min-w-0">
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                 Add Raw Material
               </label>
@@ -808,24 +815,25 @@ const ProductDevelopment = () => {
                 value={selectedRmId}
                 onChange={val => handleAddItem(val ?? '')}
                 placeholder={
-                  !selectedMasterProductId
-                    ? 'Select Master Product first...'
-                    : 'Search and add...'
+                  !selectedMasterProductId ? 'Select Master Product first...' : 'Search and add...'
                 }
                 disabled={!selectedMasterProductId}
                 className="w-full"
               />
             </div>
-            <Input
-              label="Density"
-              value={density}
-              onChange={e => setDensity(e.target.value)}
-              placeholder="Density"
-              type="number"
-              step="0.01"
-            />
-            <div className="space-y-4">
-              <div className="relative z-10">
+            <div className="min-w-0">
+              <Input
+                label="Density"
+                value={density}
+                onChange={e => setDensity(e.target.value)}
+                placeholder="Density"
+                type="number"
+                step="0.01"
+              />
+            </div>
+
+            <div className="space-y-4 min-w-0">
+              <div className="relative min-w-0">
                 <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                   Calculation Basis
                 </label>
@@ -833,20 +841,22 @@ const ProductDevelopment = () => {
                   <button
                     type="button"
                     onClick={() => setCalculationBasis('Ltr')}
-                    className={`px-4 py-2 text-sm font-medium border border-[var(--border-color)] rounded-l-lg focus:z-10 focus:ring-2 focus:ring-[var(--primary)] ${calculationBasis === 'Ltr'
+                    className={`px-4 py-2 text-sm font-medium border border-[var(--border-color)] rounded-l-lg focus:z-10 focus:ring-2 focus:ring-[var(--primary)] ${
+                      calculationBasis === 'Ltr'
                         ? 'bg-[var(--primary)] text-white'
                         : 'bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
-                      }`}
+                    }`}
                   >
                     Per Ltr
                   </button>
                   <button
                     type="button"
                     onClick={() => setCalculationBasis('Kg')}
-                    className={`px-4 py-2 text-sm font-medium border border-l-0 border-[var(--border-color)] rounded-r-lg focus:z-10 focus:ring-2 focus:ring-[var(--primary)] ${calculationBasis === 'Kg'
+                    className={`px-4 py-2 text-sm font-medium border border-l-0 border-[var(--border-color)] rounded-r-lg focus:z-10 focus:ring-2 focus:ring-[var(--primary)] ${
+                      calculationBasis === 'Kg'
                         ? 'bg-[var(--primary)] text-white'
                         : 'bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
-                      }`}
+                    }`}
                   >
                     Per Kg
                   </button>
@@ -924,6 +934,7 @@ const ProductDevelopment = () => {
                         rm => rm.masterProductId === item.productId
                       );
                       // Solids column: percent% × rmSolids / 100 (simple solid weight)
+                      // Solids column: percent% × rmSolids / 100 (simple solid weight)
                       let solidWeight = 0;
                       if (rmProduct) {
                         // RMSolids defaults to 0 if not set (treats unknown materials as solvents)
@@ -931,8 +942,12 @@ const ProductDevelopment = () => {
                           0,
                           Math.min(100, parseFloat((rmProduct.RMSolids ?? 0).toString()))
                         );
-                        const weight = Math.max(0, Number(item.percentage) || 0);
-                        solidWeight = weight * (solids / 100);
+                        const weight = parseFloat(String(item.percentage || '0'));
+
+                        // Only calculate if weight is a valid number
+                        if (!isNaN(weight) && weight >= 0) {
+                          solidWeight = weight * (solids / 100);
+                        }
                       }
 
                       return (
@@ -946,14 +961,36 @@ const ProductDevelopment = () => {
                           </td>
                           <td className="px-4 py-2">
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="decimal"
                               value={item.percentage}
-                              onChange={e =>
-                                handleUpdateItem(item.id, 'percentage', e.target.value)
-                              }
+                              onChange={e => {
+                                const value = e.target.value;
+                                // Allow empty, numbers, and decimal points with max 3 decimal places
+                                if (value === '') {
+                                  handleUpdateItem(item.id, 'percentage', value);
+                                } else if (/^\d*\.?\d*$/.test(value)) {
+                                  // Check decimal places
+                                  const parts = value.split('.');
+                                  if (parts[1] && parts[1].length > 3) {
+                                    // Don't update if more than 3 decimal places
+                                    return;
+                                  }
+                                  handleUpdateItem(item.id, 'percentage', value);
+                                }
+                              }}
+                              onBlur={e => {
+                                // Format on blur to exactly 3 decimal places
+                                const value = e.target.value;
+                                if (value && !isNaN(parseFloat(value))) {
+                                  const formatted = parseFloat(value).toFixed(3);
+                                  handleUpdateItem(item.id, 'percentage', formatted);
+                                } else if (value === '') {
+                                  handleUpdateItem(item.id, 'percentage', '');
+                                }
+                              }}
                               onKeyDown={e => {
                                 handleInputKeyDown(e, addedItems.indexOf(item), 'percentage');
-
 
                                 if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                                   e.preventDefault();
@@ -961,13 +998,12 @@ const ProductDevelopment = () => {
                               }}
                               data-row-index={addedItems.indexOf(item)}
                               data-column="percentage"
-                              step="1"
                               className="w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent outline-none transition-all"
                             />
                           </td>
                           <td className="px-4 py-2">
                             <input
-                              type="number"
+                              type="text"
                               value={solidWeight.toFixed(3)}
                               readOnly
                               className="w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface-highlight)] text-[var(--text-secondary)] cursor-not-allowed outline-none"
@@ -990,7 +1026,6 @@ const ProductDevelopment = () => {
                               }
                               onKeyDown={e => {
                                 handleInputKeyDown(e, addedItems.indexOf(item), 'waitingTime');
-
 
                                 if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                                   e.preventDefault();

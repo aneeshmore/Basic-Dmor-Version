@@ -86,6 +86,8 @@ app.get('/', (req, res) => {
   });
 });
 
+app.get('/health', (_, res) => res.send('OK'));
+
 // Error handling middleware (must be last)
 app.use(errorHandler);
 

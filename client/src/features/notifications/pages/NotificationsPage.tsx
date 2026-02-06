@@ -107,30 +107,6 @@ const NotificationsPage = () => {
   const isLoading = viewSystemWide ? loadingAll : loadingMy;
   const refetch = viewSystemWide ? refetchAll : refetchMy;
 
-  const stats = useMemo(() => {
-    const pending = orderStats
-      .filter(s => ['Pending', 'On Hold', 'Confirmed'].includes(s.status))
-      .reduce((acc, curr) => acc + curr.count, 0);
-    const accepted = orderStats
-      .filter(s =>
-        ['Accepted', 'Sufficient Stock', 'Production Started', 'Production Completed'].includes(
-          s.status
-        )
-      )
-      .reduce((acc, curr) => acc + curr.count, 0);
-
-    // Low Stock based on active notifications
-    const lowStock = notifications.filter(
-      (n: any) => n.type === 'MaterialShortage' || n.data?.shortages
-    ).length;
-
-    const dispatch = orderStats
-      .filter(s => ['Ready for Dispatch', 'Dispatched', 'Delivered'].includes(s.status))
-      .reduce((acc, curr) => acc + curr.count, 0);
-
-    return { pending, accepted, dispatch, lowStock };
-  }, [orderStats, notifications]);
-
   const markAsRead = useMarkAsRead();
 
   const handleMarkAsRead = (id: number) => {
@@ -229,6 +205,36 @@ const NotificationsPage = () => {
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }, [notifications, viewSystemWide]);
+
+  const stats = useMemo(() => {
+    const pending = groupedNotifications.filter(n => {
+      const type = n.type;
+      const status = n.data?.status;
+      if (type === 'NewOrder') return true;
+      if (type === 'OrderUpdate' && ['On Hold', 'Pending'].includes(status)) return true;
+      return false;
+    }).length;
+
+    const accepted = groupedNotifications.filter(n => {
+      const type = n.type;
+      const status = n.data?.status;
+      if (type === 'ProductionComplete') return true;
+      if (type === 'OrderUpdate' && ['Accepted', 'Production Started'].includes(status))
+        return true;
+      return false;
+    }).length;
+
+    // Low Stock based on active notifications
+    const lowStock = groupedNotifications.filter(
+      (n: any) => n.type === 'MaterialShortage' || n.type === 'MaterialShortageGroup'
+    ).length;
+
+    const dispatch = groupedNotifications.filter(
+      n => n.type === 'Dispatch' || n.type === 'Delivery'
+    ).length;
+
+    return { pending, accepted, dispatch, lowStock };
+  }, [groupedNotifications]);
 
   // Category Filtering
   const filteredNotifications = useMemo(() => {
@@ -476,7 +482,12 @@ const NotificationsPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div
           onClick={() => setActiveTab('pending')}
-          className="bg-[var(--surface)] p-4 rounded-lg border border-[var(--border)] shadow-sm flex items-center gap-4 cursor-pointer transition-shadow hover:shadow-md"
+          className={cn(
+            'p-4 rounded-lg border shadow-sm flex items-center gap-4 cursor-pointer transition-all hover:shadow-md',
+            activeTab === 'pending'
+              ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-700'
+              : 'bg-[var(--surface)] border-[var(--border)]'
+          )}
         >
           <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-full text-orange-600 dark:text-orange-400">
             <Clock />
@@ -486,10 +497,14 @@ const NotificationsPage = () => {
             <p className="text-2xl font-bold text-[var(--text-primary)]">{stats.pending}</p>
           </div>
         </div>
-
         <div
           onClick={() => setActiveTab('accepted')}
-          className="bg-[var(--surface)] p-4 rounded-lg border border-[var(--border)] shadow-sm flex items-center gap-4 cursor-pointer transition-shadow hover:shadow-md"
+          className={cn(
+            'p-4 rounded-lg border shadow-sm flex items-center gap-4 cursor-pointer transition-all hover:shadow-md',
+            activeTab === 'accepted'
+              ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700'
+              : 'bg-[var(--surface)] border-[var(--border)]'
+          )}
         >
           <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400">
             <CheckSquare />
@@ -499,10 +514,14 @@ const NotificationsPage = () => {
             <p className="text-2xl font-bold text-[var(--text-primary)]">{stats.accepted}</p>
           </div>
         </div>
-
         <div
           onClick={() => setActiveTab('dispatch')}
-          className="bg-[var(--surface)] p-4 rounded-lg border border-[var(--border)] shadow-sm flex items-center gap-4 cursor-pointer transition-shadow hover:shadow-md"
+          className={cn(
+            'p-4 rounded-lg border shadow-sm flex items-center gap-4 cursor-pointer transition-all hover:shadow-md',
+            activeTab === 'dispatch'
+              ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
+              : 'bg-[var(--surface)] border-[var(--border)]'
+          )}
         >
           <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full text-green-600 dark:text-green-400">
             <Truck />
@@ -512,10 +531,14 @@ const NotificationsPage = () => {
             <p className="text-2xl font-bold text-[var(--text-primary)]">{stats.dispatch}</p>
           </div>
         </div>
-
         <div
           onClick={() => setActiveTab('low-stock')}
-          className="bg-[var(--surface)] p-4 rounded-lg border border-[var(--border)] shadow-sm flex items-center gap-4 cursor-pointer transition-shadow hover:shadow-md"
+          className={cn(
+            'p-4 rounded-lg border shadow-sm flex items-center gap-4 cursor-pointer transition-all hover:shadow-md',
+            activeTab === 'low-stock'
+              ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
+              : 'bg-[var(--surface)] border-[var(--border)]'
+          )}
         >
           <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full text-red-600 dark:text-red-400">
             <AlertTriangle />
@@ -587,17 +610,19 @@ const NotificationsPage = () => {
               <div className="mt-1">{getPriorityIcon(n.priority)}</div>
               <div className="flex-1">
                 <div className="flex justify-between items-start">
-                  <h4 className="font-semibold text-[var(--text-primary)]">{decodeHtml(n.title)}</h4>
+                  <h4 className="font-semibold text-[var(--text-primary)]">
+                    {decodeHtml(n.title)}
+                  </h4>
                   <span className="text-xs text-[var(--text-secondary)] whitespace-nowrap ml-2 flex-shrink-0 font-medium">
                     {n.createdAt
                       ? new Date(n.createdAt).toLocaleString('en-GB', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false,
-                      })
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: false,
+                        })
                       : ''}
                   </span>
                 </div>
@@ -676,13 +701,13 @@ const NotificationsPage = () => {
                   <span className="font-medium text-gray-900">
                     {selectedOrderDetails.orderCreatedDate
                       ? new Date(selectedOrderDetails.orderCreatedDate).toLocaleString('en-GB', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false,
-                      })
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: false,
+                        })
                       : 'N/A'}
                   </span>
 
@@ -703,7 +728,9 @@ const NotificationsPage = () => {
             {selectedOrderDetails.adminRemarks && (
               <div className="bg-yellow-50 p-3 rounded-md border border-yellow-100 text-sm">
                 <span className="font-semibold text-yellow-800">Remarks: </span>
-                <span className="text-yellow-900">{decodeHtml(selectedOrderDetails.adminRemarks)}</span>
+                <span className="text-yellow-900">
+                  {decodeHtml(selectedOrderDetails.adminRemarks)}
+                </span>
               </div>
             )}
 
@@ -724,7 +751,9 @@ const NotificationsPage = () => {
                   <tbody className="divide-y divide-gray-100">
                     {selectedOrderDetails.items?.map((item, idx) => (
                       <tr key={idx} className="bg-white hover:bg-gray-50 transition-colors">
-                        <td className="p-2 font-medium text-gray-900">{decodeHtml(item.productName)}</td>
+                        <td className="p-2 font-medium text-gray-900">
+                          {decodeHtml(item.productName)}
+                        </td>
                         <td className="p-2 text-center text-gray-600">{item.size}</td>
                         <td className="p-2 text-center text-gray-900 font-medium">
                           {item.quantity} {item.unit}
@@ -777,13 +806,13 @@ const NotificationsPage = () => {
                 <span className="font-semibold text-gray-900">
                   {selectedDispatch.createdAt
                     ? new Date(selectedDispatch.createdAt).toLocaleString('en-GB', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: false,
-                    })
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false,
+                      })
                     : 'N/A'}
                 </span>
               </div>
@@ -886,13 +915,13 @@ const NotificationsPage = () => {
                       <td className="p-3 text-gray-600">
                         {order.orderCreatedDate
                           ? new Date(order.orderCreatedDate).toLocaleString('en-GB', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: false,
-                          })
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: false,
+                            })
                           : '-'}
                       </td>
                       <td className="p-3 font-medium text-gray-900">{order.customerName}</td>
