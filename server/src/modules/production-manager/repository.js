@@ -589,26 +589,33 @@ export class ProductionManagerRepository {
     const year = String(now.getFullYear());
     const month = String(now.getMonth() + 1).padStart(2, '0');
 
-    // Find existing batchNos for the same month-year
-    const pattern = `%-${month}-${year}`;
-    const rows = await db
+    const latestBatch = await db
       .select({ batchNo: productionBatch.batchNo })
       .from(productionBatch)
-      .where(sql`${productionBatch.batchNo} LIKE ${pattern}`);
+      .orderBy(desc(productionBatch.createdAt))
+      .limit(1);
 
-    let max = 0;
-    for (const r of rows) {
+    let nextSeq = 1;
+
+    if (latestBatch.length > 0) {
       try {
-        const parts = r.batchNo.split('-');
-        const seqPart = parts[0];
-        const seq = parseInt(seqPart, 10);
-        if (!Number.isNaN(seq) && seq > max) max = seq;
-      } catch {
-        // ignore
+        const parts = latestBatch[0].batchNo.split('-');
+        const lastSeq = parseInt(parts[0], 10);
+
+        if (!Number.isNaN(lastSeq)) {
+          nextSeq = lastSeq + 1;
+        }
+      } catch (err) {
+        console.error('Error parsing previous batch number:', err);
       }
     }
-    const next = String(max + 1).padStart(4, '0');
-    return `${next}-${month}-${year}`;
+
+    if (nextSeq > 9999) {
+      nextSeq = 1;
+    }
+
+    const nextSeqStr = String(nextSeq).padStart(4, '0');
+    return `${nextSeqStr}-${month}-${year}`;
   }
 
   /**
