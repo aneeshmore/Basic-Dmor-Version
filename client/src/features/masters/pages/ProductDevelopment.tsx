@@ -868,6 +868,7 @@ const ProductDevelopment = () => {
                 placeholder={`Cost / ${calculationBasis}`}
                 type="number"
                 className="bg-gray-50"
+                readOnly
               />
             </div>
           </div>
@@ -1002,6 +1003,7 @@ const ProductDevelopment = () => {
                             <input
                               type="text"
                               value={solidWeight.toFixed(3)}
+                              readOnly
                               className="w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface-highlight)] text-[var(--text-secondary)] cursor-not-allowed outline-none"
                             />
                           </td>
@@ -1009,6 +1011,7 @@ const ProductDevelopment = () => {
                             <input
                               type="number"
                               value={item.sequence}
+                              readOnly
                               className="w-full px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface-highlight)] text-[var(--text-secondary)] cursor-not-allowed outline-none"
                             />
                           </td>

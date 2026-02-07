@@ -307,7 +307,7 @@ const ProductMaster = () => {
                   value: mp.masterProductId,
                 }))}
                 value={formData.MasterProductID}
-                disabled={!isEditing}
+                disabled={saving}
                 onChange={async val => {
                   if (!val) {
                     setFormData(prev => ({
@@ -345,12 +345,12 @@ const ProductMaster = () => {
                 options={
                   formData.MasterProductID
                     ? products
-                        .filter(p => p.MasterProductID === formData.MasterProductID)
-                        .map(p => ({
-                          id: p.ProductID,
-                          label: p.ProductName,
-                          value: p.ProductName,
-                        }))
+                      .filter(p => p.MasterProductID === formData.MasterProductID)
+                      .map(p => ({
+                        id: p.ProductID,
+                        label: p.ProductName,
+                        value: p.ProductName,
+                      }))
                     : []
                 }
                 value={formData.ProductName}
@@ -363,7 +363,7 @@ const ProductMaster = () => {
                 }}
                 allowCustomValue={true}
                 required
-                disabled={!isEditing || !formData.MasterProductID}
+                disabled={saving || !formData.MasterProductID}
               />
 
               {/* Packed In (PM Search) */}
@@ -376,7 +376,7 @@ const ProductMaster = () => {
                   value: mp.masterProductId,
                 }))}
                 value={formData.PackagingId}
-                disabled={!isEditing}
+                disabled={saving}
                 onChange={async val => {
                   setFormData(prev => ({ ...prev, PackagingId: val }));
                   // Logic for capacity is handled in backend
@@ -391,7 +391,7 @@ const ProductMaster = () => {
                 label="Min Stock Level"
                 type="number"
                 min="0"
-                disabled={!isEditing}
+                disabled={saving}
                 value={
                   isEditing && formData.MinStockLevel === 0 ? '' : (formData.MinStockLevel ?? 0)
                 }
@@ -409,7 +409,7 @@ const ProductMaster = () => {
                 type="number"
                 min="0"
                 step="0.01"
-                disabled={!isEditing}
+                disabled={saving}
                 value={isEditing && formData.SellingPrice === 0 ? '' : (formData.SellingPrice ?? 0)}
                 onChange={e =>
                   setFormData(prev => ({
@@ -425,7 +425,7 @@ const ProductMaster = () => {
                 type="number"
                 min="0"
                 step="0.01"
-                disabled={!isEditing}
+                disabled={saving}
                 value={
                   isEditing && formData.IncentiveAmount === 0 ? '' : (formData.IncentiveAmount ?? 0)
                 }
@@ -472,11 +472,10 @@ const ProductMaster = () => {
                       }));
                     }}
                     disabled={formData.IsFdSyncWithDensity}
-                    className={`w-20 px-2 py-1 text-sm rounded border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] ${
-                      formData.IsFdSyncWithDensity
-                        ? 'bg-gray-100 cursor-not-allowed opacity-60'
-                        : 'bg-[var(--surface)]'
-                    }`}
+                    className={`w-20 px-2 py-1 text-sm rounded border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] ${formData.IsFdSyncWithDensity
+                      ? 'bg-gray-100 cursor-not-allowed opacity-60'
+                      : 'bg-[var(--surface)]'
+                      }`}
                     placeholder="0.00"
                   />
                 </div>
@@ -635,11 +634,10 @@ const ProductMaster = () => {
                       </td>
                       <td className="px-6 py-3 text-center">
                         <span
-                          className={`font-bold ${
-                            (product.AvailableQuantity || 0) - (product.ReservedQuantity || 0) > 0
-                              ? 'text-green-600'
-                              : 'text-red-500'
-                          }`}
+                          className={`font-bold ${(product.AvailableQuantity || 0) - (product.ReservedQuantity || 0) > 0
+                            ? 'text-green-600'
+                            : 'text-red-500'
+                            }`}
                         >
                           {(product.AvailableQuantity || 0) - (product.ReservedQuantity || 0)}
                         </span>
