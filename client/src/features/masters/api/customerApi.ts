@@ -34,6 +34,18 @@ export const customerApi = {
     }
   },
 
+  getMyCustomers: async (): Promise<ApiResponse<Customer[]>> => {
+    try {
+      const { data } = await apiClient.get(`${API_PREFIX}/masters/customers/my-customers`);
+      return { success: true, data: data.data ?? data };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err?.response?.data?.error || err?.message || 'Failed to load my customers',
+      };
+    }
+  },
+
   create: async (customer: Omit<Customer, 'CustomerID'>): Promise<ApiResponse<Customer>> => {
     try {
       const { data } = await apiClient.post(`${API_PREFIX}/masters/customers`, customer);

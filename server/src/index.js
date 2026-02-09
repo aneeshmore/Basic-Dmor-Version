@@ -94,12 +94,17 @@ app.use(errorHandler);
 // Start server
 console.log('Forcing server restart for schema sync...');
 const PORT = config.port;
+import { startCustomerJobs } from './jobs/customerJobs.js';
+
 app.listen(PORT, '0.0.0.0', () => {
   logger.info('API Server started', {
     port: PORT,
     env: config.env,
     version: config.apiVersion,
   });
+
+  // Initialize cron jobs
+  startCustomerJobs();
 });
 
 export default app;

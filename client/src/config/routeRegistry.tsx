@@ -223,6 +223,13 @@ const SalespersonRevenueReport = lazy(
 // );
 
 
+// Dashboard Redirect
+const DashboardRedirect = lazy(() =>
+  import('@/features/dashboard/components/DashboardRedirect').then(module => ({
+    default: module.DashboardRedirect,
+  }))
+);
+
 // ============================================
 // ROUTE REGISTRY
 // ============================================
@@ -230,13 +237,21 @@ const SalespersonRevenueReport = lazy(
 export const routeRegistry: RouteNode[] = [
   // ========== DASHBOARD ==========
   {
+    id: 'dashboard-redirect',
+    path: '/dashboard',
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    component: DashboardRedirect,
+    group: 'Main',
+  },
+  {
     id: 'admin-dashboard',
     path: '/dashboard/admin',
     label: 'Dashboard',
-    icon: LayoutDashboard,
     component: Dashboard,
     group: 'Main',
     apis: [{ route: '/dashboard/stats', method: 'GET', label: 'Load Dashboard Stats' }],
+    showInSidebar: false,
   },
   {
     id: 'dynamic-dashboard',

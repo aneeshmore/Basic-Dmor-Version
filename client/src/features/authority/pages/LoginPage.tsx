@@ -29,8 +29,29 @@ export default function LoginPage() {
     try {
       const result = await login({ username, password });
 
-      if (result.success) {
-        navigate('/dashboard/admin');
+      if (result.success && result.user) {
+        console.log('User Role:', result.user.Role);
+        // Role-based redirection
+        switch (result.user.Role) {
+          case 'SuperAdmin':
+            navigate('/dashboard/admin');
+            break;
+          case 'Admin':
+            navigate('/reports/salesperson-revenue');
+            break;
+          case 'Account':
+            navigate('/operations/admin-accounts');
+            break;
+          case 'Sales Person':
+            navigate('/operations/create-order');
+            break;
+          case 'Production Manager':
+            navigate('/operations/pm-dashboard');
+            break;
+          default:
+            console.log('No specific redirect for role:', result.user.Role);
+            navigate('/dashboard/admin');
+        }
       } else {
         setError(result.message || 'Invalid credentials');
       }

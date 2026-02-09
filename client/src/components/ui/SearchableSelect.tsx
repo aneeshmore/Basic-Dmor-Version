@@ -7,6 +7,7 @@ export interface Option<T = any> {
   label: string;
   subLabel?: string;
   value: T;
+  className?: string;
 }
 
 interface SearchableSelectProps<T = any> {
@@ -212,6 +213,7 @@ const SearchableSelect = <T = any,>({
                       ? 'bg-[var(--surface-hover)] text-[var(--text-primary)]'
                       : 'text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
                   }
+                  ${option.className || ''}
                 `}
                 onMouseEnter={() => setHighlightedIndex(index)}
               >

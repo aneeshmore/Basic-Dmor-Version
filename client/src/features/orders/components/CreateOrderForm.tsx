@@ -53,6 +53,8 @@ type FlexibleCustomer = Customer & {
   area?: string;
   location?: string;
   pinCode?: string;
+  isActive?: boolean;
+  IsActive?: boolean;
 };
 type FlexibleEmployee = Employee & {
   employeeId?: number;
@@ -326,7 +328,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
         setDataLoading(true);
         const [customersRes, employeesRes, salesPersonsRes, productsData, tncRes] =
           await Promise.all([
-            customerApi.getActive(), // Fetch active customers only (accessible to sales)
+            customerApi.getMyCustomers(), // Fetch all customers (including inactive)
             employeeApi.getAll(),
             employeeApi.getSalesPersons(), // Fetch employees with isSalesRole on their role
             inventoryApi.getAllProducts({ isActive: true }),
@@ -1791,12 +1793,16 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                         return list;
                       }
 
-                      return customers.map(c => ({
-                        id: c.customerId || c.CustomerID || 0,
-                        label: c.companyName || c.CompanyName || 'Unknown',
-                        subLabel: c.contactPerson || c.ContactPerson,
-                        value: c.customerId || c.CustomerID,
-                      }));
+                      return customers.map(c => {
+                        const isInactive = c.isActive === false || c.IsActive === false;
+                        return {
+                          id: c.customerId || c.CustomerID || 0,
+                          label: c.companyName || c.CompanyName || 'Unknown',
+                          subLabel: c.contactPerson || c.ContactPerson,
+                          value: c.customerId || c.CustomerID,
+                          className: isInactive ? 'text-red-500 font-medium' : '',
+                        };
+                      });
                     })()}
                     value={customerId}
                     onChange={(val: any) => handleCustomerChange(Number(val))}
@@ -1933,8 +1939,8 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
             const orderItemsContent = (
               <div
                 className={`bg-[var(--surface)] p-6 rounded-lg flex flex-col transition-all duration-300 ${isOrderItemsFullScreen
-                    ? 'fixed inset-0 rounded-none overflow-auto'
-                    : 'lg:col-span-2'
+                  ? 'fixed inset-0 rounded-none overflow-auto'
+                  : 'lg:col-span-2'
                   }`}
                 style={isOrderItemsFullScreen ? { zIndex: 999999, isolation: 'isolate' } : {}}
               >
@@ -1982,8 +1988,8 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                         key={index}
                         data-item-card
                         className={`border rounded-lg p-4 transition-all ${isComplete
-                            ? 'border-[var(--success)]/50 bg-[var(--success)]/5'
-                            : 'border-[var(--border)] bg-[var(--surface-secondary)]'
+                          ? 'border-[var(--success)]/50 bg-[var(--success)]/5'
+                          : 'border-[var(--border)] bg-[var(--surface-secondary)]'
                           } hover:border-[var(--primary)] hover:shadow-md`}
                       >
                         <div className="flex items-start justify-between mb-3">
@@ -2092,8 +2098,8 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                               </label>
                               <div
                                 className={`px-3 py-2 border rounded-lg font-semibold ${isComplete
-                                    ? 'border-[var(--success)] bg-[var(--success)]/10 text-[var(--success)]'
-                                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]'
+                                  ? 'border-[var(--success)] bg-[var(--success)]/10 text-[var(--success)]'
+                                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]'
                                   }`}
                               >
                                 ₹{calculateLineTotal(item).toFixed(2)}
@@ -2360,10 +2366,10 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                 <Badge
                   variant={previewQuotation.status === 'Rejected' ? 'destructive' : 'secondary'}
                   className={`ml-2 ${previewQuotation.status === 'Approved'
-                      ? 'bg-green-100 text-green-800'
-                      : previewQuotation.status === 'Pending'
-                        ? 'bg-orange-100 text-orange-800'
-                        : ''
+                    ? 'bg-green-100 text-green-800'
+                    : previewQuotation.status === 'Pending'
+                      ? 'bg-orange-100 text-orange-800'
+                      : ''
                     }`}
                 >
                   {previewQuotation.status}

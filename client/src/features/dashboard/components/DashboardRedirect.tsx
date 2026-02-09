@@ -16,14 +16,30 @@ export const DashboardRedirect: React.FC = () => {
       return;
     }
 
-    // Use user's configured landing page, or fallback to role-based dashboard
-    if (user.landingPage) {
-      navigate(user.landingPage, { replace: true });
+    // Role-based redirection - simplified to match Login logic
+    if (user.Role) {
+      switch (user.Role) {
+        case 'SuperAdmin':
+          navigate('/dashboard/admin', { replace: true });
+          break;
+        case 'Admin':
+          navigate('/reports/salesperson-revenue', { replace: true });
+          break;
+        case 'Account':
+          navigate('/operations/admin-accounts', { replace: true });
+          break;
+        case 'Sales Person':
+          navigate('/operations/create-order', { replace: true });
+          break;
+        case 'Production Manager':
+          navigate('/operations/pm-dashboard', { replace: true });
+          break;
+        default:
+          console.log('No specific redirect for role, going to admin dashboard:', user.Role);
+          navigate('/dashboard/admin', { replace: true });
+      }
     } else {
-      // Fallback: redirect to role-specific dashboard
-      const roleName = user.Role || 'unknown';
-      const roleSlug = roleName.toLowerCase().replace(/\s+/g, '-');
-      navigate(`/dashboard/${roleSlug}`, { replace: true });
+      navigate('/dashboard/admin', { replace: true });
     }
   }, [user, loading, isAuthenticated, navigate]);
 
