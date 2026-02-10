@@ -31,6 +31,7 @@ export interface Unit {
 export interface CustomerType {
   CustomerTypeID: number;
   CustomerTypeName: string;
+  IsSystemType?: boolean;
   CreatedAt?: string;
   UpdatedAt?: string;
 }

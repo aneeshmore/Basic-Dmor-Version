@@ -241,8 +241,55 @@ export class MastersService {
       throw new NotFoundError('Customer type not found');
     }
 
+    // Prevent deletion of system customer types
+    if (existing.isSystemType) {
+      throw new ConflictError(
+        `Cannot delete system customer type: ${existing.customerTypeName}. This type is essential for system operation.`
+      );
+    }
+
     await this.repository.deleteCustomerType(customerTypeId);
     logger.info('Customer type deleted', { id: customerTypeId });
+  }
+
+  async seedDefaultCustomerTypes() {
+    const defaultTypes = [
+      'BUILDER',
+      'CONTRACTOR',
+      'DEALER',
+      'DIRECT CUSTOMER',
+      'INDUSTRIAL',
+    ];
+
+    let seededCount = 0;
+    for (const typeName of defaultTypes) {
+      try {
+        const existing = await this.repository.findCustomerTypeByName(typeName);
+        if (existing) {
+          // If exists but not marked as system type, update it
+          if (!existing.isSystemType) {
+            await this.repository.updateCustomerType(existing.customerTypeId, {
+              isSystemType: true,
+            });
+            seededCount++;
+          }
+        } else {
+          // Create new system type
+          await this.repository.createCustomerType({
+            customerTypeName: typeName,
+            isSystemType: true,
+          });
+          seededCount++;
+        }
+      } catch (error) {
+        logger.error(`Failed to seed customer type: ${typeName}`, { error: error.message });
+      }
+    }
+
+    if (seededCount > 0) {
+      logger.info(`Seeded ${seededCount} default customer types`);
+    }
+    return seededCount;
   }
 
   // Customer methods

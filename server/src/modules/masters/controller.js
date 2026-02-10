@@ -14,6 +14,9 @@ import logger from '../../config/logger.js';
 export class MastersController {
   constructor() {
     this.service = new MastersService();
+    this.service.seedDefaultCustomerTypes().catch(err =>
+      logger.error('Failed to seed customer types on startup', { error: err.message })
+    );
   }
 
   // Department endpoints

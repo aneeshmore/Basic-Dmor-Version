@@ -13,9 +13,6 @@ const NOTIFICATION_TYPES = [
   'MaterialShortage',
   'NewOrder',
   'OrderUpdate',
-  'Dispatch',
-  'ProductionComplete',
-  'Delivery',
 ];
 
 const NotificationSettings = () => {
@@ -145,11 +142,10 @@ const NotificationSettings = () => {
             <button
               key={type}
               onClick={() => setActiveType(type)}
-              className={`px-4 py-2 border-b-2 whitespace-nowrap transition-colors ${
-                activeType === type
+              className={`px-4 py-2 border-b-2 whitespace-nowrap transition-colors ${activeType === type
                   ? 'border-blue-600 text-blue-600 font-medium'
                   : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
+                }`}
             >
               {type.replace(/([A-Z])/g, ' $1').trim()}
             </button>
@@ -185,11 +181,10 @@ const NotificationSettings = () => {
                 >
                   <div>
                     <span
-                      className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded mr-2 ${
-                        rule.targetType === 'ROLE'
+                      className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded mr-2 ${rule.targetType === 'ROLE'
                           ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
                           : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                      }`}
+                        }`}
                     >
                       {rule.targetType}
                     </span>
@@ -254,23 +249,23 @@ const NotificationSettings = () => {
               <option value="">-- Select --</option>
               {targetType === 'ROLE'
                 ? roles.map(r => {
-                    const id = (r as any).roleId || (r as any).RoleID;
-                    const name = (r as any).roleName || (r as any).RoleName;
-                    return (
-                      <option key={id} value={id}>
-                        {name}
-                      </option>
-                    );
-                  })
+                  const id = (r as any).roleId || (r as any).RoleID;
+                  const name = (r as any).roleName || (r as any).RoleName;
+                  return (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  );
+                })
                 : departments.map(d => {
-                    const id = (d as any).departmentId || (d as any).DepartmentID;
-                    const name = (d as any).departmentName || (d as any).DepartmentName;
-                    return (
-                      <option key={id} value={id}>
-                        {name}
-                      </option>
-                    );
-                  })}
+                  const id = (d as any).departmentId || (d as any).DepartmentID;
+                  const name = (d as any).departmentName || (d as any).DepartmentName;
+                  return (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  );
+                })}
             </select>
           </div>
 

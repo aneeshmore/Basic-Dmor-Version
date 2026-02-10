@@ -34,16 +34,8 @@ export class NotificationsService {
         case 'MaterialShortage':
           requiredModule = 'inventory'; // Access to Low Stock products
           break;
-        case 'NewOrder':
         case 'OrderUpdate':
           requiredModule = 'orders'; // Access to Order details
-          break;
-        case 'Dispatch':
-        case 'Delivery':
-          requiredModule = 'dispatch-planning'; // Access to Dispatch details
-          break;
-        case 'ProductionComplete':
-          requiredModule = 'production-manager';
           break;
       }
 
@@ -100,22 +92,13 @@ export class NotificationsService {
       { notificationType: 'MaterialShortage', targetType: 'ROLE', targetId: 3 }, // Production Manager
       { notificationType: 'MaterialShortage', targetType: 'ROLE', targetId: 6 }, // Inventory Manager
 
-      // New Order - notify Admin, Accountant
+      // New Order - notify Admin
       { notificationType: 'NewOrder', targetType: 'ROLE', targetId: 2 }, // Admin
 
-      // Order Update - notify Admin
+      // Order Update - notify Admin, Sales Manager, Production Manager
       { notificationType: 'OrderUpdate', targetType: 'ROLE', targetId: 2 }, // Admin
-
-      // Dispatch - notify Admin, Sales Manager
-      { notificationType: 'Dispatch', targetType: 'ROLE', targetId: 2 }, // Admin
-      { notificationType: 'Dispatch', targetType: 'ROLE', targetId: 4 }, // Sales Manager
-
-      // Delivery - notify Sales Manager
-      { notificationType: 'Delivery', targetType: 'ROLE', targetId: 4 }, // Sales Manager
-
-      // Production Complete - notify Admin, Sales Manager
-      { notificationType: 'ProductionComplete', targetType: 'ROLE', targetId: 2 }, // Admin
-      { notificationType: 'ProductionComplete', targetType: 'ROLE', targetId: 3 }, // Production Manager
+      { notificationType: 'OrderUpdate', targetType: 'ROLE', targetId: 3 }, // Production Manager
+      { notificationType: 'OrderUpdate', targetType: 'ROLE', targetId: 4 }, // Sales Manager
     ];
 
     let seeded = 0;
@@ -290,12 +273,12 @@ export class NotificationsService {
     const title = `Vehicle Dispatched: ${vehicleNo}`;
     const message = `Dispatch #${dispatchId} initiated. Driver: ${driverName}. Orders: ${orderIds.join(', ')}`;
 
-    const recipients = await this.getRecipients('Dispatch');
+    const recipients = await this.getRecipients('OrderUpdate');
 
     for (const recipient of recipients) {
       await this.createNotification({
         recipientId: recipient.employeeId,
-        type: 'Dispatch',
+        type: 'OrderUpdate',
         title,
         message,
         data: { dispatchId, orderIds },
@@ -309,12 +292,12 @@ export class NotificationsService {
     const title = `Production Completed: ${batchCode || batchId}`;
     const message = `Batch ${batchCode || batchId} for ${productName} (${quantity} units) has been completed and added to stock.`;
 
-    const recipients = await this.getRecipients('ProductionComplete');
+    const recipients = await this.getRecipients('OrderUpdate');
 
     for (const u of recipients) {
       await this.createNotification({
         recipientId: u.employeeId,
-        type: 'ProductionComplete',
+        type: 'OrderUpdate',
         title,
         message,
         data: { batchId, batchCode },
@@ -329,22 +312,12 @@ export class NotificationsService {
     const ordersStr = orderIds.length > 0 ? `Orders: ${orderIds.join(', ')}.` : '';
     const message = `Dispatch #${dispatchId} (${vehicleNo}) has been marked as Delivered. ${ordersStr} ${remarks ? `Remarks: ${remarks}` : ''}`;
 
-    const recipients = await this.getRecipients('Delivery');
-
-    // Note: Salesperson logic is specific.
-    // Ideally, we should also notify the salesperson of the SPECIFIC order.
-    // The previous logic did: getEmployeesByRole('Sales'). This was a broadcast to ALL sales.
-    // The new Rule System allows 'Sales' role to sub to 'Delivery'.
-    // If we want to target the SPECIFIC salesperson of the order, that's "Data Scoped" notification.
-    // The current rule system handles "Role Scoped".
-    // For now, replacing the "Broadcast to Sales Role" with the Rule System is correct.
-    // Targeted notifications (like "Your order is delivered") should be separate logic if needed.
-    // I will keep the Rule System logic.
+    const recipients = await this.getRecipients('OrderUpdate');
 
     for (const u of recipients) {
       await this.createNotification({
         recipientId: u.employeeId,
-        type: 'Delivery',
+        type: 'OrderUpdate',
         title,
         message,
         data: { dispatchId, orderIds },

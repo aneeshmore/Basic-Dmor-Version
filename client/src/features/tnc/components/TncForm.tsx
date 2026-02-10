@@ -27,7 +27,7 @@ export const TncForm: React.FC<TncFormProps> = ({
   isLoading,
 }) => {
   const [description, setDescription] = useState('');
-  const [type, setType] = useState('');
+  const [type, setType] = useState('Payment');
 
   useEffect(() => {
     if (editingTnc) {
@@ -35,7 +35,7 @@ export const TncForm: React.FC<TncFormProps> = ({
       setType(editingTnc.type);
     } else {
       setDescription('');
-      setType('');
+      setType('Payment');
     }
   }, [editingTnc]);
 
@@ -44,7 +44,7 @@ export const TncForm: React.FC<TncFormProps> = ({
     onSubmit({ type, description });
     if (!editingTnc) {
       setDescription('');
-      setType('');
+      setType('Payment');
     }
   };
 

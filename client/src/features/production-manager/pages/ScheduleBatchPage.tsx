@@ -6,6 +6,8 @@ import { bomApi } from '../api/bomApi';
 import { productApi } from '../../master-products/api/productApi';
 import { productDevelopmentApi } from '../../masters/api/productDevelopment';
 import { employeeApi } from '../../employees/api/employeeApi';
+import { companyApi } from '../../company/api/companyApi';
+import { CompanyInfo } from '../../company/types';
 import { PageHeader } from '@/components/common';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -220,6 +222,7 @@ export default function ScheduleBatchPage() {
   const [extraMaterials, setExtraMaterials] = useState<any[]>([]);
   const [selectedExtraMaterialId, setSelectedExtraMaterialId] = useState<number | null>(null);
   const [extraMaterialQty, setExtraMaterialQty] = useState<number>(0);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
 
   // Calculate Total Output Weight
   const totalOutputWeight = useMemo(() => {
@@ -462,6 +465,19 @@ export default function ScheduleBatchPage() {
     };
     initData();
     fetchScheduledBatches();
+
+    // Fetch Company Info
+    const fetchCompanyInfo = async () => {
+      try {
+        const res = await companyApi.get();
+        if (res.data) {
+          setCompanyInfo((res.data as any).data || res.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch company info', err);
+      }
+    };
+    fetchCompanyInfo();
   }, []);
 
   // Click outside listener for MP and RM Dropdowns
@@ -1622,7 +1638,11 @@ export default function ScheduleBatchPage() {
 
       // Header
       doc.setFontSize(16);
-      doc.text('MOREX TECHNOLOGIES', 105, 15, { align: 'center' });
+      // 1. Header: Company Info + Title
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      const companyHeaderName = companyInfo?.companyName || 'MOREX TECHNOLOGIES';
+      doc.text(companyHeaderName.toUpperCase(), 105, 15, { align: 'center' });
 
       doc.setFontSize(10);
       doc.text(`Batch No : ${batch.batchNo} / ${batch.masterProductName || ''}`, 14, 25);

@@ -23,6 +23,7 @@ export class CustomerTypeDTO {
   constructor(customerType) {
     this.CustomerTypeID = customerType.customerTypeId || customerType.customer_type_id;
     this.CustomerTypeName = customerType.customerTypeName || customerType.customer_type_name;
+    this.IsSystemType = customerType.isSystemType ?? customerType.is_system_type ?? false;
     this.CreatedAt = customerType.createdAt || customerType.created_at;
     this.UpdatedAt = customerType.updatedAt || customerType.updated_at;
   }

@@ -117,6 +117,7 @@ const CustomerTypeForm = ({
         required
         autoFocus
         error={error}
+        disabled={item?.IsSystemType}
       />
 
       <div className="flex justify-end gap-3 pt-6 border-t border-[var(--border)] mt-6">
@@ -281,14 +282,16 @@ export default function CustomerTypeMaster() {
           >
             <Edit2 size={16} />
           </button>
-          <button
-            onClick={() => handleDelete(row.original.CustomerTypeID)}
-            className="p-2 rounded-lg hover:bg-red-50 text-[var(--text-secondary)] hover:text-[var(--danger)] transition-colors border border-transparent hover:border-red-200 focus-ring"
-            title="Delete"
-            aria-label="Delete"
-          >
-            <Trash2 size={16} />
-          </button>
+          {!row.original.IsSystemType && (
+            <button
+              onClick={() => handleDelete(row.original.CustomerTypeID)}
+              className="p-2 rounded-lg hover:bg-red-50 text-[var(--text-secondary)] hover:text-[var(--danger)] transition-colors border border-transparent hover:border-red-200 focus-ring"
+              title="Delete"
+              aria-label="Delete"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
       ),
     },
@@ -325,9 +328,9 @@ export default function CustomerTypeMaster() {
                   editingCustomerType
                     ? initiateUpdate
                     : item => {
-                        setPendingItem(item);
-                        setIsAddConfirmModalOpen(true);
-                      }
+                      setPendingItem(item);
+                      setIsAddConfirmModalOpen(true);
+                    }
                 }
                 onCancel={() => {
                   setEditingCustomerType(null);

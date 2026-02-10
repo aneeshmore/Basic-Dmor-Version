@@ -6,6 +6,8 @@ import { Button, Modal } from '@/components/ui';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { addPdfFooter } from '@/utils/pdfUtils';
+import { companyApi } from '@/features/company/api/companyApi';
+import { CompanyInfo } from '@/features/company/types';
 
 interface BatchReportModalProps {
   isOpen: boolean;
@@ -27,6 +29,7 @@ export default function BatchReportModal({
   const [materials, setMaterials] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [relatedSkus, setRelatedSkus] = useState<any[]>([]); // All SKUs for this master product
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
 
   useEffect(() => {
     if (!isOpen || !batchId) return;
@@ -49,6 +52,19 @@ export default function BatchReportModal({
     };
 
     fetchData();
+
+    // Fetch Company Info
+    const fetchCompanyInfo = async () => {
+      try {
+        const res = await companyApi.get();
+        if (res.data) {
+          setCompanyInfo((res.data as any).data || res.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch company info', err);
+      }
+    };
+    fetchCompanyInfo();
   }, [isOpen, batchId]);
 
   // Duration Calculation Helper
@@ -201,7 +217,8 @@ export default function BatchReportModal({
 
     // Header
     doc.setFontSize(16);
-    doc.text('MOREX TECHNOLOGIES', 105, 15, { align: 'center' });
+    const companyHeaderName = companyInfo?.companyName || 'MOREX TECHNOLOGIES';
+    doc.text(companyHeaderName.toUpperCase(), 105, 15, { align: 'center' });
     doc.line(14, 18, 196, 18);
 
     doc.setFontSize(10);
@@ -629,7 +646,7 @@ export default function BatchReportModal({
           <div className="border-2 border-gray-800 p-6 min-h-[600px] bg-white text-black">
             {/* Header */}
             <div className="text-center mb-4">
-              <h1 className="text-2xl font-bold">DMOR PAINTS</h1>
+              <h1 className="text-2xl font-bold">{companyInfo?.companyName || 'DMOR PAINTS'}</h1>
               <div className="border-b-2 border-gray-800 mt-2"></div>
             </div>
 
