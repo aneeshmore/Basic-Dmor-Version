@@ -1057,9 +1057,7 @@ const ProductDevelopment = () => {
                   <td className="px-4 py-3">
                     <span
                       className={
-                        totalPercentage >= 100 && totalPercentage <= 100.999
-                          ? 'text-green-600'
-                          : 'text-red-500'
+                        totalPercentage.toFixed(3) === '100.000' ? 'text-green-600' : 'text-red-500'
                       }
                     >
                       {totalPercentage.toFixed(3)}%

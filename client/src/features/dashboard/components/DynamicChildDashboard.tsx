@@ -174,6 +174,11 @@ const ROUTE_METADATA: Record<
     iconBg: 'bg-violet-50',
     iconColor: 'text-violet-600',
   },
+  'new-batch-report': {
+    description: 'New batch production report',
+    iconBg: 'bg-indigo-50',
+    iconColor: 'text-indigo-600',
+  },
   'material-inward-report': {
     description: 'Material inward records',
     iconBg: 'bg-amber-50',

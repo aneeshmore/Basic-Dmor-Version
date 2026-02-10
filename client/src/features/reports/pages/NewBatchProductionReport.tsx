@@ -49,7 +49,7 @@ ChartJS.register(
   Legend
 );
 
-const BatchProductionReport = () => {
+const NewBatchProductionReport = () => {
   // ... (existing state) ...
   const [data, setData] = useState<BatchProductionReportItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -353,28 +353,17 @@ const BatchProductionReport = () => {
 
       // 3. Tables Section - Side by Side
       // Separate regular and additional materials
-      // Ingredients Body and Totals - compute rate and amount
+      // Ingredients Body - Without Rate and Amount columns
       const ingredientsBody = ingredients.map((rm, index) => {
-        const actual = parseNumber(rm.actualQty ?? rm.percentage ?? '0');
-        const rate =
-          rm.unitPrice !== null && rm.unitPrice !== undefined ? parseNumber(rm.unitPrice) : 0;
-        const amount = actual * rate;
         return [
           index + 1,
           rm.rawMaterialName,
           formatNumber(rm.percentage),
-          formatNumber(actual),
-          formatNumber(rate),
-          formatNumber(amount),
+          formatNumber(rm.actualQty || rm.percentage),
         ];
       });
 
-      const totalAmount = ingredients.reduce((sum, rm) => {
-        const actual = parseNumber(rm.actualQty ?? rm.percentage ?? '0');
-        const rate =
-          rm.unitPrice !== null && rm.unitPrice !== undefined ? parseNumber(rm.unitPrice) : 0;
-        return sum + actual * rate;
-      }, 0);
+      const totalAmount = 0;
 
       // Sub Products Body - Using calculated filtered list
       const subProductsBody = filteredSubProducts.map(sp => {
@@ -404,11 +393,11 @@ const BatchProductionReport = () => {
 
       const tableY = currentY;
 
-      // Left Table: Ingredients (Full Width)
+      // Left Table: Ingredients (Side by Side - Left)
       autoTable(doc, {
         startY: tableY,
-        margin: { left: margin, right: margin },
-        head: [['Seq', 'Product', 'Percentage (%)', 'Actual', 'Rate', 'Amount']],
+        margin: { left: margin, right: 110 },
+        head: [['Seq', 'Product', 'Percentage (%)', 'Actual']],
         body: ingredientsBody,
         theme: 'grid',
         styles: {
@@ -429,24 +418,13 @@ const BatchProductionReport = () => {
           lineColor: [229, 231, 235],
         },
         columnStyles: {
-          0: { cellWidth: 12, halign: 'center' },
-          1: { cellWidth: 65, halign: 'left' },
-          2: { cellWidth: 25, halign: 'right' },
-          3: { cellWidth: 25, halign: 'right' },
-          4: { cellWidth: 25, halign: 'right' },
-          5: { cellWidth: 30, halign: 'right' },
+          0: { cellWidth: 10, halign: 'center' },
+          1: { cellWidth: 45, halign: 'left' },
+          2: { cellWidth: 18, halign: 'right' },
+          3: { cellWidth: 18, halign: 'right' },
         },
-        tableWidth: pageWidth - margin * 2,
-        foot: [
-          [
-            '',
-            'Total',
-            formatNumber(totalPercentage),
-            formatNumber(totalActualWeight),
-            '',
-            formatNumber(totalAmount),
-          ],
-        ],
+        tableWidth: 91,
+        foot: [['', 'Total', formatNumber(totalPercentage), formatNumber(totalActualWeight)]],
         footStyles: {
           fillColor: colorSuccess, // Green
           textColor: [255, 255, 255], // White
@@ -477,10 +455,10 @@ const BatchProductionReport = () => {
 
       const leftTableFinalY = (doc as any).lastAutoTable.finalY;
 
-      // Right Table: Sub Products (Full Width) - Placed Below Left Table
+      // Right Table: Sub Products (Side by Side - Right)
       autoTable(doc, {
-        startY: leftTableFinalY + 8,
-        margin: { left: margin, right: margin },
+        startY: tableY,
+        margin: { left: 110, right: margin },
         head: [['Shade', 'QTY', 'ACT QTY', 'LTR', 'KG']],
         body: subProductsBody,
         theme: 'grid',
@@ -502,13 +480,13 @@ const BatchProductionReport = () => {
           lineColor: [229, 231, 235],
         },
         columnStyles: {
-          0: { cellWidth: 65, halign: 'left' }, // Shade - product names
-          1: { cellWidth: 25, halign: 'right' }, // QTY
-          2: { cellWidth: 25, halign: 'right' }, // ACT QTY
-          3: { cellWidth: 30, halign: 'right' }, // LTR
-          4: { cellWidth: 30, halign: 'right' }, // KG
+          0: { cellWidth: 35, halign: 'left' }, // Shade - product names
+          1: { cellWidth: 15, halign: 'right' }, // QTY
+          2: { cellWidth: 15, halign: 'right' }, // ACT QTY
+          3: { cellWidth: 15, halign: 'right' }, // LTR
+          4: { cellWidth: 15, halign: 'right' }, // KG
         },
-        tableWidth: pageWidth - margin * 2,
+        tableWidth: 95,
         foot: [
           [
             'Total',
@@ -1224,7 +1202,7 @@ const BatchProductionReport = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Batch Report For Accounts"
+        title="Batch Production Reports"
         description="Comprehensive view of all production batches"
         actions={
           <Button
@@ -1745,8 +1723,6 @@ const BatchProductionReport = () => {
                             Percentage (%)
                           </th>
                           <th className="border border-gray-300 px-2 py-1 text-right">Actual</th>
-                          <th className="border border-gray-300 px-2 py-1 text-right">Rate</th>
-                          <th className="border border-gray-300 px-2 py-1 text-right">Amount</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1765,17 +1741,6 @@ const BatchProductionReport = () => {
                             <td className="border border-gray-300 px-2 py-1 text-right">
                               {formatNumberForPreview(rm.actualQty || rm.percentage)}
                             </td>
-                            <td className="border border-gray-300 px-2 py-1 text-right">
-                              {formatNumberForPreview(rm.unitPrice)}
-                            </td>
-                            <td className="border border-gray-300 px-2 py-1 text-right">
-                              {formatNumberForPreview(
-                                parseNumber(rm.actualQty ?? rm.percentage ?? '0') *
-                                  (rm.unitPrice !== null && rm.unitPrice !== undefined
-                                    ? parseNumber(rm.unitPrice)
-                                    : 0)
-                              )}
-                            </td>
                           </tr>
                         ))}
                         {/* Additional Materials - All Bold */}
@@ -1793,17 +1758,6 @@ const BatchProductionReport = () => {
                             <td className="border border-gray-300 px-2 py-1 text-right font-bold">
                               {formatNumberForPreview(rm.actualQty || rm.percentage)}
                             </td>
-                            <td className="border border-gray-300 px-2 py-1 text-right font-bold">
-                              {formatNumberForPreview(rm.unitPrice)}
-                            </td>
-                            <td className="border border-gray-300 px-2 py-1 text-right font-bold">
-                              {formatNumberForPreview(
-                                parseNumber(rm.actualQty ?? rm.percentage ?? '0') *
-                                  (rm.unitPrice !== null && rm.unitPrice !== undefined
-                                    ? parseNumber(rm.unitPrice)
-                                    : 0)
-                              )}
-                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -1817,10 +1771,6 @@ const BatchProductionReport = () => {
                           </td>
                           <td className="border border-gray-300 px-2 py-1 text-right">
                             {formatNumberForPreview(totalActual)}
-                          </td>
-                          <td className="border border-gray-300 px-2 py-1 text-right">&nbsp;</td>
-                          <td className="border border-gray-300 px-2 py-1 text-right">
-                            {formatNumberForPreview(totalAmount)}
                           </td>
                         </tr>
                       </tfoot>
@@ -2056,4 +2006,4 @@ const BatchProductionReport = () => {
   );
 };
 
-export default BatchProductionReport;
+export default NewBatchProductionReport;

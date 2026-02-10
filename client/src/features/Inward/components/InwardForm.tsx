@@ -10,6 +10,7 @@ import { CreateInwardInput, InwardEntry, InwardItemInput } from '../types';
 import { Product } from '@/features/inventory/types';
 import { Unit } from '@/features/masters/types';
 import { Calendar, Plus, Trash2, Save, Edit2 } from 'lucide-react';
+import { showToast } from '@/utils/toast';
 
 interface InwardFormProps {
   onSubmit: (data: CreateInwardInput) => Promise<void>;
@@ -140,7 +141,32 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
           unitApi.getAll().then(res => res.data),
           suppliersApi.getAll({ isActive: true }),
         ]);
-        setUnits(unitsData || []);
+        // Normalize unit objects to expected shape { UnitID, UnitName }
+        const normalizedUnits = (unitsData || []).map((u: any) => ({
+          UnitID: u.UnitID ?? u.unitId ?? u.id ?? 0,
+          UnitName: u.UnitName ?? u.unitName ?? u.name ?? '',
+          UnitSymbol: u.UnitSymbol ?? u.unitSymbol ?? u.symbol ?? undefined,
+        }));
+
+        // Ensure default units exist (KG, NO, LTR)
+        const required = ['KG', 'NO.', 'LTR'];
+        const existingNames = normalizedUnits.map((u: any) =>
+          (u.UnitName || '').toString().trim().toUpperCase()
+        );
+        let nextTempId = -1;
+        required.forEach(req => {
+          if (!existingNames.includes(req)) {
+            normalizedUnits.push({ UnitID: nextTempId--, UnitName: req, UnitSymbol: undefined });
+          }
+        });
+
+        // Debug: log units for verification
+        // eslint-disable-next-line no-console
+        console.debug('InwardForm: unitsData ->', unitsData);
+        // eslint-disable-next-line no-console
+        console.debug('InwardForm: normalizedUnits ->', normalizedUnits);
+
+        setUnits(normalizedUnits);
         setSuppliers(suppliersData || []);
       } catch (error) {
         console.error('Failed to load data', error);
@@ -190,8 +216,18 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
 
     const handleItemChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       const { name, value } = e.target;
+
+      // Prevent accepting zero as unit price
+      if (name === 'unitPrice') {
+        const num = parseFloat(String(value));
+        if (!isNaN(num) && num === 0) {
+          showToast.error('Enter a non-zero value for Actual Density');
+          return;
+        }
+      }
+
       setCurrentItem(prev => {
-        const updated = { ...prev, [name]: name === 'unitId' ? Number(value) : value };
+        const updated = { ...prev, [name]: name === 'unitId' ? Number(value) : value } as any;
 
         if (name === 'quantity' || name === 'totalPrice') {
           const qty = Number(name === 'quantity' ? value : updated.quantity);
@@ -256,7 +292,8 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
 
         const finalUnitId =
           currentItem.unitId ||
-          products.find(p => p.masterProductId === currentItem.productId)?.unitId || getDefaultUnitId(activeTab);
+          products.find(p => p.masterProductId === currentItem.productId)?.unitId ||
+          getDefaultUnitId(activeTab);
 
         if (!finalUnitId) {
           alert('Please select a unit');
@@ -453,12 +490,13 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
               type="button"
               onClick={() => handleTabChange('RM')}
               disabled={(!!initialData || items.length > 0) && activeTab !== 'RM'}
-              className={`flex-1 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${activeTab === 'RM'
-                ? 'bg-[var(--primary-light)] text-[var(--primary)] shadow-sm ring-1 ring-[var(--primary-light)]'
-                : !!initialData || items.length > 0
-                  ? 'text-[var(--text-disabled)] cursor-not-allowed opacity-50'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
-                }`}
+              className={`flex-1 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${
+                activeTab === 'RM'
+                  ? 'bg-[var(--primary-light)] text-[var(--primary)] shadow-sm ring-1 ring-[var(--primary-light)]'
+                  : !!initialData || items.length > 0
+                    ? 'text-[var(--text-disabled)] cursor-not-allowed opacity-50'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+              }`}
               title={
                 (!!initialData || items.length > 0) && activeTab !== 'RM'
                   ? 'Cannot change product type after adding products'
@@ -471,12 +509,13 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
               type="button"
               onClick={() => handleTabChange('PM')}
               disabled={(!!initialData || items.length > 0) && activeTab !== 'PM'}
-              className={`flex-1 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${activeTab === 'PM'
-                ? 'bg-[var(--primary-light)] text-[var(--primary)] shadow-sm ring-1 ring-[var(--primary-light)]'
-                : !!initialData || items.length > 0
-                  ? 'text-[var(--text-disabled)] cursor-not-allowed opacity-50'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
-                }`}
+              className={`flex-1 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${
+                activeTab === 'PM'
+                  ? 'bg-[var(--primary-light)] text-[var(--primary)] shadow-sm ring-1 ring-[var(--primary-light)]'
+                  : !!initialData || items.length > 0
+                    ? 'text-[var(--text-disabled)] cursor-not-allowed opacity-50'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+              }`}
               title={
                 (!!initialData || items.length > 0) && activeTab !== 'PM'
                   ? 'Cannot change product type after adding products'
@@ -694,10 +733,11 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
                   {items.map((item, idx) => (
                     <tr
                       key={idx}
-                      className={`transition-colors duration-150 ${editingItemIndex === idx
-                        ? 'bg-[var(--primary-light)] border-l-4 border-l-[var(--primary)]'
-                        : 'hover:bg-[var(--surface-hover)]'
-                        }`}
+                      className={`transition-colors duration-150 ${
+                        editingItemIndex === idx
+                          ? 'bg-[var(--primary-light)] border-l-4 border-l-[var(--primary)]'
+                          : 'hover:bg-[var(--surface-hover)]'
+                      }`}
                     >
                       <td className="px-4 py-3 text-[var(--text-primary)] font-medium whitespace-nowrap">
                         {getProductName(item.masterProductId)}

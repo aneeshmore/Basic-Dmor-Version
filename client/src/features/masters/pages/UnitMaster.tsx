@@ -139,6 +139,17 @@ export default function UnitMaster() {
   const [isAddConfirmModalOpen, setIsAddConfirmModalOpen] = useState(false);
   const [pendingItem, setPendingItem] = useState<Unit | null>(null);
 
+  // Default units that should always be present
+  const DEFAULT_UNITS = [
+    { UnitID: -1, UnitName: 'KG' },
+    { UnitID: -2, UnitName: 'NO' },
+    { UnitID: -3, UnitName: 'LTR' },
+  ];
+
+  const isDefaultUnit = (unit: Unit): boolean => {
+    return unit.UnitID === -1 || unit.UnitID === -2 || unit.UnitID === -3;
+  };
+
   useEffect(() => {
     loadUnits();
   }, []);
@@ -148,7 +159,10 @@ export default function UnitMaster() {
       setLoading(true);
       const response = await unitApi.getAll();
       if (response.success && response.data) {
-        setUnits(response.data);
+        // Merge default units with fetched units, avoiding duplicates
+        const fetchedUnitNames = new Set(response.data.map(u => u.UnitName));
+        const defaultUnitsToAdd = DEFAULT_UNITS.filter(du => !fetchedUnitNames.has(du.UnitName));
+        setUnits([...defaultUnitsToAdd, ...response.data]);
       }
     } catch (error) {
       logger.error('Failed to load units:', error);
@@ -266,26 +280,33 @@ export default function UnitMaster() {
     {
       id: 'actions',
       header: 'Actions',
-      cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-2">
-          <button
-            onClick={() => handleEdit(row.original)}
-            className="p-2 rounded-lg hover:bg-[var(--surface-highlight)] text-[var(--text-secondary)] hover:text-[var(--primary)] transition-colors border border-transparent hover:border-[var(--border)] focus-ring"
-            title="Edit"
-            aria-label="Edit"
-          >
-            <Edit2 size={16} />
-          </button>
-          <button
-            onClick={() => handleDelete(row.original.UnitID)}
-            className="p-2 rounded-lg hover:bg-red-50 text-[var(--text-secondary)] hover:text-[var(--danger)] transition-colors border border-transparent hover:border-red-200 focus-ring"
-            title="Delete"
-            aria-label="Delete"
-          >
-            <Trash2 size={16} />
-          </button>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const isDefault = isDefaultUnit(row.original);
+        return (
+          <div className="flex items-center justify-end gap-2">
+            {!isDefault && (
+              <>
+                <button
+                  onClick={() => handleEdit(row.original)}
+                  className="p-2 rounded-lg hover:bg-[var(--surface-highlight)] text-[var(--text-secondary)] hover:text-[var(--primary)] transition-colors border border-transparent hover:border-[var(--border)] focus-ring"
+                  title="Edit"
+                  aria-label="Edit"
+                >
+                  <Edit2 size={16} />
+                </button>
+                <button
+                  onClick={() => handleDelete(row.original.UnitID)}
+                  className="p-2 rounded-lg hover:bg-red-50 text-[var(--text-secondary)] hover:text-[var(--danger)] transition-colors border border-transparent hover:border-red-200 focus-ring"
+                  title="Delete"
+                  aria-label="Delete"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
