@@ -1352,6 +1352,7 @@ export default function EmployeeMaster() {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [viewingEmployee, setViewingEmployee] = useState<Employee | null>(null);
   const [formKey, setFormKey] = useState(0);
+  const [showHidden, setShowHidden] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1405,7 +1406,7 @@ export default function EmployeeMaster() {
   const loadEmployees = async () => {
     try {
       setLoading(true);
-      const response = await employeeApi.getAll();
+      const response = await employeeApi.getAll({ includeInactive: true });
       if (response.success && response.data) {
         setEmployees(response.data);
       }
@@ -1462,22 +1463,30 @@ export default function EmployeeMaster() {
       const employee = employees.find(e => e.EmployeeID === id);
       if (!employee) return;
 
+      // Toggle logic: Active → Inactive, Inactive → Active
+      const newStatus = employee.Status === 'Active' ? 'Inactive' : 'Active';
+      const action = newStatus === 'Inactive' ? 'hide' : 'restore';
+
       // Confirmation dialog
       const confirmed = window.confirm(
-        `Are you sure you want to delete employee "${employee.FirstName} ${employee.LastName}"?`
+        `Are you sure you want to ${action} employee "${employee.FirstName} ${employee.LastName}"?`
       );
 
       if (!confirmed) {
         return; // User cancelled
       }
 
-      await employeeApi.delete(id);
-      await loadEmployees(); // Reload to get fresh data
-      showToast.success(
-        `Employee "${employee.FirstName} ${employee.LastName}" deleted successfully!`
-      );
+      // Update status via API
+      const response = await employeeApi.update(id, { ...employee, Status: newStatus });
+      if (response && response.success) {
+        await loadEmployees(); // Reload to get fresh data
+        const message = newStatus === 'Inactive'
+          ? `Employee "${employee.FirstName} ${employee.LastName}" hidden successfully!`
+          : `Employee "${employee.FirstName} ${employee.LastName}" restored successfully!`;
+        showToast.success(message);
+      }
     } catch (error) {
-      logger.error('Failed to delete employee:', error);
+      logger.error('Failed to toggle employee status:', error);
     }
   };
 
@@ -1587,10 +1596,13 @@ export default function EmployeeMaster() {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => (
         <span
-          className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${row.original.Status === 'Active'
-            ? 'bg-green-100 text-green-700'
-            : 'bg-gray-100 text-gray-700'
-            }`}
+          className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+            row.original.Status === 'Active'
+              ? 'bg-green-100 text-green-700'
+              : row.original.Status === 'Inactive'
+              ? 'bg-red-100 text-red-700'
+              : 'bg-gray-100 text-gray-700'
+          }`}
         >
           {row.original.Status}
         </span>
@@ -1797,10 +1809,13 @@ export default function EmployeeMaster() {
                   <span className="text-xs font-medium text-[var(--text-secondary)]">Status</span>
                   <p className="text-[var(--text-primary)] font-medium">
                     <span
-                      className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${viewingEmployee.Status === 'Active'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-700'
-                        }`}
+                      className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        viewingEmployee.Status === 'Active'
+                          ? 'bg-green-100 text-green-700'
+                          : viewingEmployee.Status === 'Inactive'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}
                     >
                       {viewingEmployee.Status}
                     </span>
@@ -1897,10 +1912,12 @@ export default function EmployeeMaster() {
           onDepartmentChange={handleDepartmentChange}
           salesPersons={employees.filter(e => {
             // Filter by EmployeeType 'SalesPerson' or if the Role name contains 'Sales'
+            // Also exclude Inactive employees
             // This covers both explicit type assignment and role-based matching
             return (
-              e.EmployeeType === 'SalesPerson' ||
-              e.Role?.toLowerCase().includes('sales')
+              e.Status === 'Active' &&
+              (e.EmployeeType === 'SalesPerson' ||
+              e.Role?.toLowerCase().includes('sales'))
             );
           })}
         />
@@ -1908,7 +1925,24 @@ export default function EmployeeMaster() {
 
       {/* Employee Table Section */}
       <div className="bg-[var(--surface)] rounded-lg border border-[var(--border)] shadow-sm overflow-hidden">
-        <DataTable data={employees} columns={columns} searchPlaceholder="Search employees..." />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border-b border-[var(--border)]">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)]">Employee Records</h3>
+          <button
+            onClick={() => setShowHidden(!showHidden)}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              showHidden
+                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {showHidden ? '✓ Showing Hidden Records' : '○ Hide Hidden Records'}
+          </button>
+        </div>
+        <DataTable
+          data={showHidden ? employees : employees.filter(e => e.Status === 'Active')}
+          columns={columns}
+          searchPlaceholder="Search employees..."
+        />
       </div>
     </div>
   );

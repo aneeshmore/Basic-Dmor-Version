@@ -239,12 +239,14 @@ export class EmployeesService {
       throw new AppError('Employee not found', 404);
     }
 
-    // Prevent deletion of SuperAdmin
+    // Prevent toggling SuperAdmin
     const roleName = existing.role || '';
     if (roleName.toLowerCase() === 'superadmin') {
-      throw new AppError('Cannot delete SuperAdmin employee', 403);
+      throw new AppError('Cannot toggle SuperAdmin employee status', 403);
     }
 
-    await this.repository.delete(employeeId);
+    // Toggle status: Active → Inactive, Inactive → Active
+    const newStatus = existing.status === 'Active' ? 'Inactive' : 'Active';
+    await this.repository.update(employeeId, { status: newStatus });
   }
 }

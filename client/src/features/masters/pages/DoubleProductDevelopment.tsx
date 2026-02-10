@@ -1207,7 +1207,7 @@ const DoubleProductDevelopment = () => {
                   {calculateSolidVolumeRatio(items).toFixed(3)}%
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              {/* <div className="flex items-center gap-2">
                 <span className="text-[var(--text-secondary)] font-medium">PVC:</span>
                 <span className="text-[var(--text-primary)] font-semibold">
                   {calculatePVC(items).toFixed(3)}%
@@ -1218,7 +1218,7 @@ const DoubleProductDevelopment = () => {
                 <span className="text-[var(--text-primary)] font-semibold">
                   {calculateCPVC(items).toFixed(3)}%
                 </span>
-              </div>
+              </div> */}
               <div className="flex items-center gap-2">
                 <span className="text-[var(--text-secondary)] font-medium">Density:</span>
                 <span className="text-[var(--text-primary)] font-semibold">

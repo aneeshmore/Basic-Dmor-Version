@@ -240,10 +240,21 @@ export class EmployeesRepository {
   }
 
   async delete(employeeId) {
-    // Delete from employee_roles (no cascade on employeeId FK)
-    await db.delete(employeeRoles).where(eq(employeeRoles.employeeId, employeeId));
-    // Finally delete the employee
-    await db.delete(employees).where(eq(employees.employeeId, employeeId));
+    // Soft-delete behavior: toggle status between Active and Inactive
+    // First fetch the current employee to get their current status
+    const employee = await this.findById(employeeId);
+    if (!employee) {
+      throw new Error('Employee not found');
+    }
+    
+    // Toggle: Active → Inactive, Inactive → Active
+    const newStatus = employee.status === 'Active' ? 'Inactive' : 'Active';
+    
+    // Update status without removing rows
+    await db
+      .update(employees)
+      .set({ status: newStatus, updatedAt: new Date() })
+      .where(eq(employees.employeeId, employeeId));
   }
 
   async assignRole(employeeId, roleId) {
