@@ -470,7 +470,7 @@ export const CrmDashboard = () => {
       <div className="flex border-b border-[var(--border)] gap-4">
         <button
           className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'upcoming'
-            ? 'border-[var(--primary)] text-[var(--primary)]'
+            ? 'border-[var(--primary)] text-[var(--primary)] bg-red-50'
             : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           onClick={() => setActiveTab('upcoming')}
@@ -479,7 +479,7 @@ export const CrmDashboard = () => {
         </button>
         <button
           className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'customers'
-            ? 'border-[var(--primary)] text-[var(--primary)]'
+            ? 'border-[var(--primary)] text-[var(--primary)] bg-blue-50'
             : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           onClick={() => setActiveTab('customers')}
@@ -490,7 +490,7 @@ export const CrmDashboard = () => {
 
       {/* Content */}
       {activeTab === 'upcoming' ? (
-        <div className="space-y-6">
+        <div className="space-y-6 bg-red-100 p-6 rounded-lg">
           {/* Search Bar for Upcoming */}
           <div className="relative max-w-sm">
             <Search
@@ -508,7 +508,7 @@ export const CrmDashboard = () => {
 
           <div className="space-y-8">
             {/* Today's Section */}
-            <div className="card border-l-4 border-l-red-500">
+            <div className="card border-l-4 border-l-red-500 bg-red-50">
               <div className="p-4 border-b border-[var(--border)] bg-red-50/50">
                 <h3 className="text-sm font-bold text-red-800 flex items-center gap-2">
                   <AlertCircle size={16} /> Due Today & Overdue
@@ -535,7 +535,7 @@ export const CrmDashboard = () => {
           </div>
         </div>
       ) : (
-        <div className="card">
+        <div className="card bg-blue-50">
           <div className="p-4 border-b border-[var(--border)] flex flex-col md:flex-row md:justify-between md:items-center gap-4 bg-blue-50">
             <h3 className="text-sm font-bold text-blue-800 flex items-center gap-2">
               <User size={16} /> Client Directory
