@@ -41,6 +41,9 @@ const MasterProduct = () => {
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [selectedHardenerId, setSelectedHardenerId] = useState<number | null>(null);
 
+  // Table search state
+  const [tableSearch, setTableSearch] = useState('');
+
   // Pending edit ID from URL params (to be applied after products load)
   const [pendingEditId, setPendingEditId] = useState<number | null>(null);
 
@@ -279,13 +282,13 @@ const MasterProduct = () => {
     }
   };
 
-  // Filter products based on productName input - the name field acts as search
+  // Filter products based on table search only
   const filteredProducts = products.filter(
     p =>
       p.productType === activeTab &&
-      (productName.trim() === '' ||
-        p.masterProductName.toLowerCase().includes(productName.toLowerCase()) ||
-        p.masterProductId.toString().includes(productName))
+      (tableSearch.trim() === '' ||
+        p.masterProductName.toLowerCase().includes(tableSearch.toLowerCase()) ||
+        p.masterProductId.toString().includes(tableSearch))
   );
 
   return (
@@ -331,10 +334,11 @@ const MasterProduct = () => {
                     setSelectedHardenerId(null);
                     setHighlightedIndex(-1);
                   }}
-                  className={`py-2 px-1 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-colors ${activeTab === type
+                  className={`py-2 px-1 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-colors ${
+                    activeTab === type
                       ? 'bg-[var(--primary)] text-white shadow-md'
                       : 'bg-[var(--surface-highlight)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'
-                    }`}
+                  }`}
                 >
                   {fullForm}
                 </button>
@@ -347,7 +351,6 @@ const MasterProduct = () => {
               value={productName}
               onChange={e => {
                 setProductName(e.target.value);
-                setHighlightedIndex(0); // Reset to first result on type
               }}
               onKeyDown={e => {
                 if (e.key === 'ArrowDown') {
@@ -583,27 +586,17 @@ const MasterProduct = () => {
         {/* Right Side: Table */}
         <div className="lg:col-span-8 card flex flex-col min-h-0">
           <div className="p-4 border-b border-[var(--border)] bg-[var(--surface-highlight)] rounded-t-lg flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Search size={18} className="text-[var(--text-secondary)]" />
-              {productName.trim() && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-[var(--text-primary)] bg-[var(--surface)] px-2 py-1 rounded">
-                    &ldquo;{productName}&rdquo;
-                  </span>
-                  {filteredProducts.length === 0 && (
-                    <span className="text-xs text-[var(--success)] font-medium ml-2 bg-green-50 px-2 py-1 rounded">
-                      → Press Save to add new
-                    </span>
-                  )}
-                  {filteredProducts.length > 0 && (
-                    <span className="text-xs text-[var(--text-secondary)] ml-2">
-                      ↑↓ Navigate • Enter to select
-                    </span>
-                  )}
-                </div>
-              )}
+            <div className="flex items-center gap-3 flex-grow">
+              <Search size={18} className="text-[var(--text-secondary)] flex-shrink-0" />
+              <input
+                type="text"
+                value={tableSearch}
+                onChange={e => setTableSearch(e.target.value)}
+                placeholder="Search by name or ID..."
+                className="flex-grow bg-[var(--surface)] border border-[var(--border)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-0 transition-all"
+              />
             </div>
-            <span className="text-xs text-[var(--text-secondary)]">
+            <span className="text-xs text-[var(--text-secondary)] flex-shrink-0">
               {filteredProducts.length} result{filteredProducts.length !== 1 ? 's' : ''}
             </span>
           </div>
@@ -640,24 +633,26 @@ const MasterProduct = () => {
                     <tr
                       key={product.masterProductId}
                       onClick={() => handleEdit(product)}
-                      className={`transition-colors cursor-pointer ${index === highlightedIndex
+                      className={`transition-colors cursor-pointer ${
+                        index === highlightedIndex
                           ? 'bg-[var(--primary)]/10 border-l-4 border-l-[var(--primary)]'
                           : selectedProduct?.masterProductId === product.masterProductId
                             ? 'bg-[var(--surface-highlight)]'
                             : 'hover:bg-[var(--surface-hover)]'
-                        }`}
+                      }`}
                     >
                       <td className="px-6 py-3 font-mono text-[var(--text-secondary)]">
                         {product.masterProductId}
                       </td>
                       <td className="px-6 py-3">
                         <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${product.productType === 'FG'
+                          className={`px-2 py-1 rounded text-xs font-medium ${
+                            product.productType === 'FG'
                               ? 'bg-blue-100 text-blue-700'
                               : product.productType === 'RM'
                                 ? 'bg-green-100 text-green-700'
                                 : 'bg-purple-100 text-purple-700'
-                            }`}
+                          }`}
                         >
                           {product.productType || 'FG'}
                         </span>

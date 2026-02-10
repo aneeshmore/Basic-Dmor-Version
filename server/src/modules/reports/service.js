@@ -152,6 +152,30 @@ export class ReportsService {
           // We now rely ONLY on batch_materials which is a snapshot of the recipe at batch creation time.
           // This prevents current recipe changes from altering historical reports.
 
+          // Fetch latest inward unit prices for these materials (if any)
+          const materialIds = batchMaterialsData
+            .map(bm => bm.materialId)
+            .filter(id => id !== null && id !== undefined);
+
+          let latestPriceMap = new Map();
+          if (materialIds.length > 0) {
+            const inwardRows = await db
+              .select({
+                masterProductId: materialInward.masterProductId,
+                unitPrice: materialInward.unitPrice,
+              })
+              .from(materialInward)
+              .where(inArray(materialInward.masterProductId, materialIds))
+              .orderBy(desc(materialInward.inwardDate));
+
+            inwardRows.forEach(row => {
+              // first occurrence (descending by date) is the latest
+              if (!latestPriceMap.has(row.masterProductId)) {
+                latestPriceMap.set(row.masterProductId, row.unitPrice);
+              }
+            });
+          }
+
           const rawMaterials = batchMaterialsData.map(bm => {
             // Determine if it's "additional"
             // 1. Explicitly flagged in DB
@@ -173,6 +197,8 @@ export class ReportsService {
               // Since we don't track variance for regular items anymore, Actual = Planned (Required)
               // For additional items, Actual = Required (which stores the added amount)
               actualQty: bm.requiredQuantity,
+              // attach latest unit price if available from inward records
+              unitPrice: latestPriceMap.get(bm.materialId) || null,
               isAdditional,
             };
           });
@@ -214,7 +240,6 @@ export class ReportsService {
           }
 
           const calculatedPackagingMaterials = Array.from(packagingMap.values());
-
 
           return {
             batchId: batch.batchId,
@@ -299,7 +324,6 @@ export class ReportsService {
             packagingMaterials: calculatedPackagingMaterials, // Add calculated PMs
           };
         })
-
       );
 
       return batchesWithBom;
@@ -378,8 +402,6 @@ export class ReportsService {
       result.sort((a, b) => b.totalRevenue - a.totalRevenue);
 
       return result;
-
-
     } catch (error) {
       console.error('Error fetching salesman revenue report:', error);
       throw error;
@@ -439,7 +461,7 @@ export class ReportsService {
             salespersonId: spId,
             salespersonName: spName,
             totalIncentive: 0,
-            details: []
+            details: [],
           };
         }
 
@@ -458,7 +480,7 @@ export class ReportsService {
             totalQuantity: 0,
             incentiveRate: rate,
             totalIncentive: 0,
-            orders: [] // specific orders contributing to this
+            orders: [], // specific orders contributing to this
           };
           grouped[spId].details.push(productEntry);
         }
@@ -469,7 +491,7 @@ export class ReportsService {
           orderNumber: item.orderNumber,
           date: item.date,
           quantity: qty,
-          incentive: incentive
+          incentive: incentive,
         });
       });
 
@@ -478,13 +500,11 @@ export class ReportsService {
       result.sort((a, b) => b.totalIncentive - a.totalIncentive);
 
       return result;
-
     } catch (error) {
       console.error('Error fetching salesperson incentive report:', error);
       throw error;
     }
   }
-
 
   async getDailyConsumptionReport(date) {
     try {
@@ -508,10 +528,7 @@ export class ReportsService {
         })
         .from(masterProducts)
         .where(
-          and(
-            inArray(masterProducts.productType, ['RM', 'PM']),
-            eq(masterProducts.isActive, true)
-          )
+          and(inArray(masterProducts.productType, ['RM', 'PM']), eq(masterProducts.isActive, true))
         );
 
       // 2. Calculate Opening Stock based on Inventory Transactions (Ledger)
@@ -525,12 +542,10 @@ export class ReportsService {
         })
         .from(inventoryTransactions)
         .leftJoin(products, eq(inventoryTransactions.productId, products.productId))
-        .where(
-          and(
-            lt(inventoryTransactions.createdAt, startOfDay)
-          )
-        )
-        .groupBy(sql`COALESCE(${inventoryTransactions.masterProductId}, ${products.masterProductId})`);
+        .where(and(lt(inventoryTransactions.createdAt, startOfDay)))
+        .groupBy(
+          sql`COALESCE(${inventoryTransactions.masterProductId}, ${products.masterProductId})`
+        );
 
       openingStockData.forEach(item => {
         if (item.masterProductId) {
@@ -584,10 +599,7 @@ export class ReportsService {
           .from(batchProducts)
           .innerJoin(products, eq(batchProducts.productId, products.productId))
           .where(
-            and(
-              inArray(batchProducts.batchId, completedBatchIds),
-              isNotNull(products.packagingId)
-            )
+            and(inArray(batchProducts.batchId, completedBatchIds), isNotNull(products.packagingId))
           )
           .groupBy(products.packagingId);
 
@@ -625,7 +637,6 @@ export class ReportsService {
       filteredReportData.sort((a, b) => a.masterProductName.localeCompare(b.masterProductName));
 
       return filteredReportData;
-
     } catch (error) {
       console.error('Error fetching daily consumption report:', error);
       throw error;
@@ -819,7 +830,10 @@ export class ReportsService {
             masterProductRM,
             eq(masterProducts.masterProductId, masterProductRM.masterProductId)
           )
-          .leftJoin(inventoryTransactions, eq(masterProducts.masterProductId, inventoryTransactions.masterProductId))
+          .leftJoin(
+            inventoryTransactions,
+            eq(masterProducts.masterProductId, inventoryTransactions.masterProductId)
+          )
           .where(and(...rmConditions))
           .groupBy(
             masterProducts.masterProductId,
@@ -866,7 +880,10 @@ export class ReportsService {
             masterProductPM,
             eq(masterProducts.masterProductId, masterProductPM.masterProductId)
           )
-          .leftJoin(inventoryTransactions, eq(masterProducts.masterProductId, inventoryTransactions.masterProductId))
+          .leftJoin(
+            inventoryTransactions,
+            eq(masterProducts.masterProductId, inventoryTransactions.masterProductId)
+          )
           .where(and(...pmConditions))
           .groupBy(
             masterProducts.masterProductId,
@@ -1177,7 +1194,7 @@ export class ReportsService {
 
           const preResult = await db
             .select({
-              totalQuantity: sql`SUM(${inventoryTransactions.quantity})`
+              totalQuantity: sql`SUM(${inventoryTransactions.quantity})`,
             })
             .from(inventoryTransactions)
             .leftJoin(products, eq(inventoryTransactions.productId, products.productId))
@@ -1185,10 +1202,7 @@ export class ReportsService {
               masterProducts,
               sql`COALESCE(${products.masterProductId}, ${inventoryTransactions.masterProductId}) = ${masterProducts.masterProductId}`
             )
-            .where(and(
-              ...productConds,
-              lt(inventoryTransactions.createdAt, new Date(startDate))
-            ));
+            .where(and(...productConds, lt(inventoryTransactions.createdAt, new Date(startDate))));
 
           if (preResult.length > 0 && preResult[0].totalQuantity) {
             openingBalance = Number(preResult[0].totalQuantity);
@@ -1215,12 +1229,13 @@ export class ReportsService {
 
         const lifetimeResult = await db
           .select({
-            totalQuantity: sql`SUM(${inventoryTransactions.quantity})`
+            totalQuantity: sql`SUM(${inventoryTransactions.quantity})`,
           })
           .from(inventoryTransactions)
           .where(and(...productCondsAll));
 
-        const lifetimeSum = lifetimeResult.length > 0 ? Number(lifetimeResult[0].totalQuantity || 0) : 0;
+        const lifetimeSum =
+          lifetimeResult.length > 0 ? Number(lifetimeResult[0].totalQuantity || 0) : 0;
 
         // iii. Calculate Drift
         const discrepancy = currentOfficialStock - lifetimeSum;
@@ -1390,7 +1405,7 @@ export class ReportsService {
             transactionType: transitionType,
             productCategory: category,
             notes: tx.notes || '',
-            originalSnapshotBalance: tx.balanceAfter // (Optional debugging)
+            originalSnapshotBalance: tx.balanceAfter, // (Optional debugging)
           };
         }
       );
@@ -1398,17 +1413,16 @@ export class ReportsService {
       // Reverse list to show Newest First (standard report format)
       processedTransactions.reverse();
 
-
       return {
         product: product
           ? {
-            ...product,
-            masterProductName: product.masterProduct?.masterProductName,
-            productType: product.masterProduct?.productType,
-            fgDetails: product.masterProduct?.fgDetails,
-            rmDetails: product.masterProduct?.rmDetails,
-            pmDetails: product.masterProduct?.pmDetails,
-          }
+              ...product,
+              masterProductName: product.masterProduct?.masterProductName,
+              productType: product.masterProduct?.productType,
+              fgDetails: product.masterProduct?.fgDetails,
+              rmDetails: product.masterProduct?.rmDetails,
+              pmDetails: product.masterProduct?.pmDetails,
+            }
           : null,
         transactions: processedTransactions,
         bom: bom.map(b => ({

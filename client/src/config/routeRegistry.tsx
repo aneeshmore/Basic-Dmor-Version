@@ -137,11 +137,16 @@ const CustomerReport = lazy(() => import('@/features/reports/pages/CustomerRepor
 const CancelledOrdersReport = lazy(() => import('@/features/reports/pages/CancelledOrdersReport'));
 const ProfitLossReport = lazy(() => import('@/features/reports/pages/ProfitLossReport'));
 const BatchProductionReport = lazy(() => import('@/features/reports/pages/BatchProductionReport'));
+const NewBatchProductionReport = lazy(
+  () => import('@/features/reports/pages/NewBatchProductionReport')
+);
 const MaterialInwardReport = lazy(() => import('@/features/reports/pages/MaterialInwardReport'));
 const StockReport = lazy(() => import('@/features/reports/pages/StockReport'));
 const LowStockReport = lazy(() => import('@/features/reports/pages/LowStockReport'));
 const ProductWiseReport = lazy(() => import('@/features/reports/pages/ProductWiseReport'));
-const DailyConsumptionReport = lazy(() => import('@/features/reports/pages/DailyConsumptionReport'));
+const DailyConsumptionReport = lazy(
+  () => import('@/features/reports/pages/DailyConsumptionReport')
+);
 // Masters
 const MastersDashboard = lazy(() => import('@/features/masters/pages/MastersDashboard'));
 const DepartmentMaster = lazy(() => import('@/features/masters/pages/DepartmentMaster'));
@@ -221,7 +226,6 @@ const SalespersonRevenueReport = lazy(
 // const SalespersonIncentiveReport = lazy(
 //   () => import('@/features/reports/pages/SalespersonIncentiveReport')
 // );
-
 
 // Dashboard Redirect
 const DashboardRedirect = lazy(() =>
@@ -498,7 +502,6 @@ export const routeRegistry: RouteNode[] = [
     component: OperationsDashboard,
     group: 'Main',
     children: [
-
       {
         id: 'create-order',
         path: '/operations/create-order',
@@ -818,9 +821,18 @@ export const routeRegistry: RouteNode[] = [
       {
         id: 'batch-report',
         path: '/reports/batch-production',
-        label: 'Batch Report',
+        label: 'Batch Reports For Accounts',
         icon: BarChart3,
         component: BatchProductionReport,
+        permission: { module: 'report-batch' },
+        apis: [{ route: '/reports/batch-production', method: 'GET', label: 'View Batch Report' }],
+      },
+      {
+        id: 'new-batch-report',
+        path: '/reports/new-batch-production',
+        label: 'Batch Report',
+        icon: BarChart3,
+        component: NewBatchProductionReport,
         permission: { module: 'report-batch' },
         apis: [{ route: '/reports/batch-production', method: 'GET', label: 'View Batch Report' }],
       },

@@ -9,7 +9,6 @@ import { productDevelopmentApi } from '@/features/masters/api/productDevelopment
 import logger from '@/utils/logger';
 import { showToast } from '@/utils/toast';
 import { handleApiError } from '@/utils/errorHandler';
-import { formatDecimalDisplay } from '@/utils/formatters';
 import {
   DndContext,
   closestCenter,
@@ -320,7 +319,9 @@ const DoubleProductDevelopment = () => {
     }
 
     const targetItems = isHardener ? hardenerItems : baseItems;
-    if (targetItems.some(item => item.productId === productToAdd.masterProductId)) {
+    const alreadyExists = targetItems.some(item => item.productId === productToAdd.masterProductId);
+
+    if (alreadyExists && !productToAdd.CanBeAddedMultipleTimes) {
       showToast.error('Product already added to this section');
       return;
     }
@@ -800,13 +801,19 @@ const DoubleProductDevelopment = () => {
 
   const rmProductOptions = useMemo(
     () =>
-      rmMasterProducts.map(mp => ({
-        id: mp.masterProductId,
-        label: mp.masterProductName,
-        value: mp.masterProductId,
-        subLabel: String(mp.masterProductId),
-      })),
-    [rmMasterProducts]
+      rmMasterProducts
+        .filter(mp => {
+          const isAlreadyAdded = baseItems.some(item => item.productId === mp.masterProductId);
+          if (isAlreadyAdded && !mp.CanBeAddedMultipleTimes) return false;
+          return true;
+        })
+        .map(mp => ({
+          id: mp.masterProductId,
+          label: mp.masterProductName,
+          value: mp.masterProductId,
+          subLabel: mp.CanBeAddedMultipleTimes ? '✓ Can add multiple times' : undefined,
+        })),
+    [rmMasterProducts, baseItems]
   );
 
   // Helper to calculate total percentage of a specific list (for local footer)
@@ -1144,7 +1151,11 @@ const DoubleProductDevelopment = () => {
                   />
                 </td>
                 <td
-                  className={`px-4 py-3 ${Math.abs(calculateTotalPercentage(items) - 100) < 0.01 ? 'text-[var(--success)]' : ''}`}
+                  className={`px-4 py-3 font-bold ${
+                    calculateTotalPercentage(items).toFixed(3) === '100.000'
+                      ? 'text-[var(--success)] bg-green-50'
+                      : 'text-[var(--danger)] bg-red-50'
+                  }`}
                 >
                   {calculateTotalPercentage(items).toFixed(3)}%
                 </td>

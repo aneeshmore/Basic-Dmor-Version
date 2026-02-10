@@ -94,7 +94,15 @@ interface DistributionInfo {
 }
 
 // Sortable Row Component for DnD
-function SortableRow({ id, children, isDisabled = false }: { id: string; children: React.ReactNode; isDisabled?: boolean }) {
+function SortableRow({
+  id,
+  children,
+  isDisabled = false,
+}: {
+  id: string;
+  children: React.ReactNode;
+  isDisabled?: boolean;
+}) {
   const sortable = useSortable({ id, disabled: isDisabled });
 
   if (isDisabled) {
@@ -152,8 +160,7 @@ export default function ScheduleBatchPage() {
           <div className="text-gray-600">
             {!isAuthenticated
               ? 'Please log in to access this page.'
-              : 'You do not have permission to create production batches.'
-            }
+              : 'You do not have permission to create production batches.'}
           </div>
         </div>
       </div>
@@ -232,7 +239,12 @@ export default function ScheduleBatchPage() {
       const capacityLtr = parseFloat(sku.packagingCapacityLtr || '0');
       if (capacityLtr > 0) {
         const fillingDensity = parseFloat(sku.fillingDensity || '0');
-        const density = fillingDensity > 0 ? fillingDensity : (actualDensity && actualDensity > 0 ? actualDensity : 1);
+        const density =
+          fillingDensity > 0
+            ? fillingDensity
+            : actualDensity && actualDensity > 0
+              ? actualDensity
+              : 1;
         return sum + qty * capacityLtr * density;
       }
 
@@ -1497,7 +1509,10 @@ export default function ScheduleBatchPage() {
 
       const capacityLtr = parseFloat(sku.packagingCapacityLtr || '0');
       if (capacityLtr > 0) {
-        const density = (actualDensity && actualDensity > 0) ? actualDensity : parseFloat(sku.fillingDensity || '1');
+        const density =
+          actualDensity && actualDensity > 0
+            ? actualDensity
+            : parseFloat(sku.fillingDensity || '1');
         return sum + qty * capacityLtr * density;
       }
 
@@ -1553,7 +1568,9 @@ export default function ScheduleBatchPage() {
 
       // Compute actual batch weight (if density provided, treat actualQuantity as volume)
       const actualBatchWeight =
-        actualQuantity && actualDensity ? Number(actualQuantity) * Number(actualDensity) : Number(actualQuantity) || 0;
+        actualQuantity && actualDensity
+          ? Number(actualQuantity) * Number(actualDensity)
+          : Number(actualQuantity) || 0;
 
       const totalOutputWeight = outputSkus.reduce((sum, s) => sum + (Number(s.weightKg) || 0), 0);
 
@@ -1889,10 +1906,19 @@ export default function ScheduleBatchPage() {
                           value={actualDensity}
                           onChange={e => {
                             const val = e.target.value;
-                            setActualDensity(val === '' ? '' : parseFloat(val));
+                            const numVal = val === '' ? '' : parseFloat(val);
+
+                            if (numVal === 0) {
+                              showToast.error('Enter a non-zero value for Actual Density'); // Display toast
+                              return; // Do not update state with 0
+                            }
+
+                            setActualDensity(numVal);
                           }}
-                          onWheel={(e) => e.preventDefault()}
-                          onKeyDown={(e) => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault(); }}
+                          onWheel={e => e.preventDefault()}
+                          onKeyDown={e => {
+                            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
+                          }}
                           className="w-full px-3 py-2 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]"
                           required
                         />
@@ -1914,8 +1940,10 @@ export default function ScheduleBatchPage() {
                             const val = e.target.value;
                             setActualViscosity(val === '' ? '' : parseFloat(val));
                           }}
-                          onWheel={(e) => e.preventDefault()}
-                          onKeyDown={(e) => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault(); }}
+                          onWheel={e => e.preventDefault()}
+                          onKeyDown={e => {
+                            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
+                          }}
                           className="w-full px-3 py-2 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]"
                           required
                         />
@@ -2000,10 +2028,14 @@ export default function ScheduleBatchPage() {
                             })
                             .map(mat => (
                               <tr key={mat.batchMaterialId}>
-                                <td className={`py-2 px-3 text-[var(--text-primary)] ${mat.materialName.toLowerCase().includes('water') ? 'font-bold' : ''}`}>
+                                <td
+                                  className={`py-2 px-3 text-[var(--text-primary)] ${mat.materialName.toLowerCase().includes('water') ? 'font-bold' : ''}`}
+                                >
                                   {mat.materialName}
                                 </td>
-                                <td className={`py-2 px-3 text-right text-[var(--text-secondary)] ${mat.materialName.toLowerCase().includes('water') ? 'font-bold' : ''}`}>
+                                <td
+                                  className={`py-2 px-3 text-right text-[var(--text-secondary)] ${mat.materialName.toLowerCase().includes('water') ? 'font-bold' : ''}`}
+                                >
                                   {mat.plannedQuantity.toFixed(3)}
                                 </td>
                               </tr>
@@ -2105,8 +2137,10 @@ export default function ScheduleBatchPage() {
                             min="0"
                             value={extraMaterialQty || ''}
                             onChange={e => setExtraMaterialQty(parseFloat(e.target.value) || 0)}
-                            onWheel={(e) => e.preventDefault()}
-                            onKeyDown={(e) => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault(); }}
+                            onWheel={e => e.preventDefault()}
+                            onKeyDown={e => {
+                              if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
+                            }}
                             placeholder="0.000"
                             className="w-full px-3 py-2 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]"
                           />
@@ -2167,8 +2201,11 @@ export default function ScheduleBatchPage() {
                                     const val = parseInt(e.target.value) || 0;
                                     setSkuOutput(prev => ({ ...prev, [sku.productId]: val }));
                                   }}
-                                  onWheel={(e) => e.preventDefault()}
-                                  onKeyDown={(e) => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault(); }}
+                                  onWheel={e => e.preventDefault()}
+                                  onKeyDown={e => {
+                                    if (e.key === 'ArrowUp' || e.key === 'ArrowDown')
+                                      e.preventDefault();
+                                  }}
                                   className="w-24 px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-right float-right"
                                 />
                               </td>
@@ -2196,7 +2233,12 @@ export default function ScheduleBatchPage() {
                                 const capacityLtr = parseFloat(sku.packagingCapacityLtr || '0');
                                 if (capacityLtr > 0) {
                                   const fillingDensity = parseFloat(sku.fillingDensity || '0');
-                                  const density = fillingDensity > 0 ? fillingDensity : (actualDensity && actualDensity > 0 ? actualDensity : 1);
+                                  const density =
+                                    fillingDensity > 0
+                                      ? fillingDensity
+                                      : actualDensity && actualDensity > 0
+                                        ? actualDensity
+                                        : 1;
                                   return sum + qty * capacityLtr * density;
                                 }
 
@@ -2311,8 +2353,10 @@ export default function ScheduleBatchPage() {
                           step="0.01"
                           value={plannedQuantity}
                           onChange={e => setPlannedQuantity(parseFloat(e.target.value))}
-                          onWheel={(e) => e.preventDefault()}
-                          onKeyDown={(e) => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault(); }}
+                          onWheel={e => e.preventDefault()}
+                          onKeyDown={e => {
+                            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
+                          }}
                           className="flex-1 px-4 py-2 border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] outline-none"
                           required
                         />
@@ -2630,12 +2674,14 @@ export default function ScheduleBatchPage() {
                         <tr key={batch.batchId} className="hover:bg-[var(--surface-hover)]">
                           <td className="px-4 py-3 font-medium">{batch.batchNo}</td>
                           <td className="px-4 py-3 text-sm">
-                            {(batch.startedAt || batch.createdAt)
-                              ? new Date(batch.startedAt || batch.createdAt || '').toLocaleDateString('en-IN', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                              })
+                            {batch.startedAt || batch.createdAt
+                              ? new Date(
+                                  batch.startedAt || batch.createdAt || ''
+                                ).toLocaleDateString('en-IN', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                })
                               : '-'}
                           </td>
                           <td className="px-4 py-3 min-w-[150px]">{batch.masterProductName}</td>
