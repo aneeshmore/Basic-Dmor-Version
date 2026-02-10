@@ -9,9 +9,9 @@ export class EmployeesController {
 
   getAllEmployees = async (req, res, next) => {
     try {
-      // Default to showing only active employees
+      // If includeInactive is explicitly true, return all statuses; otherwise default to Active
       const filters = {
-        status: req.query.status || 'Active',
+        status: req.query.includeInactive === 'true' ? undefined : 'Active',
         departmentId: req.query.departmentId ? parseInt(req.query.departmentId) : undefined,
         limit: req.query.limit ? parseInt(req.query.limit) : undefined,
         offset: req.query.offset ? parseInt(req.query.offset) : undefined,
@@ -111,11 +111,11 @@ export class EmployeesController {
       const employeeId = parseInt(req.params.id);
       await this.service.deleteEmployee(employeeId);
 
-      logger.info('Employee deleted', { employeeId });
+      logger.info('Employee status toggled', { employeeId });
 
       res.json({
         success: true,
-        message: 'Employee deleted successfully',
+        message: 'Employee status toggled successfully',
       });
     } catch (error) {
       next(error);

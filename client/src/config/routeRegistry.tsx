@@ -459,8 +459,8 @@ export const routeRegistry: RouteNode[] = [
       },
       {
         id: 'quotation-maker',
-        path: '/quotation-maker',
-        label: 'Quotation Maker',
+        path: '/company-details',
+        label: 'Company Details',
         icon: FileText,
         component: QuotationMaker,
         // showInSidebar: true, // Default is true
