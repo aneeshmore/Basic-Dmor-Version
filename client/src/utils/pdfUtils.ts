@@ -14,7 +14,7 @@ export const addPdfFooter = (doc: jsPDF) => {
 
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
-        doc.text("Generated with Morex Technologies's OMS", width / 2, height - 5, { align: 'center' });
+        doc.text("Generated with Morex Technologies's OMS", width / 2, height - 10, { align: 'center' });
     }
 };
 

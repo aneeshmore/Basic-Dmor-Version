@@ -156,7 +156,12 @@ export const FGInwardForm = React.forwardRef<HTMLFormElement, FGInwardFormProps>
 
     const handleItemChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       const { name, value } = e.target;
-      setCurrentItem(prev => ({ ...prev, [name]: value }));
+
+      if (name === 'unitId') {
+        setCurrentItem(prev => ({ ...prev, unitId: Number(value) }));
+      } else {
+        setCurrentItem(prev => ({ ...prev, [name]: value }));
+      }
     };
 
     const handleBillChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -479,8 +484,8 @@ export const FGInwardForm = React.forwardRef<HTMLFormElement, FGInwardFormProps>
                     <tr
                       key={idx}
                       className={`transition-colors duration-150 ${editingItemIndex === idx
-                          ? 'bg-[var(--primary-light)] border-l-4 border-l-[var(--primary)]'
-                          : 'hover:bg-[var(--surface-hover)]'
+                        ? 'bg-[var(--primary-light)] border-l-4 border-l-[var(--primary)]'
+                        : 'hover:bg-[var(--surface-hover)]'
                         }`}
                     >
                       <td className="px-4 py-3 text-[var(--text-primary)] font-medium whitespace-nowrap">

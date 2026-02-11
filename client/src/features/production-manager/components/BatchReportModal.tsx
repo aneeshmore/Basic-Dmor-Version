@@ -228,33 +228,40 @@ export default function BatchReportModal({
     if (reportType === 'batch-chart') {
       // Batch Chart Report
       doc.text(`Batch No : ${batch.batchNo} / ${batch.masterProductName || ''}`, 14, 25);
-      doc.text(`Date : ${new Date(batch.scheduledDate).toLocaleDateString()}`, 100, 25);
+      doc.text(`Date : ${new Date(batch.scheduledDate).toLocaleDateString()}`, 115, 25);
       doc.text(`Supervisor : Mr. ${batch.supervisorName || 'N/A'}`, 14, 32);
-      doc.text(`Start Date-Time : -`, 100, 31);
-      doc.text(`End Date-Time : -`, 100, 37);
       doc.text(`Labours : ${batch.labourNames || 'N/A'}`, 14, 38);
-      doc.text(`Density : ${batch.density ? Number(batch.density).toFixed(3) : '-'}`, 14, 44);
+      doc.text(`Actual Density : `, 115, 32);
+      doc.text(`Product Viscosity : `, 115, 38);
+      doc.text(`Mill Based Viscosity : `, 115, 44);
+
+      // Hegman gauge: Numbers 1-8 in circles
+      doc.text(`Hegman gauge :`, 115, 50);
+      let circleX = 145;
+      const hbY = 49.5;
+      for (let i = 1; i <= 8; i++) {
+        doc.setLineWidth(0.1);
+        doc.circle(circleX, hbY, 2);
+        doc.setFontSize(6);
+        doc.text(i.toString(), circleX, hbY + 0.5, { align: 'center' });
+        circleX += 6;
+      }
+      doc.setFontSize(10);
+
+      doc.text(`Standard Density : ${batch.density ? Number(batch.density).toFixed(3) : '-'}`, 14, 44);
       doc.text(`Water % : ${batch.waterPercentage || '0.00'}`, 14, 50);
       doc.text(`Production Qty : ${batch.plannedQuantity}`, 14, 56);
+      tablesStartY = 70;
     } else {
       // Completion Chart Report - Reorganized Layout
-      // LEFT SIDE: Batch info + Date/Time fields
+      // LEFT SIDE: Batch info
       doc.text(`Batch No : ${batch.batchNo} / ${batch.masterProductName || ''}`, 14, 25, { maxWidth: 85 });
       doc.text(`Supervisor : Mr. ${batch.supervisorName || 'N/A'}`, 14, 32);
       doc.text(`Labours : ${batch.labourNames || 'N/A'}`, 14, 38);
       doc.text(`Date : ${new Date(batch.scheduledDate).toLocaleDateString()}`, 14, 44);
-      doc.text(
-        `Start Date-Time : ${batch.startedAt ? new Date(batch.startedAt).toLocaleString() : '-'}`,
-        14,
-        50
-      );
-      doc.text(
-        `End Date-Time : ${batch.completedAt ? new Date(batch.completedAt).toLocaleString() : '-'}`,
-        14,
-        56
-      );
+
       const duration = calculateDuration(batch.startedAt, batch.completedAt);
-      doc.text(`Total Time : ${duration}`, 14, 62);
+      doc.text(`Total Time : ${duration}`, 14, 50);
 
       // RIGHT SIDE: Quality & Variance Analysis Table
       // Calculate variance values
@@ -289,7 +296,7 @@ export default function BatchReportModal({
         margin: { left: 105 },
         head: [['Parameter', 'Standard / Theoretical', 'Actual', 'Variance']],
         body: [
-          ['Density', stdDensity.toFixed(2), actDensity.toFixed(2), densityVariance.toFixed(2)],
+          ['Standard Density', stdDensity.toFixed(2), actDensity.toFixed(2), densityVariance.toFixed(2)],
           [
             'Viscosity',
             stdViscosity > 0 ? stdViscosity.toString() : '-',
@@ -317,7 +324,7 @@ export default function BatchReportModal({
       });
 
       const qualityTableFinalY = (doc as any).lastAutoTable.finalY;
-      tablesStartY = Math.max(tablesStartY, qualityTableFinalY + 10);
+      tablesStartY = Math.max(70, qualityTableFinalY + 10);
     }
 
     // Raw Materials Table (Only raw materials, no packaging)
@@ -515,7 +522,7 @@ export default function BatchReportModal({
     // Draw Product Table (Right Side)
     autoTable(doc, {
       startY: tablesStartY,
-      head: [['Shade', 'QTY', 'ACT QTY', 'LTR', 'KG']],
+      head: [['Shade', 'QTY', 'Filled Qty', 'LTR', 'KG']],
       body: productData,
       foot: [
         [
@@ -667,27 +674,51 @@ export default function BatchReportModal({
                 <p>
                   <span className="font-semibold">Labours:</span> {batchData.labourNames || 'N/A'}
                 </p>
+                <p>
+                  <span className="font-semibold">Standard Density:</span>{' '}
+                  {batchData.density ? Number(batchData.density).toFixed(3) : '-'}
+                </p>
+                <p>
+                  <span className="font-semibold">Water %:</span>{' '}
+                  {batchData.waterPercentage || '0.00'}
+                </p>
+                <p>
+                  <span className="font-semibold">Production Qty:</span>{' '}
+                  {batchData.plannedQuantity}
+                </p>
+              </div>
+              <div>
+                <p>
+                  <span className="font-semibold">Date:</span>{' '}
+                  {new Date(batchData.scheduledDate).toLocaleDateString()}
+                </p>
                 {reportType === 'batch-chart' ? (
                   <>
                     <p>
-                      <span className="font-semibold">Density:</span>{' '}
-                      {batchData.density ? Number(batchData.density).toFixed(3) : '-'}
+                      <span className="font-semibold">Actual Density:</span>{' '}
                     </p>
                     <p>
-                      <span className="font-semibold">Water %:</span>{' '}
-                      {batchData.waterPercentage || '0.00'}
+                      <span className="font-semibold">Product Viscosity:</span>{' '}
                     </p>
                     <p>
-                      <span className="font-semibold">Production Qty:</span>{' '}
-                      {batchData.plannedQuantity}
+                      <span className="font-semibold">Mill Based Viscosity:</span>{' '}
                     </p>
+                    <div className="flex items-center gap-2 py-1 whitespace-nowrap">
+                      <span className="font-semibold">Hegman gauge:</span>
+                      <div className="flex gap-1.5">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                          <div
+                            key={num}
+                            className="w-5 h-5 border border-black rounded-full flex items-center justify-center text-[10px] leading-none"
+                          >
+                            {num}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </>
                 ) : (
                   <>
-                    <p>
-                      <span className="font-semibold">Date:</span>{' '}
-                      {new Date(batchData.scheduledDate).toLocaleDateString()}
-                    </p>
                     <p>
                       <span className="font-semibold">Total Time:</span>{' '}
                       {calculateDuration(batchData.startedAt, batchData.completedAt)}
@@ -695,107 +726,104 @@ export default function BatchReportModal({
                   </>
                 )}
               </div>
-              <div className="text-right">
-                {reportType === 'batch-chart' ? (
-                  <>
-                    <p>
-                      <span className="font-semibold">Date:</span>{' '}
-                      {new Date(batchData.scheduledDate).toLocaleDateString()}
-                    </p>
-                  </>
-                ) : (
-                  /* Quality & Variance Analysis Table for Completion Chart */
-                  <div className="text-left">
-                    <h4 className="font-bold text-xs mb-1 text-gray-700">
-                      Quality & Variance Analysis
-                    </h4>
-                    <table className="w-full border-collapse border border-gray-600 text-xs">
-                      <thead>
-                        <tr>
-                          <th className="border border-gray-600 px-1 py-0.5">Parameter</th>
-                          <th className="border border-gray-600 px-1 py-0.5">Standard</th>
-                          <th className="border border-gray-600 px-1 py-0.5">Actual</th>
-                          <th className="border border-gray-600 px-1 py-0.5">Variance</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(() => {
-                          const stdDensity = batchData.fgDensity
-                            ? parseFloat(batchData.fgDensity)
-                            : batchData.density
-                              ? parseFloat(batchData.density)
-                              : 0;
-                          const actDensity = batchData.actualDensity
-                            ? parseFloat(batchData.actualDensity)
-                            : 0;
-                          const densityVariance = actDensity - stdDensity;
-
-                          const stdViscosity = batchData.viscosity
-                            ? parseFloat(batchData.viscosity)
-                            : 0;
-                          const actViscosity = batchData.actualViscosity
-                            ? parseFloat(batchData.actualViscosity)
-                            : 0;
-                          const viscosityVariance = actViscosity - stdViscosity;
-
-                          const actualQty = batchData.actualQuantity
-                            ? parseFloat(batchData.actualQuantity)
-                            : 0;
-                          const stdTotalWeight = batchData.plannedQuantity
-                            ? parseFloat(batchData.plannedQuantity) * stdDensity
-                            : 0;
-                          const actTotalWeight = actualQty * actDensity;
-                          const totalWeightVariance = actTotalWeight - stdTotalWeight;
-
-                          return (
-                            <>
-                              <tr>
-                                <td className="border border-gray-600 px-1 py-0.5">Density</td>
-                                <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                  {stdDensity.toFixed(2)}
-                                </td>
-                                <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                  {actDensity.toFixed(2)}
-                                </td>
-                                <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                  {densityVariance.toFixed(2)}
-                                </td>
-                              </tr>
-                              <tr>
-                                <td className="border border-gray-600 px-1 py-0.5">Viscosity</td>
-                                <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                  {stdViscosity > 0 ? stdViscosity : '-'}
-                                </td>
-                                <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                  {actViscosity > 0 ? actViscosity : '-'}
-                                </td>
-                                <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                  {viscosityVariance.toFixed(2)}
-                                </td>
-                              </tr>
-                              <tr>
-                                <td className="border border-gray-600 px-1 py-0.5">
-                                  Total Weight (Kg)
-                                </td>
-                                <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                  {stdTotalWeight.toFixed(2)}
-                                </td>
-                                <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                  {actTotalWeight.toFixed(2)}
-                                </td>
-                                <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                  {totalWeightVariance.toFixed(2)}
-                                </td>
-                              </tr>
-                            </>
-                          );
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
             </div>
+            <div className="text-right">
+              {reportType === 'batch-chart' ? (
+                <>
+                </>
+              ) : (
+                /* Quality & Variance Analysis Table for Completion Chart */
+                <div className="text-left">
+                  <h4 className="font-bold text-xs mb-1 text-gray-700">
+                    Quality & Variance Analysis
+                  </h4>
+                  <table className="w-full border-collapse border border-gray-600 text-xs">
+                    <thead>
+                      <tr>
+                        <th className="border border-gray-600 px-1 py-0.5">Parameter</th>
+                        <th className="border border-gray-600 px-1 py-0.5">Standard</th>
+                        <th className="border border-gray-600 px-1 py-0.5">Actual</th>
+                        <th className="border border-gray-600 px-1 py-0.5">Variance</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const stdDensity = batchData.fgDensity
+                          ? parseFloat(batchData.fgDensity)
+                          : batchData.density
+                            ? parseFloat(batchData.density)
+                            : 0;
+                        const actDensity = batchData.actualDensity
+                          ? parseFloat(batchData.actualDensity)
+                          : 0;
+                        const densityVariance = actDensity - stdDensity;
+
+                        const stdViscosity = batchData.viscosity
+                          ? parseFloat(batchData.viscosity)
+                          : 0;
+                        const actViscosity = batchData.actualViscosity
+                          ? parseFloat(batchData.actualViscosity)
+                          : 0;
+                        const viscosityVariance = actViscosity - stdViscosity;
+
+                        const actualQty = batchData.actualQuantity
+                          ? parseFloat(batchData.actualQuantity)
+                          : 0;
+                        const stdTotalWeight = batchData.plannedQuantity
+                          ? parseFloat(batchData.plannedQuantity) * stdDensity
+                          : 0;
+                        const actTotalWeight = actualQty * actDensity;
+                        const totalWeightVariance = actTotalWeight - stdTotalWeight;
+
+                        return (
+                          <>
+                            <tr>
+                              <td className="border border-gray-600 px-1 py-0.5">Standard Density</td>
+                              <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                {stdDensity.toFixed(2)}
+                              </td>
+                              <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                {actDensity.toFixed(2)}
+                              </td>
+                              <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                {densityVariance.toFixed(2)}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="border border-gray-600 px-1 py-0.5">Viscosity</td>
+                              <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                {stdViscosity > 0 ? stdViscosity : '-'}
+                              </td>
+                              <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                {actViscosity > 0 ? actViscosity : '-'}
+                              </td>
+                              <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                {viscosityVariance.toFixed(2)}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="border border-gray-600 px-1 py-0.5">
+                                Total Weight (Kg)
+                              </td>
+                              <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                {stdTotalWeight.toFixed(2)}
+                              </td>
+                              <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                {actTotalWeight.toFixed(2)}
+                              </td>
+                              <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                {totalWeightVariance.toFixed(2)}
+                              </td>
+                            </tr>
+                          </>
+                        );
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
 
             {/* Main Content Areas: Side-by-Side Tables */}
             <div className="flex gap-4 items-start">
@@ -1113,6 +1141,6 @@ export default function BatchReportModal({
           <div className="text-center text-gray-500 py-10">Failed to load batch data</div>
         )}
       </div>
-    </Modal>
+    </Modal >
   );
 }

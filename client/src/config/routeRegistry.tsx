@@ -477,12 +477,23 @@ export const routeRegistry: RouteNode[] = [
         ],
       },
       {
-        id: 'quotation-maker',
+        id: 'company-details',
         path: '/company-details',
         label: 'Company Details',
         icon: FileText,
+        component: lazy(() => import('@/features/company/pages/CompanyDetailsPage')),
+        permission: { module: 'quotation-maker' },
+        apis: [
+          { route: '/company', method: 'GET', label: 'Get Company Details' },
+          { route: '/company', method: 'PUT', label: 'Update Company Details' },
+        ],
+      },
+      {
+        id: 'quotation-print',
+        path: '/quotation-print',
+        label: 'Create Quotation',
         component: QuotationMaker,
-        // showInSidebar: true, // Default is true
+        showInSidebar: true,
         permission: { module: 'quotation-maker' },
         apis: [
           { route: '/masters/customers', method: 'GET', label: 'Load Customers' },

@@ -185,15 +185,12 @@ const NewBatchProductionReport = () => {
 
       // Use autoTable for layout precision on the text block to match Preview's alignment
       // Left Info Block
-      const infoData = [
+      // Left Info Block
+      const leftInfoData = [
         [`Batch No:`, `${batch.batchNo}${batch.productName ? ' / ' + batch.productName : ''}`],
         [`Supervisor:`, batch.supervisor || '-'],
         [`Labours:`, batch.labourNames || '-'],
-        [`Date:`, formatDate(new Date().toISOString())],
-        [`Start Date-Time:`, formatDateTime(batch.startedAt)],
-        [`End Date-Time:`, formatDateTime(batch.completedAt)],
-        [
-          `Total Time:`,
+        [`Total Time:`,
           (() => {
             if (!batch.actualTimeHours) return batch.timeRequired || '-';
             const hours = Math.floor(parseFloat(batch.actualTimeHours));
@@ -203,10 +200,22 @@ const NewBatchProductionReport = () => {
         ],
       ];
 
+      // Right Info Block (Quality Fields)
+      const rightInfoData = [
+        [`Date:`, formatDate(new Date().toISOString())],
+        [`Actual Density:`, ''],
+        [`Product Viscosity:`, ''],
+        [`Mill Based Viscosity:`, ''],
+        [`Hegman gauge:`, ''],
+      ];
+
+      const infoStartY = headerEndY + 5;
+
+      // Draw Left Table
       autoTable(doc, {
-        startY: headerEndY + 5,
+        startY: infoStartY,
         margin: { left: margin },
-        body: infoData,
+        body: leftInfoData,
         theme: 'plain',
         styles: {
           fontSize: 10,
@@ -218,7 +227,41 @@ const NewBatchProductionReport = () => {
           0: { cellWidth: 35, fontStyle: 'bold' },
           1: { cellWidth: 60 },
         },
-        tableWidth: 95, // Occupy left side
+        tableWidth: 95,
+      });
+
+      // Draw Right Table
+      autoTable(doc, {
+        startY: infoStartY,
+        margin: { left: margin + 95 + 5 }, // Offset by left table width + gap
+        body: rightInfoData,
+        theme: 'plain',
+        styles: {
+          fontSize: 10,
+          cellPadding: 1.5,
+          font: 'helvetica',
+          textColor: colorGray700,
+        },
+        columnStyles: {
+          0: { cellWidth: 40, fontStyle: 'bold' },
+          1: { cellWidth: 60 },
+        },
+        tableWidth: 100,
+        didDrawCell: (data) => {
+          if (data.section === 'body' && data.column.index === 1 && data.row.index === 4) {
+            // Hegman gauge is at index 4 now in right table
+            let circleX = data.cell.x + 5;
+            const circleY = data.cell.y + data.cell.height / 2;
+            for (let i = 1; i <= 8; i++) {
+              doc.setLineWidth(0.1);
+              doc.setDrawColor(0, 0, 0);
+              doc.circle(circleX, circleY, 2);
+              doc.setFontSize(6);
+              doc.text(i.toString(), circleX, circleY + 0.6, { align: 'center' });
+              circleX += 6;
+            }
+          }
+        },
       });
 
       const infoBlockFinalY = (doc as any).lastAutoTable.finalY;
@@ -310,7 +353,7 @@ const NewBatchProductionReport = () => {
         margin: { left: rightTableX }, // Align to right side
         head: [['Parameter', 'Standard ', 'Actual', 'Variance']],
         body: [
-          ['Density', stdDensity.toFixed(2), actDensity.toFixed(2), densityVariance.toFixed(2)],
+          ['Standard Density', stdDensity.toFixed(2), actDensity.toFixed(2), densityVariance.toFixed(2)],
           [
             'Viscosity',
             stdViscosity > 0 ? stdViscosity.toString() : '-',
@@ -459,7 +502,7 @@ const NewBatchProductionReport = () => {
       autoTable(doc, {
         startY: tableY,
         margin: { left: 110, right: margin },
-        head: [['Shade', 'QTY', 'ACT QTY', 'LTR', 'KG']],
+        head: [['Shade', 'QTY', 'Filled Qty', 'LTR', 'KG']],
         body: subProductsBody,
         theme: 'grid',
         styles: {
@@ -1154,13 +1197,12 @@ const NewBatchProductionReport = () => {
             <div className="flex justify-center">
               <Badge
                 variant="outline"
-                className={`${
-                  isPositive
-                    ? 'bg-green-600 text-white hover:bg-green-700'
-                    : isNegative
-                      ? 'bg-red-600 text-white hover:bg-red-700'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                } border-none rounded-sm px-1.5`}
+                className={`${isPositive
+                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  : isNegative
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                  } border-none rounded-sm px-1.5`}
               >
                 {isPositive ? '+' : ''}
                 {diff.toFixed(3)}
@@ -1243,11 +1285,10 @@ const NewBatchProductionReport = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div
             onClick={() => setStatusFilter('All')}
-            className={`card p-4 rounded-lg transition-all cursor-pointer ${
-              statusFilter === 'All'
-                ? 'border-2 border-[var(--primary)] bg-white shadow-md ring-1 ring-[var(--primary)]/30'
-                : 'border border-gray-100 bg-white shadow-sm hover:shadow-md'
-            }`}
+            className={`card p-4 rounded-lg transition-all cursor-pointer ${statusFilter === 'All'
+              ? 'border-2 border-[var(--primary)] bg-white shadow-md ring-1 ring-[var(--primary)]/30'
+              : 'border border-gray-100 bg-white shadow-sm hover:shadow-md'
+              }`}
           >
             <div className="flex justify-between items-start">
               <div>
@@ -1257,11 +1298,10 @@ const NewBatchProductionReport = () => {
                 <p className="text-3xl font-bold text-gray-900 mt-2">{stats.total}</p>
               </div>
               <div
-                className={`p-2 rounded-lg ${
-                  statusFilter === 'All'
-                    ? 'bg-[var(--primary)] text-white'
-                    : 'bg-gray-50 text-gray-400'
-                }`}
+                className={`p-2 rounded-lg ${statusFilter === 'All'
+                  ? 'bg-[var(--primary)] text-white'
+                  : 'bg-gray-50 text-gray-400'
+                  }`}
               >
                 <Layers className="w-6 h-6" />
               </div>
@@ -1270,11 +1310,10 @@ const NewBatchProductionReport = () => {
 
           <div
             onClick={() => setStatusFilter('In Progress')}
-            className={`card p-4 rounded-lg transition-all cursor-pointer ${
-              statusFilter === 'In Progress'
-                ? 'border-2 border-blue-500 bg-white shadow-md ring-1 ring-blue-500/30'
-                : 'border border-gray-100 bg-white shadow-sm hover:shadow-md'
-            }`}
+            className={`card p-4 rounded-lg transition-all cursor-pointer ${statusFilter === 'In Progress'
+              ? 'border-2 border-blue-500 bg-white shadow-md ring-1 ring-blue-500/30'
+              : 'border border-gray-100 bg-white shadow-sm hover:shadow-md'
+              }`}
           >
             <div className="flex justify-between items-start">
               <div>
@@ -1284,11 +1323,10 @@ const NewBatchProductionReport = () => {
                 <p className="text-3xl font-bold text-blue-700 mt-2">{stats.inProgress}</p>
               </div>
               <div
-                className={`p-2 rounded-lg ${
-                  statusFilter === 'In Progress'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-blue-100 text-blue-600'
-                }`}
+                className={`p-2 rounded-lg ${statusFilter === 'In Progress'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-blue-100 text-blue-600'
+                  }`}
               >
                 <Loader className="w-6 h-6 animate-spin-slow" />
               </div>
@@ -1296,11 +1334,10 @@ const NewBatchProductionReport = () => {
           </div>
           <div
             onClick={() => setStatusFilter('Completed')}
-            className={`card p-4 rounded-lg transition-all cursor-pointer ${
-              statusFilter === 'Completed'
-                ? 'border-2 border-green-500 bg-white shadow-md ring-1 ring-green-500/30'
-                : 'border border-gray-100 bg-white shadow-sm hover:shadow-md'
-            }`}
+            className={`card p-4 rounded-lg transition-all cursor-pointer ${statusFilter === 'Completed'
+              ? 'border-2 border-green-500 bg-white shadow-md ring-1 ring-green-500/30'
+              : 'border border-gray-100 bg-white shadow-sm hover:shadow-md'
+              }`}
           >
             <div className="flex justify-between items-start">
               <div>
@@ -1310,11 +1347,10 @@ const NewBatchProductionReport = () => {
                 <p className="text-3xl font-bold text-green-700 mt-2">{stats.completed}</p>
               </div>
               <div
-                className={`p-2 rounded-lg ${
-                  statusFilter === 'Completed'
-                    ? 'bg-green-500 text-white'
-                    : 'bg-green-100 text-green-600'
-                }`}
+                className={`p-2 rounded-lg ${statusFilter === 'Completed'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-green-100 text-green-600'
+                  }`}
               >
                 <CheckCircle className="w-6 h-6" />
               </div>
@@ -1322,11 +1358,10 @@ const NewBatchProductionReport = () => {
           </div>
           <div
             onClick={() => setStatusFilter('Cancelled')}
-            className={`card p-4 rounded-lg transition-all cursor-pointer ${
-              statusFilter === 'Cancelled'
-                ? 'border-2 border-red-500 bg-white shadow-md ring-1 ring-red-500/30'
-                : 'border border-gray-100 bg-white shadow-sm hover:shadow-md'
-            }`}
+            className={`card p-4 rounded-lg transition-all cursor-pointer ${statusFilter === 'Cancelled'
+              ? 'border-2 border-red-500 bg-white shadow-md ring-1 ring-red-500/30'
+              : 'border border-gray-100 bg-white shadow-sm hover:shadow-md'
+              }`}
           >
             <div className="flex justify-between items-start">
               <div>
@@ -1336,9 +1371,8 @@ const NewBatchProductionReport = () => {
                 <p className="text-3xl font-bold text-red-700 mt-2">{stats.cancelled}</p>
               </div>
               <div
-                className={`p-2 rounded-lg ${
-                  statusFilter === 'Cancelled' ? 'bg-red-500 text-white' : 'bg-red-100 text-red-600'
-                }`}
+                className={`p-2 rounded-lg ${statusFilter === 'Cancelled' ? 'bg-red-500 text-white' : 'bg-red-100 text-red-600'
+                  }`}
               >
                 <XCircle className="w-6 h-6" />
               </div>
@@ -1375,11 +1409,10 @@ const NewBatchProductionReport = () => {
             size="sm"
             variant={statusFilter === status ? 'primary' : 'secondary'}
             onClick={() => setStatusFilter(status)}
-            className={`min-w-[100px] transition-all duration-200 ${
-              statusFilter === status
-                ? 'bg-[var(--primary)] text-white shadow-md transform scale-105'
-                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-            }`}
+            className={`min-w-[100px] transition-all duration-200 ${statusFilter === status
+              ? 'bg-[var(--primary)] text-white shadow-md transform scale-105'
+              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
           >
             {status}
           </Button>
@@ -1408,17 +1441,17 @@ const NewBatchProductionReport = () => {
                   Sub-Products (Batch Variants)
                 </h4>
                 {row.original.subProducts &&
-                row.original.subProducts.filter(sub => {
-                  const actQty =
-                    typeof sub.actualQty === 'number'
-                      ? sub.actualQty
-                      : parseFloat(sub.actualQty || '0');
-                  const batchQty =
-                    typeof sub.batchQty === 'number'
-                      ? sub.batchQty
-                      : parseFloat(sub.batchQty || '0');
-                  return actQty > 0 || batchQty > 0;
-                }).length > 0 ? (
+                  row.original.subProducts.filter(sub => {
+                    const actQty =
+                      typeof sub.actualQty === 'number'
+                        ? sub.actualQty
+                        : parseFloat(sub.actualQty || '0');
+                    const batchQty =
+                      typeof sub.batchQty === 'number'
+                        ? sub.batchQty
+                        : parseFloat(sub.batchQty || '0');
+                    return actQty > 0 || batchQty > 0;
+                  }).length > 0 ? (
                   <table className="w-full text-sm text-left bg-[var(--surface)] rounded-lg border border-[var(--border)]">
                     <thead className="bg-[var(--color-neutral-100)] text-[var(--text-secondary)]">
                       <tr>
@@ -1793,18 +1826,18 @@ const NewBatchProductionReport = () => {
                   </thead>
                   <tbody>
                     {previewBatch.subProducts &&
-                    previewBatch.subProducts.filter(sp => {
-                      // Only show SKUs with actualQty > 0 OR batchQty > 0
-                      const actQty =
-                        typeof sp.actualQty === 'number'
-                          ? sp.actualQty
-                          : parseFloat(sp.actualQty || '0');
-                      const batchQty =
-                        typeof sp.batchQty === 'number'
-                          ? sp.batchQty
-                          : parseFloat(sp.batchQty || '0');
-                      return actQty > 0 || batchQty > 0;
-                    }).length > 0 ? (
+                      previewBatch.subProducts.filter(sp => {
+                        // Only show SKUs with actualQty > 0 OR batchQty > 0
+                        const actQty =
+                          typeof sp.actualQty === 'number'
+                            ? sp.actualQty
+                            : parseFloat(sp.actualQty || '0');
+                        const batchQty =
+                          typeof sp.batchQty === 'number'
+                            ? sp.batchQty
+                            : parseFloat(sp.batchQty || '0');
+                        return actQty > 0 || batchQty > 0;
+                      }).length > 0 ? (
                       previewBatch.subProducts
                         .filter(sp => {
                           const actQty =

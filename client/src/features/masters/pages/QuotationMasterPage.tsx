@@ -27,6 +27,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { downloadQuotationPDF } from '@/features/quotations/utils/pdfGenerator';
 import { decodeHtml } from '@/utils/stringUtils';
 
+
 interface Product {
   productId?: number;
   ProductID?: number;
@@ -50,8 +51,11 @@ const QuotationMasterPage: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   // Modal States
+  // Modal States
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedQuotation, setSelectedQuotation] = useState<QuotationRecord | null>(null);
+
+
 
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectRemark, setRejectRemark] = useState('');
@@ -209,9 +213,16 @@ const QuotationMasterPage: React.FC = () => {
     }
   }, []);
 
-  // Handle Edit - Navigate to edit page
+  // Handle Edit - Navigate to Editor Page
   const handleEdit = useCallback((quotation: QuotationRecord) => {
-    navigate(`/quotations/edit/${quotation.quotationId}`);
+    navigate('/quotation-print', {
+      state: {
+        importedData: quotation.content,
+        quotationId: quotation.quotationId,
+        editMode: true, // Signal that we are editing an existing quotation
+        status: quotation.status
+      }
+    });
   }, [navigate]);
 
   // Table Columns
@@ -782,6 +793,8 @@ const QuotationMasterPage: React.FC = () => {
           </div>
         )}
       </Modal>
+
+
 
       {/* Reject Modal */}
       <Modal

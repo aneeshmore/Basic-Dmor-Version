@@ -11,7 +11,7 @@ export function navigateToDownloadPDF(
   quotationData: QuotationData,
   navigate: (path: string, options?: any) => void
 ): void {
-  navigate('/quotation-maker', {
+  navigate('/company-details', {
     state: {
       importedData: quotationData,
       startInPreview: true,
@@ -40,7 +40,7 @@ export async function downloadQuotationPDF(quotationData: QuotationData): Promis
   );
 
   // Open QuotationMaker in new window - using correct route path
-  const url = `/quotation-maker?download=${dataKey}`;
+  const url = `/company-details?download=${dataKey}`;
   window.open(url, '_blank');
 }
 
@@ -61,6 +61,6 @@ export async function downloadInvoicePDF(quotationData: QuotationData): Promise<
   );
 
   // Open QuotationMaker in new window
-  const url = `/quotation-maker?download=${dataKey}`;
+  const url = `/company-details?download=${dataKey}`;
   window.open(url, '_blank');
 }

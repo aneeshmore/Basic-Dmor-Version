@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Download, Trash2, ArrowLeft, FileText, Upload, Save } from 'lucide-react';
+import { Download, FileText, Save, X, Trash2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { ColumnDef } from '@tanstack/react-table';
@@ -17,7 +17,7 @@ import { tncApi } from '@/features/tnc/api/tncApi';
 import { Tnc } from '@/features/tnc/types';
 
 import SearchableSelect from '@/components/ui/SearchableSelect';
-import { Input, Select, Modal } from '@/components/ui';
+import { Select, Modal, Input } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import { format } from 'date-fns';
 import { quotationApi, QuotationRecord } from '../api/quotationApi';
@@ -29,8 +29,6 @@ import { employeeApi } from '@/features/employees/api/employeeApi';
 import { inventoryApi } from '@/features/inventory/api/inventoryApi';
 import { Customer } from '@/features/masters/types';
 import { Employee } from '@/features/employees/types';
-import UpdateConfirmModal from '@/features/orders/components/UpdateConfirmModal';
-import { QuotationHistoryTable } from '../components/QuotationHistoryTable';
 
 
 
@@ -154,9 +152,22 @@ const calculateItemAmount = (item: QuotationItem) => {
   return item.quantity * item.rate * (1 - item.discount / 100);
 };
 
-const QuotationMaker = () => {
-  const [mode, setMode] = useState<'form' | 'preview'>('form');
-  const [data, setData] = useState<QuotationData>(INITIAL_DATA);
+// Interface for Modal Props
+interface QuotationMakerProps {
+  initialData?: QuotationData;
+  isModal?: boolean;
+  onClose?: () => void;
+  onUpdate?: () => void;
+}
+
+const QuotationMaker: React.FC<QuotationMakerProps> = ({
+  initialData,
+  isModal = false,
+  onClose,
+  onUpdate
+}) => {
+
+  const [data, setData] = useState<QuotationData>(initialData || INITIAL_DATA);
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -192,7 +203,7 @@ const QuotationMaker = () => {
   const [quotationsList, setQuotationsList] = useState<any[]>([]);
   const [autoDownloadPending, setAutoDownloadPending] = useState(false);
   const [shouldAutoClose, setShouldAutoClose] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(!!initialData); // Auto-set edit mode if initialData provided
   const [editQuotationId, setEditQuotationId] = useState<number | null>(null);
   const [isInvoice, setIsInvoice] = useState(false); // New state for Invoice mode
 
@@ -202,6 +213,7 @@ const QuotationMaker = () => {
   const [selectedPaymentTerms, setSelectedPaymentTerms] = useState('');
   const [selectedDeliveryTerms, setSelectedDeliveryTerms] = useState('');
   const [quotationLoading, setQuotationLoading] = useState(false);
+  const toastShownRef = useRef(false);
   const location = useLocation();
   const { user } = useAuth();
   const isAdmin = user?.Role
@@ -214,6 +226,22 @@ const QuotationMaker = () => {
     data.status || ''
   );
   const canDownload = isAdmin || isApprovedStatus;
+
+  // Initialize from initialData if provided (Modal Mode)
+  useEffect(() => {
+    if (initialData) {
+      setData(prev => ({
+        ...prev,
+        ...initialData,
+      }));
+      if ((initialData as any).quotationId) {
+        setEditQuotationId((initialData as any).quotationId);
+        setIsEditMode(true);
+      }
+    }
+  }, [initialData]);
+
+  // Handle imported data from navigation state
 
   // Handle imported data from navigation state
   useEffect(() => {
@@ -232,17 +260,23 @@ const QuotationMaker = () => {
       }));
 
       // Check for edit mode (updating rejected quotation)
+      // Use a ref to prevent double toasts in Strict Mode if possible, 
+      // though state updates might still cause re-renders.
       if (location.state.editMode && location.state.quotationId) {
         setIsEditMode(true);
         setEditQuotationId(location.state.quotationId);
-        showToast.success('Edit mode: Update quotation and resubmit for approval');
+        if (!toastShownRef.current) {
+          showToast.success('Edit mode: Update quotation and resubmit for approval');
+          toastShownRef.current = true;
+        }
       } else {
-        showToast.success('Data imported from Create Order');
+        if (!toastShownRef.current) {
+          showToast.success('Data imported from Create Order');
+          toastShownRef.current = true;
+        }
       }
 
-      if (location.state.startInPreview) {
-        setMode('preview');
-      }
+
 
       // Check for auto-download flag
       if (location.state.autoDownload) {
@@ -254,8 +288,7 @@ const QuotationMaker = () => {
         setIsInvoice(true);
       }
 
-      // Clear state so it doesn't re-import if user navigates back and forth
-      window.history.replaceState({}, '');
+      // Removed window.history.replaceState to prevent data loss on remount (Strict Mode) and allow refresh
     }
 
     // Also check URL query param for download data key (from new window)
@@ -278,9 +311,7 @@ const QuotationMaker = () => {
               companyCode: INITIAL_DATA.companyCode,
               companyEmail: INITIAL_DATA.companyEmail,
             }));
-            if (parsed.startInPreview) {
-              setMode('preview');
-            }
+
             if (parsed.autoDownload) {
               setAutoDownloadPending(true);
               setShouldAutoClose(true); // Flag to close window after download
@@ -300,7 +331,7 @@ const QuotationMaker = () => {
 
   // Auto-download when pending and in preview mode
   useEffect(() => {
-    if (autoDownloadPending && mode === 'preview' && printRef.current && !isGenerating) {
+    if (autoDownloadPending && printRef.current && !isGenerating) {
       // Small delay to ensure render is complete
       const timer = setTimeout(() => {
         handleDownloadPDF(shouldAutoClose); // Pass auto-close flag
@@ -308,7 +339,7 @@ const QuotationMaker = () => {
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [autoDownloadPending, mode, isGenerating, shouldAutoClose]);
+  }, [autoDownloadPending, isGenerating, shouldAutoClose]);
 
   // Fetch data on component mount
   useEffect(() => {
@@ -419,24 +450,43 @@ const QuotationMaker = () => {
   const handleSaveQuotation = async () => {
     try {
       setQuotationLoading(true);
-      showToast.loading(isEditMode ? 'Updating Quotation...' : 'Saving Quotation...', 'quotation-save');
+      const isUpdate = isEditMode && !!editQuotationId;
+      console.log('Detailed Save/Update Logic:', { isEditMode, editQuotationId, isUpdate });
 
-      if (isEditMode && editQuotationId) {
-        await quotationApi.update(editQuotationId, data);
-        showToast.success('Quotation Updated & Resubmitted for Approval', 'quotation-save');
-        setData(prev => ({ ...prev, status: 'Pending' }));
-        setIsEditMode(false);
-        setEditQuotationId(null);
+      showToast.loading(isUpdate ? 'Updating Quotation...' : 'Saving Quotation...', 'quotation-save');
+
+      if (isUpdate) {
+        // Explicit Update Call
+        console.log('Calling quotationApi.update with ID:', editQuotationId);
+        await quotationApi.update(editQuotationId!, data);
+        showToast.success('Quotation Updated Successfully', 'quotation-save');
+
+        // Reset edit mode only if NOT in modal (modal closes anyway)
+        if (!isModal) {
+          setData(prev => ({ ...prev, status: 'Pending' }));
+          setIsEditMode(false);
+          setEditQuotationId(null);
+        }
       } else {
+        // Create Call
+        console.log('Calling quotationApi.create');
         await quotationApi.create(data);
         showToast.success(isAdmin ? 'Quotation Saved' : 'Quotation Sent for Approval', 'quotation-save');
-        setData(prev => ({ ...prev, status: 'Pending' }));
+        if (!isModal) {
+          setData(prev => ({ ...prev, status: 'Pending' }));
+        }
       }
 
       // Refresh local list if needed
       await fetchQuotations();
+
+      // If in Modal mode, call parent handlers
+      if (isModal) {
+        if (onUpdate) onUpdate();
+        if (onClose) onClose();
+      }
     } catch (error) {
-      console.error(error);
+      console.error('Save Quotation Error:', error);
       showToast.error('Failed to save quotation', 'quotation-save');
     } finally {
       setQuotationLoading(false);
@@ -600,14 +650,7 @@ const QuotationMaker = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handlePreview = (isInvoiceMode: boolean) => {
-    if (validateForm()) {
-      setIsInvoice(isInvoiceMode);
-      setMode('preview');
-    } else {
-      showToast.error('Please fix validation errors before proceeding');
-    }
-  };
+
 
   const handleSaveCompanyInfo = async () => {
     if (!validateForm()) {
@@ -883,365 +926,8 @@ const QuotationMaker = () => {
     [productOptions, handleProductSelectReal, updateItem, deleteItem]
   );
 
-  if (mode === 'form') {
-    return (
-      <div className="min-h-screen bg-[var(--background)] p-4 md:p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Edit Mode Banner */}
-          {isEditMode && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-amber-800">Editing Rejected Quotation</h3>
-                <p className="text-sm text-amber-700">
-                  Make your changes and click &quot;Update &amp; Resubmit&quot; to send for approval
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Header */}
-          <div className="bg-[var(--surface)] rounded-xl shadow-sm border border-[var(--border)] p-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  {isEditMode ? 'Update Quotation' : 'Setup Company Details'}
-                </h1>
-                <p className="text-sm text-[var(--text-secondary)] mt-1">
-                  {isEditMode
-                    ? 'Review and modify the quotation details below'
-                    : 'Configure your company details to generate a quotation & invoice'}
-                </p>
-              </div>
-              <div className="flex gap-2 flex-shrink-0">
-                <Button
-                  onClick={() => handlePreview(false)}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm flex items-center"
-                >
-                  <FileText className="mr-2 h-4 w-4" /> Preview Quotation
-                </Button>
-                <Button
-                  onClick={() => handlePreview(true)}
-                  className="bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white shadow-sm flex items-center"
-                >
-                  <FileText className="mr-2 h-4 w-4" /> Preview Invoice
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Horizontal Layout: Company Info (Left - Narrower) + Quotation Items (Right - Wider) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* CENTER: Quotation Setup - Takes full width centered */}
-            <div className="bg-[var(--surface)] p-6 rounded-lg lg:col-span-3 max-w-4xl mx-auto w-full">
-              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4 border-b pb-2">
-                Setup Company Details
-              </h3>
-
-              <div className="space-y-4">
-                {/* Company Name and Logo */}
-                <div className="flex gap-4 items-start">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      Company Name
-                    </label>
-                    <Input
-                      value={data.companyName}
-                      onChange={e => updateField('companyName', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      Company Logo
-                    </label>
-                    <div className="flex items-center gap-4">
-                      {/* Preview */}
-                      <div className="h-10 w-10 border border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden bg-gray-50">
-                        {data.companyLogo ? (
-                          <img src={data.companyLogo} alt="Logo" className="w-full h-full object-contain" />
-                        ) : (
-                          <span className="text-[10px] text-gray-400">Logo</span>
-                        )}
-                      </div>
-
-                      {/* Upload Button */}
-                      {!data.companyLogo && (
-                        <div className="relative">
-                          <input
-                            type="file"
-                            id="logo-upload"
-                            className="hidden"
-                            accept="image/png, image/jpeg, image/jpg"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                if (file.size > 500 * 1024) { // 500KB limit
-                                  alert("File too large. Please upload an image under 500KB.");
-                                  return;
-                                }
-                                const reader = new FileReader();
-                                reader.onloadend = () => {
-                                  updateField('companyLogo', reader.result as string);
-                                };
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                          />
-                          <label
-                            htmlFor="logo-upload"
-                            className="cursor-pointer px-4 py-2 bg-[var(--surface-secondary)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] text-sm font-medium rounded-lg border border-dashed border-[var(--border)] hover:border-[var(--primary)] transition-all flex items-center gap-2 shadow-sm"
-                          >
-                            <Upload size={16} className="text-[var(--primary)]" />
-                            <span>Upload</span>
-                          </label>
-                        </div>
-                      )}
-                      {data.companyLogo && (
-                        <button
-                          onClick={() => updateField('companyLogo', '')}
-                          className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-full transition-colors"
-                          title="Remove Logo"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Contact, Email, Pincode */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      Contact Number
-                    </label>
-                    <Input
-                      value={data.companyPhone}
-                      onChange={e => {
-                        const val = e.target.value.replace(/\D/g, '');
-                        if (val.length <= 10) updateField('companyPhone', val);
-                      }}
-                      error={errors.companyPhone}
-                      placeholder="Enter 10 digit number"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      Email
-                    </label>
-                    <Input
-                      value={data.companyEmail}
-                      onChange={e => updateField('companyEmail', e.target.value)}
-                      error={errors.companyEmail}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      Pincode
-                    </label>
-                    <Input
-                      value={data.companyPincode}
-                      onChange={e => {
-                        const val = e.target.value.replace(/\D/g, '');
-                        if (val.length <= 6) updateField('companyPincode', val);
-                      }}
-                      error={errors.companyPincode}
-                      placeholder="6 digits"
-                    />
-                  </div>
-                </div>
-
-                {/* Address */}
-                <div>
-                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                    Address
-                  </label>
-                  <textarea
-                    value={data.companyAddress}
-                    onChange={e => updateField('companyAddress', e.target.value)}
-                    rows={2}
-                    className="w-full px-3 py-2 border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--text-primary)] rounded-lg focus:outline-none focus:border-[var(--primary)] resize-none"
-                  />
-                </div>
-
-                {/* GSTIN, PAN, Udyam */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      GSTIN
-                    </label>
-                    <Input
-                      value={data.companyGSTIN}
-                      onChange={e => updateField('companyGSTIN', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      PAN Number
-                    </label>
-                    <Input
-                      value={data.companyPAN || ''}
-                      onChange={e => updateField('companyPAN', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      Udyam Reg. No
-                    </label>
-                    <Input
-                      value={data.udyamRegistrationNumber}
-                      onChange={e => updateField('udyamRegistrationNumber', e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {/* Tax Rates */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      CGST Rate
-                    </label>
-                    <Input
-                      value={data.companyCGST}
-                      onChange={e => {
-                        const val = e.target.value;
-                        if (val === '' || /^\d*\.?\d*$/.test(val)) updateField('companyCGST', val);
-                      }}
-                      error={errors.companyCGST}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      SGST Rate
-                    </label>
-                    <Input
-                      value={data.companySGST}
-                      onChange={e => {
-                        const val = e.target.value;
-                        if (val === '' || /^\d*\.?\d*$/.test(val)) updateField('companySGST', val);
-                      }}
-                      error={errors.companySGST}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                      IGST Rate
-                    </label>
-                    <Input
-                      value={data.companyIGST}
-                      onChange={e => {
-                        const val = e.target.value;
-                        if (val === '' || /^\d*\.?\d*$/.test(val)) updateField('companyIGST', val);
-                      }}
-                      error={errors.companyIGST}
-                    />
-                  </div>
-                </div>
-
-                {/* Bank Details */}
-                <div className="border-t border-[var(--border)] pt-4 mt-4">
-                  <h4 className="text-md font-semibold text-[var(--text-primary)] mb-4">
-                    Bank Details
-                  </h4>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                          Bank Name
-                        </label>
-                        <Input
-                          value={data.bankName}
-                          onChange={e => updateField('bankName', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                          Account Number
-                        </label>
-                        <Input
-                          value={data.accountNo}
-                          onChange={e => updateField('accountNo', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                          IFSC Code
-                        </label>
-                        <Input
-                          value={data.ifsc}
-                          onChange={e => updateField('ifsc', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                          Branch
-                        </label>
-                        <Input
-                          value={data.branch}
-                          onChange={e => updateField('branch', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Terms & Conditions */}
-                <div className="border-t border-[var(--border)] pt-4 mt-4">
-                  <h4 className="text-md font-semibold text-[var(--text-primary)] mb-4">
-                    Terms & Conditions
-                  </h4>
-                  <textarea
-                    value={data.termsAndConditions || ''}
-                    onChange={e => updateField('termsAndConditions', e.target.value)}
-                    rows={4}
-                    className="w-full px-3 py-2 border border-[var(--border)] bg-[var(--surface-secondary)] text-[var(--text-primary)] rounded-lg focus:outline-none focus:border-[var(--primary)] resize-none"
-                  />
-                </div>
-
-                {/* Save Company Details Button */}
-                <div className="pt-4 mt-4 border-t border-[var(--border)]">
-                  <Button
-                    onClick={handleSaveCompanyInfo}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white flex justify-center items-center gap-2"
-                  >
-                    <Save size={16} /> Save Company Details
-                  </Button>
-                </div>
-              </div>
-            </div>
-            {/* Quotation History Table */}
-            <div className="bg-[var(--surface)] p-6 rounded-lg lg:col-span-3 max-w-4xl mx-auto w-full mt-6">
-              <QuotationHistoryTable
-                data={quotationsList.filter(q => q.status !== 'Converted')}
-                onView={(record) => {
-                  setData({
-                    ...INITIAL_DATA,
-                    ...record.content,
-                    status: record.status, // Ensure status is preserved from record
-                  });
-                  setEditQuotationId(record.quotationId);
-                  setIsEditMode(true);
-                  // Scroll to top
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-              />
-            </div>
-
-            {/* Footer Branding */}
-            <div className="mt-4 text-center">
-              <p className="text-[7pt] text-gray-400 italic">
-                Generated with Morex Technologies&apos;s OMS
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Removed 'form' mode check. Component now always renders the editor view.
+  // The 'preview' return block below is now the main render.
 
   // Preview Mode
   return (
@@ -1282,18 +968,32 @@ const QuotationMaker = () => {
       <div className="flex justify-between items-center mb-6 no-print">
         <div className="flex items-center gap-4">
           {/* Hide Edit button if in auto-close/download mode */}
-          {!shouldAutoClose && (
-            <Button
-              onClick={() => setMode('form')}
-              variant="secondary"
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft size={16} /> Edit Data
-            </Button>
-          )}
+
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">Quotation Preview</h1>
         </div>
         <div className="flex gap-3 items-center">
+          {/* Add Update/Save Buttons for Modal Mode */}
+          {(isEditMode || !isModal) && (
+            <Button
+              onClick={handleSaveQuotation}
+              isLoading={quotationLoading}
+              className={`flex items-center gap-2 text-white shadow-sm ${isEditMode ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}`}
+            >
+              <Save size={18} />
+              {isEditMode ? 'Update & Resubmit' : 'Create Quotation'}
+            </Button>
+          )}
+
+          {/* Invoice Mode Toggle */}
+          <Button
+            onClick={() => setIsInvoice(!isInvoice)}
+            variant="secondary"
+            className={`flex items-center gap-2 ${isInvoice ? 'bg-purple-50 text-purple-700 border-purple-200' : 'text-gray-600'}`}
+          >
+            <FileText size={16} />
+            {isInvoice ? 'Invoice Mode' : 'Quotation Mode'}
+          </Button>
+
           {!canDownload && (
             <span className="text-orange-600 font-medium text-sm flex items-center bg-orange-50 px-3 py-2 rounded border border-orange-200">
               {data.status === 'Pending' ? 'Wait for Admin Approval' : 'Approval Required'}
@@ -1308,6 +1008,17 @@ const QuotationMaker = () => {
           >
             <Download size={18} /> Download PDF
           </Button>
+
+          {/* Close Button for Modal */}
+          {isModal && (
+            <Button
+              variant="ghost"
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1366,14 +1077,14 @@ const QuotationMaker = () => {
                   <div className="flex-grow">
                     <EditableInput
                       isPdfMode={isPdfMode}
-                      readOnly={true}
+                      readOnly={isPdfMode}
                       value={data.companyName}
                       onChange={v => updateField('companyName', v)}
                       className="font-bold text-[9pt] mb-1"
                     />
                     <EditableTextArea
                       isPdfMode={isPdfMode}
-                      readOnly={true}
+                      readOnly={isPdfMode}
                       value={data.companyAddress}
                       onChange={v => updateField('companyAddress', v)}
                       className="text-[8.5pt] h-[60px]"
@@ -1382,7 +1093,7 @@ const QuotationMaker = () => {
                       <span className="font-bold">GSTIN/UIN:</span>
                       <EditableInput
                         isPdfMode={isPdfMode}
-                        readOnly={true}
+                        readOnly={isPdfMode}
                         value={data.companyGSTIN}
                         onChange={v => updateField('companyGSTIN', v)}
                         className="w-40 inline-block ml-1"
@@ -1392,7 +1103,7 @@ const QuotationMaker = () => {
                       <span className="font-bold">Email:</span>
                       <EditableInput
                         isPdfMode={isPdfMode}
-                        readOnly={true}
+                        readOnly={isPdfMode}
                         value={data.companyEmail}
                         onChange={v => updateField('companyEmail', v)}
                         className="w-40 inline-block ml-1"
@@ -1402,7 +1113,7 @@ const QuotationMaker = () => {
                       <span className="font-bold">Contact:</span>
                       <EditableInput
                         isPdfMode={isPdfMode}
-                        readOnly={true}
+                        readOnly={isPdfMode}
                         value={data.companyPhone || ''}
                         onChange={v => updateField('companyPhone', v)}
                         className="w-40 inline-block ml-1"
@@ -1417,7 +1128,7 @@ const QuotationMaker = () => {
                   <div>
                     <EditableInput
                       isPdfMode={isPdfMode}
-                      readOnly={true}
+                      readOnly={isPdfMode}
                       value={data.buyerName || data.customerAddress?.split('\n')[0] || ''}
                       onChange={v => updateField('buyerName', v)}
                       className="font-bold text-[9pt] mb-1"
@@ -1435,7 +1146,7 @@ const QuotationMaker = () => {
                         <span className="font-bold">GSTIN/UIN:</span>
                         <EditableInput
                           isPdfMode={isPdfMode}
-                          readOnly={true}
+                          readOnly={isPdfMode}
                           value={data.buyerGSTIN || ''}
                           onChange={v => updateField('buyerGSTIN', v)}
                           className="w-40 inline-block ml-1"
@@ -1454,7 +1165,7 @@ const QuotationMaker = () => {
                     <span className="font-bold block text-[8pt]">{isInvoice ? 'Bill No.' : 'Quotation No.'}</span>
                     <EditableInput
                       isPdfMode={isPdfMode}
-                      readOnly={true}
+                      readOnly={isPdfMode}
                       value={data.quotationNo}
                       onChange={v => updateField('quotationNo', v)}
                       className="font-bold"
@@ -1464,7 +1175,7 @@ const QuotationMaker = () => {
                     <span className="font-bold block text-[8pt]">Dated</span>
                     <EditableInput
                       isPdfMode={isPdfMode}
-                      readOnly={true}
+                      readOnly={isPdfMode}
                       value={data.date}
                       onChange={v => updateField('date', v)}
                       className="font-bold"
@@ -1480,7 +1191,7 @@ const QuotationMaker = () => {
                     <span className="font-bold block text-[8pt]">Buyer&apos;s Ref./Order No.</span>
                     <EditableInput
                       isPdfMode={isPdfMode}
-                      readOnly={true}
+                      readOnly={isPdfMode}
                       value={data.buyerRef}
                       onChange={v => updateField('buyerRef', v)}
                       className="font-bold"
@@ -1490,7 +1201,7 @@ const QuotationMaker = () => {
                     <span className="font-bold block text-[8pt]">Sales Person</span>
                     <EditableInput
                       isPdfMode={isPdfMode}
-                      readOnly={true}
+                      readOnly={isPdfMode}
                       value={data.otherRef}
                       onChange={v => updateField('otherRef', v)}
                     />
@@ -1615,7 +1326,7 @@ const QuotationMaker = () => {
                       <td className="p-1 align-top relative">
                         <EditableTextArea
                           isPdfMode={isPdfMode}
-                          readOnly={true}
+                          readOnly={isPdfMode}
                           rows={1}
                           value={item.description}
                           onChange={v => updateItem(item.id, 'description', v)}
@@ -1626,7 +1337,7 @@ const QuotationMaker = () => {
                       <td className="p-1 align-top text-right">
                         <EditableInput
                           isPdfMode={isPdfMode}
-                          readOnly={true}
+                          readOnly={isPdfMode}
                           type="number"
                           value={item.quantity || ''}
                           onChange={v => {
@@ -1639,7 +1350,7 @@ const QuotationMaker = () => {
                       <td className="p-1 align-top text-right">
                         <EditableInput
                           isPdfMode={isPdfMode}
-                          readOnly={true}
+                          readOnly={isPdfMode}
                           type="number"
                           value={item.rate || ''}
                           onChange={v => updateItem(item.id, 'rate', parseFloat(v) || 0)}
