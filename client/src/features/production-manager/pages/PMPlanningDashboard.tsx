@@ -128,7 +128,9 @@ export default function PMPlanningDashboard() {
         setExpandedRows(prev => new Set(prev).add(masterProductId));
 
         if (result.noRecipe || result.materials?.length === 0) {
-          'No recipe/formula configured for this product. Please set up 1K Product Development first.'
+          showToast.warning(
+            'No recipe/formula configured for this product. Please set up Product Development first.'
+          );
         } else if (result.feasible) {
           showToast.success('All materials available for production!');
         } else {
@@ -440,8 +442,8 @@ function ViewToggle({ active, onClick, children, icon }: ViewToggleProps) {
     <button
       onClick={onClick}
       className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${active
-          ? 'bg-[var(--primary)] text-white shadow-sm'
-          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+        ? 'bg-[var(--primary)] text-white shadow-sm'
+        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
         }`}
     >
       {icon}
@@ -471,8 +473,8 @@ function TabButton({ active, onClick, children, color }: TabButtonProps) {
     <button
       onClick={onClick}
       className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${active
-          ? activeColor + ' shadow-sm'
-          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+        ? activeColor + ' shadow-sm'
+        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
         }`}
     >
       {children}
@@ -562,8 +564,8 @@ function ProductCard({
   return (
     <div
       className={`bg-[var(--surface)] rounded-xl border transition-all overflow-hidden ${isExpanded
-          ? 'border-[var(--primary)]/40 shadow-lg shadow-[var(--primary)]/5'
-          : 'border-[var(--border)] hover:border-[var(--border-hover)]'
+        ? 'border-[var(--primary)]/40 shadow-lg shadow-[var(--primary)]/5'
+        : 'border-[var(--border)] hover:border-[var(--border-hover)]'
         }`}
     >
       {/* Header Row */}
@@ -621,8 +623,8 @@ function ProductCard({
             </p>
             <p
               className={`font-bold ${group.totalAvailableQty >= group.totalOrderQty
-                  ? 'text-[var(--success)]'
-                  : 'text-[var(--danger)]'
+                ? 'text-[var(--success)]'
+                : 'text-[var(--danger)]'
                 }`}
             >
               {group.totalAvailableQty}
@@ -736,8 +738,8 @@ function ProductCard({
                         <p className="text-[10px] text-[var(--text-tertiary)] uppercase">Avail</p>
                         <p
                           className={`font-medium ${product.availableQty >= product.totalOrderQty
-                              ? 'text-[var(--success)]'
-                              : 'text-[var(--danger)]'
+                            ? 'text-[var(--success)]'
+                            : 'text-[var(--danger)]'
                             }`}
                         >
                           {product.availableQty}
@@ -798,8 +800,8 @@ function ProductCard({
                       <div
                         key={idx}
                         className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-3 rounded-lg border ${isAvailable
-                            ? 'bg-[var(--success)]/5 border-[var(--success)]/20'
-                            : 'bg-[var(--danger)]/5 border-[var(--danger)]/20'
+                          ? 'bg-[var(--success)]/5 border-[var(--success)]/20'
+                          : 'bg-[var(--danger)]/5 border-[var(--danger)]/20'
                           }`}
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
