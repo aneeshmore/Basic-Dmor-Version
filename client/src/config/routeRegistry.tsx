@@ -422,7 +422,7 @@ export const routeRegistry: RouteNode[] = [
       {
         id: 'development',
         path: '/masters/development',
-        label: 'Product Development',
+        label: '1K Product Development',
         icon: FlaskConical,
         component: ProductDevelopment,
         permission: { module: 'product-development' },
@@ -435,7 +435,7 @@ export const routeRegistry: RouteNode[] = [
       {
         id: 'double-development',
         path: '/masters/double-development',
-        label: 'Double Product Development',
+        label: '2K Product Development',
         icon: FlaskConical,
         component: DoubleProductDevelopment,
         permission: { module: 'double-development' },
@@ -493,7 +493,7 @@ export const routeRegistry: RouteNode[] = [
         path: '/quotation-print',
         label: 'Create Quotation',
         component: QuotationMaker,
-        showInSidebar: true,
+        showInSidebar: false,
         permission: { module: 'quotation-maker' },
         apis: [
           { route: '/masters/customers', method: 'GET', label: 'Load Customers' },

@@ -1141,8 +1141,8 @@ const DoubleProductDevelopment = () => {
                     value={
                       isHardener
                         ? (
-                            100 - calculateListTotalPercentage(baseItemsForCalculation || [])
-                          ).toFixed(3)
+                          100 - calculateListTotalPercentage(baseItemsForCalculation || [])
+                        ).toFixed(3)
                         : calculateListTotalPercentage(items).toFixed(3)
                     }
                     step="0.01"
@@ -1151,11 +1151,10 @@ const DoubleProductDevelopment = () => {
                   />
                 </td>
                 <td
-                  className={`px-4 py-3 font-bold ${
-                    calculateTotalPercentage(items).toFixed(3) === '100.000'
+                  className={`px-4 py-3 font-bold ${calculateTotalPercentage(items).toFixed(3) === '100.000'
                       ? 'text-[var(--success)] bg-green-50'
                       : 'text-[var(--danger)] bg-red-50'
-                  }`}
+                    }`}
                 >
                   {calculateTotalPercentage(items).toFixed(3)}%
                 </td>
@@ -1305,7 +1304,7 @@ const DoubleProductDevelopment = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Double Product Development Form"
+        title="2K Product Development Form"
         description="Manage formulations for Base and Linked Hardener"
       />
 
@@ -1455,7 +1454,7 @@ const DoubleProductDevelopment = () => {
               hardenerItems,
               true,
               masterProducts.find(p => p.masterProductId === linkedHardenerId)?.masterProductName ||
-                '',
+              '',
               true,
               baseItems
             )}

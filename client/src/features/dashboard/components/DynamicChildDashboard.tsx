@@ -89,7 +89,7 @@ const ROUTE_METADATA: Record<
     iconColor: 'text-violet-600',
   },
   'double-development': {
-    description: 'Double product development',
+    description: '2K product development',
     iconBg: 'bg-fuchsia-50',
     iconColor: 'text-fuchsia-600',
   },

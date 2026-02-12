@@ -2367,7 +2367,7 @@ export default function ScheduleBatchPage() {
                     {masterProductId > 0 && pdWaterPercentage > 0 && (
                       <div>
                         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                          Water Percentage (from Product Development)
+                          Water Percentage (from 1K Product Development)
                         </label>
                         <div className="flex items-center gap-2">
                           <div className="w-5 h-5 text-[var(--text-tertiary)] flex items-center justify-center">
@@ -2676,12 +2676,12 @@ export default function ScheduleBatchPage() {
                           <td className="px-4 py-3 text-sm">
                             {batch.startedAt || batch.createdAt
                               ? new Date(
-                                  batch.startedAt || batch.createdAt || ''
-                                ).toLocaleDateString('en-IN', {
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                  year: 'numeric',
-                                })
+                                batch.startedAt || batch.createdAt || ''
+                              ).toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                              })
                               : '-'}
                           </td>
                           <td className="px-4 py-3 min-w-[150px]">{batch.masterProductName}</td>

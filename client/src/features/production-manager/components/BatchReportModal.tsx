@@ -239,7 +239,7 @@ export default function BatchReportModal({
       doc.text(`Hegman gauge :`, 115, 50);
       let circleX = 145;
       const hbY = 49.5;
-      for (let i = 1; i <= 8; i++) {
+      for (let i = 6; i <= 8; i++) {
         doc.setLineWidth(0.1);
         doc.circle(circleX, hbY, 2);
         doc.setFontSize(6);
@@ -253,8 +253,7 @@ export default function BatchReportModal({
       doc.text(`Production Qty : ${batch.plannedQuantity}`, 14, 56);
       tablesStartY = 70;
     } else {
-      // Completion Chart Report - Reorganized Layout
-      // LEFT SIDE: Batch info
+      // Completion Chart Report Header Info
       doc.text(`Batch No : ${batch.batchNo} / ${batch.masterProductName || ''}`, 14, 25, { maxWidth: 85 });
       doc.text(`Supervisor : Mr. ${batch.supervisorName || 'N/A'}`, 14, 32);
       doc.text(`Labours : ${batch.labourNames || 'N/A'}`, 14, 38);
@@ -263,69 +262,29 @@ export default function BatchReportModal({
       const duration = calculateDuration(batch.startedAt, batch.completedAt);
       doc.text(`Total Time : ${duration}`, 14, 50);
 
-      // RIGHT SIDE: Quality & Variance Analysis Table
-      // Calculate variance values
-      const stdDensity = batch.fgDensity
-        ? parseFloat(batch.fgDensity)
-        : batch.density
-          ? parseFloat(batch.density)
-          : 0;
-      const actDensity = batch.actualDensity ? parseFloat(batch.actualDensity) : 0;
-      const densityVariance = actDensity - stdDensity;
-
-      const stdViscosity = batch.viscosity ? parseFloat(batch.viscosity) : 0;
-      const actViscosity = batch.actualViscosity ? parseFloat(batch.actualViscosity) : 0;
-      const viscosityVariance = actViscosity - stdViscosity;
-
-      // Calculate total weight from actual quantity and density
-      const actualQty = batch.actualQuantity ? parseFloat(batch.actualQuantity) : 0;
-      const stdTotalWeight = batch.plannedQuantity
-        ? parseFloat(batch.plannedQuantity) * stdDensity
-        : 0;
-      const actTotalWeight = actualQty * actDensity;
-      const totalWeightVariance = actTotalWeight - stdTotalWeight;
-
-      // Draw Quality & Variance Analysis Table on right side
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Quality & Variance Analysis', 105, 24);
-      doc.setFont('helvetica', 'normal');
-
-      autoTable(doc, {
-        startY: 35,
-        margin: { left: 105 },
-        head: [['Parameter', 'Standard / Theoretical', 'Actual', 'Variance']],
-        body: [
-          ['Standard Density', stdDensity.toFixed(2), actDensity.toFixed(2), densityVariance.toFixed(2)],
-          [
-            'Viscosity',
-            stdViscosity > 0 ? stdViscosity.toString() : '-',
-            actViscosity > 0 ? actViscosity.toString() : '-',
-            viscosityVariance !== 0 ? viscosityVariance.toFixed(2) : '-',
-          ],
-          [
-            'Total Weight (Kg)',
-            stdTotalWeight.toFixed(2),
-            actTotalWeight.toFixed(2),
-            totalWeightVariance.toFixed(2),
-          ],
-        ],
-        theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2, minCellHeight: 6, lineColor: 0, lineWidth: 0.2, fillColor: [255, 255, 255] },
-        headStyles: { textColor: 0, fontStyle: 'bold', fontSize: 7, fillColor: [255, 255, 255] },
-        bodyStyles: { fillColor: [255, 255, 255] },
-        columnStyles: {
-          0: { cellWidth: 25 },
-          1: { cellWidth: 29, halign: 'right' },
-          2: { cellWidth: 18, halign: 'right' },
-          3: { cellWidth: 18, halign: 'right' },
-        },
-        tableWidth: 90,
-      });
-
-      const qualityTableFinalY = (doc as any).lastAutoTable.finalY;
-      tablesStartY = Math.max(70, qualityTableFinalY + 10);
+      tablesStartY = 70;
     }
+
+    // Calculate quality and variance values (Needed for both report types in the new layout)
+    const stdDensity = batch.fgDensity
+      ? parseFloat(batch.fgDensity)
+      : batch.density
+        ? parseFloat(batch.density)
+        : 0;
+    const actDensity = batch.actualDensity ? parseFloat(batch.actualDensity) : 0;
+    const densityVariance = actDensity - stdDensity;
+
+    const stdViscosity = batch.viscosity ? parseFloat(batch.viscosity) : 0;
+    const actViscosity = batch.actualViscosity ? parseFloat(batch.actualViscosity) : 0;
+    const viscosityVariance = actViscosity - stdViscosity;
+
+    // Calculate total weight from actual quantity and density
+    const actualQty = batch.actualQuantity ? parseFloat(batch.actualQuantity) : 0;
+    const stdTotalWeight = batch.plannedQuantity
+      ? parseFloat(batch.plannedQuantity) * stdDensity
+      : 0;
+    const actTotalWeight = actualQty * actDensity;
+    const totalWeightVariance = actTotalWeight - stdTotalWeight;
 
     // Raw Materials Table (Only raw materials, no packaging)
     // Separate regular materials from additional materials
@@ -496,20 +455,19 @@ export default function BatchReportModal({
       styles: { fontSize: 8, cellPadding: 2, minCellHeight: 6, lineColor: 0, lineWidth: 0.2, fillColor: [255, 255, 255] },
       headStyles: { textColor: 0, fontStyle: 'bold', fillColor: [255, 255, 255] },
       bodyStyles: { fillColor: [255, 255, 255] },
-      margin: { left: 14, right: 110 }, // Width approx 86
+      margin: { left: 14, right: 105 },
       tableWidth: 86,
       pageBreak: 'avoid',
       columnStyles: {
-        0: { cellWidth: 8 }, // Seq
-        1: { cellWidth: 41 }, // Product (Wider)
-        2: { cellWidth: 10, halign: 'center' }, // Wait
-        3: { cellWidth: 15, halign: 'right' }, // UseQty
-        4: { cellWidth: 12, halign: 'right' }, // Check (Smaller)
+        0: { cellWidth: 8 },
+        1: { cellWidth: 41 },
+        2: { cellWidth: 10, halign: 'center' },
+        3: { cellWidth: 15, halign: 'right' },
+        4: { cellWidth: 12, halign: 'right' },
       },
       didParseCell: data => {
         if (data.section === 'body') {
           const rowIndex = data.row.index;
-          // Apply bold styling to additional materials (rows after additionalStartIndex)
           if (rowIndex >= additionalStartIndex && additionalStartIndex < bomData.length) {
             data.cell.styles.fontStyle = 'bold';
           }
@@ -519,31 +477,114 @@ export default function BatchReportModal({
 
     const leftTableFinalY = (doc as any).lastAutoTable.finalY;
 
-    // Draw Product Table (Right Side)
+    // RIGHT Column: Table Stack (Parameters -> Shades -> Packaging)
+    const rightMargin = 14;
+    const rightTableX = 105;
+    const rightTableWidth = 91;
+
+    // 1. Parameters Table
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Quality & Variance Analysis', rightTableX, tablesStartY - 2);
+
     autoTable(doc, {
       startY: tablesStartY,
-      head: [['Shade', 'QTY', 'Filled Qty', 'LTR', 'KG']],
+      margin: { left: rightTableX, right: rightMargin },
+      head: [['Parameter', 'Std', 'Act', 'Var']],
+      body: [
+        ['Density', stdDensity.toFixed(2), actDensity.toFixed(2), densityVariance.toFixed(2)],
+        [
+          'Viscosity',
+          stdViscosity > 0 ? stdViscosity.toString() : '-',
+          actViscosity > 0 ? actViscosity.toString() : '-',
+          viscosityVariance !== 0 ? viscosityVariance.toFixed(2) : '-',
+        ],
+        [
+          'Weight (Kg)',
+          stdTotalWeight.toFixed(2),
+          actTotalWeight.toFixed(2),
+          totalWeightVariance.toFixed(2),
+        ],
+      ],
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2, minCellHeight: 6, lineColor: 0, lineWidth: 0.2, fillColor: [255, 255, 255] },
+      headStyles: { textColor: 0, fontStyle: 'bold', fontSize: 7, fillColor: [255, 255, 255] },
+      bodyStyles: { fillColor: [255, 255, 255] },
+      columnStyles: {
+        0: { cellWidth: 30 },
+        1: { cellWidth: 20, halign: 'right' },
+        2: { cellWidth: 20, halign: 'right' },
+        3: { cellWidth: 20, halign: 'right' },
+      },
+      tableWidth: rightTableWidth,
+    });
+
+    let rightStackY = (doc as any).lastAutoTable.finalY + 8;
+
+    // 2. Shades Table
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Shades', rightTableX, rightStackY - 2);
+
+    autoTable(doc, {
+      startY: rightStackY,
+      margin: { left: rightTableX, right: rightMargin },
+      head: [['Shade', 'QTY', 'Filled', 'LTR', 'KG']],
       body: productData,
       foot: [
         [
-          { content: 'Total', styles: { halign: 'right', fontStyle: 'bold', textColor: 0 } },
-          { content: totalPackages.toString(), styles: { fontStyle: 'bold', halign: 'center', textColor: 0 } },
-          { content: '', styles: { fontStyle: 'bold', textColor: 0 } },
-          { content: '', styles: { fontStyle: 'bold', textColor: 0 } },
-          { content: totalKg > 0 ? totalKg.toFixed(3) : '', styles: { fontStyle: 'bold', textColor: 0, halign: 'right' } },
+          'Total',
+          totalPackages.toString(),
+          '',
+          '',
+          totalKg > 0 ? totalKg.toFixed(3) : '',
         ],
       ],
       theme: 'grid',
       styles: { fontSize: 8, cellPadding: 2, minCellHeight: 6, lineColor: 0, lineWidth: 0.2, fillColor: [255, 255, 255] },
       headStyles: { textColor: 0, fontStyle: 'bold', fillColor: [255, 255, 255] },
       bodyStyles: { fillColor: [255, 255, 255] },
-      margin: { left: 110 },
-      tableWidth: 86,
+      footStyles: { textColor: 0, fontStyle: 'bold', fillColor: [255, 255, 255] },
+      columnStyles: {
+        0: { cellWidth: 31 },
+        1: { cellWidth: 15, halign: 'center' },
+        2: { cellWidth: 15 },
+        3: { cellWidth: 15 },
+        4: { cellWidth: 15, halign: 'right' },
+      },
+      tableWidth: rightTableWidth,
       pageBreak: 'avoid',
     });
 
-    const rightTableFinalY = (doc as any).lastAutoTable.finalY;
-    let finalY = Math.max(leftTableFinalY, rightTableFinalY);
+    rightStackY = (doc as any).lastAutoTable.finalY + 8;
+
+    // 3. Packaging Table (Only if raw materials contains packaging)
+    if (packagingData.length > 0) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Packaging Materials', rightTableX, rightStackY - 2);
+
+      autoTable(doc, {
+        startY: rightStackY,
+        margin: { left: rightTableX, right: rightMargin },
+        head: [['Material', 'QTY']],
+        body: packagingData,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2, minCellHeight: 6, lineColor: 0, lineWidth: 0.2, fillColor: [255, 255, 255] },
+        headStyles: { textColor: 0, fontStyle: 'bold', fillColor: [255, 255, 255] },
+        bodyStyles: { fillColor: [255, 255, 255] },
+        columnStyles: {
+          0: { cellWidth: 66 },
+          1: { cellWidth: 25, halign: 'right' },
+        },
+        tableWidth: rightTableWidth,
+        pageBreak: 'avoid',
+      });
+      rightStackY = (doc as any).lastAutoTable.finalY;
+    }
+
+    const finalYTotal = Math.max(leftTableFinalY, rightStackY) + 10;
+    let finalYTotalActual = finalYTotal;
 
     // Additional Materials - Now Merged into main table logic with bolditalic
     // if (additionalMaterials.length > 0) { ... } -> Removed
@@ -576,7 +617,7 @@ export default function BatchReportModal({
       });
 
       autoTable(doc, {
-        startY: finalY + 5,
+        startY: finalYTotal + 5,
         head: [
           ['Product', 'APP QTY', 'BATCH QTY', 'DISPATCH QTY', 'TOTAL', 'ACTUAL QTY', 'DIFFERENCE'],
         ],
@@ -605,24 +646,26 @@ export default function BatchReportModal({
         rowPageBreak: 'avoid', // Try to avoid breaking rows across pages
       });
 
-      finalY = (doc as any).lastAutoTable.finalY;
+      finalYTotalActual = (doc as any).lastAutoTable.finalY;
     }
+
+    const finalYFooter = (relatedSkus.length > 0) ? finalYTotalActual : finalYTotal;
 
     // Separator line
     doc.setLineWidth(0.2);
-    doc.line(14, finalY + 10, 196, finalY + 10);
+    doc.line(14, finalYFooter + 10, 196, finalYFooter + 10);
 
     // Footer
-    doc.text('Production Remark :', 14, finalY + 15);
+    doc.text('Production Remark :', 14, finalYFooter + 15);
     if (reportType === 'completion-chart' && batch.productionRemarks) {
-      doc.text(batch.productionRemarks, 14, finalY + 22);
+      doc.text(batch.productionRemarks, 14, finalYFooter + 22);
     }
 
-    doc.text('Labours Sign :-', 40, finalY + 40);
-    doc.text(batch.labourNames || '', 40, finalY + 46);
+    doc.text('Labours Sign :-', 40, finalYFooter + 40);
+    doc.text(batch.labourNames || '', 40, finalYFooter + 46);
 
-    doc.text('Superviser Sign :-', 150, finalY + 40);
-    doc.text(`Mr. ${batch.supervisorName || ''}`, 150, finalY + 46);
+    doc.text('Superviser Sign :-', 150, finalYFooter + 40);
+    doc.text(`Mr. ${batch.supervisorName || ''}`, 150, finalYFooter + 46);
 
     const fileName =
       reportType === 'batch-chart'
@@ -706,7 +749,7 @@ export default function BatchReportModal({
                     <div className="flex items-center gap-2 py-1 whitespace-nowrap">
                       <span className="font-semibold">Hegman gauge:</span>
                       <div className="flex gap-1.5">
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                        {[6, 7, 8].map((num) => (
                           <div
                             key={num}
                             className="w-5 h-5 border border-black rounded-full flex items-center justify-center text-[10px] leading-none"

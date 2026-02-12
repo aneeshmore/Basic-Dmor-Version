@@ -739,7 +739,7 @@ const ProductDevelopment = () => {
     <div className="space-y-6">
       {/* Page Header */}
       <PageHeader
-        title="Product Development Form"
+        title="1K Product Development Form"
         description="Create and manage product recipes"
       />
 

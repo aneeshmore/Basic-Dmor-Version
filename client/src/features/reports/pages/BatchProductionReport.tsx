@@ -252,7 +252,7 @@ const BatchProductionReport = () => {
             // Hegman gauge is at index 4 now in right table
             let circleX = data.cell.x + 5;
             const circleY = data.cell.y + data.cell.height / 2;
-            for (let i = 1; i <= 8; i++) {
+            for (let i = 6; i <= 8; i++) {
               doc.setLineWidth(0.1);
               doc.setDrawColor(0, 0, 0);
               doc.circle(circleX, circleY, 2);
@@ -340,59 +340,7 @@ const BatchProductionReport = () => {
       const actTotalWeight = totalLtr * actDensity;
       const totalWeightVariance = actTotalWeight - stdTotalWeight;
 
-      // Header for Quality Table
-      const rightTableX = 115;
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0, 0, 0); // Black
-      const qualityTitleY = headerEndY + 5; // Align with left info block start
-      doc.text('Quality & Variance Analysis', rightTableX, qualityTitleY);
-
-      autoTable(doc, {
-        startY: qualityTitleY + 4, // Start table below title
-        margin: { left: rightTableX }, // Align to right side
-        head: [['Parameter', 'Standard ', 'Actual', 'Variance']],
-        body: [
-          ['Standard Density', stdDensity.toFixed(2), actDensity.toFixed(2), densityVariance.toFixed(2)],
-          [
-            'Viscosity',
-            stdViscosity > 0 ? stdViscosity.toString() : '-',
-            actViscosity > 0 ? actViscosity.toString() : '-',
-            viscosityVariance !== 0 ? viscosityVariance.toFixed(2) : '0.00',
-          ],
-          [
-            'Total Weight (Kg)',
-            stdTotalWeight.toFixed(2),
-            actTotalWeight.toFixed(2),
-            totalWeightVariance.toFixed(2),
-          ],
-        ],
-        theme: 'grid',
-        styles: {
-          fontSize: 8,
-          cellPadding: 2,
-          lineColor: [229, 231, 235], // Gray 200
-          lineWidth: 0.1,
-          textColor: colorGray700,
-        },
-        headStyles: {
-          fillColor: colorGray100,
-          textColor: [0, 0, 0],
-          fontStyle: 'bold',
-          fontSize: 8,
-          lineWidth: 0.1,
-          lineColor: [229, 231, 235],
-        },
-        columnStyles: {
-          0: { cellWidth: 25 },
-          1: { cellWidth: 20, halign: 'right' },
-          2: { cellWidth: 15, halign: 'right' },
-          3: { cellWidth: 15, halign: 'right' },
-        },
-        tableWidth: 80, // Tweak width to fit
-      });
-
-      let currentY = Math.max(infoBlockFinalY, (doc as any).lastAutoTable.finalY) + 10;
+      let currentY = infoBlockFinalY + 10;
 
       // 3. Tables Section - Side by Side
       // Separate regular and additional materials
@@ -447,10 +395,10 @@ const BatchProductionReport = () => {
 
       const tableY = currentY;
 
-      // Left Table: Ingredients (Full Width)
+      // Left Table: Ingredients (Side by Side - Left)
       autoTable(doc, {
         startY: tableY,
-        margin: { left: margin, right: margin },
+        margin: { left: margin, right: 110 },
         head: [['Seq', 'Product', 'Percentage (%)', 'Actual', 'Rate', 'Amount']],
         body: ingredientsBody,
         theme: 'grid',
@@ -472,14 +420,14 @@ const BatchProductionReport = () => {
           lineColor: [229, 231, 235],
         },
         columnStyles: {
-          0: { cellWidth: 12, halign: 'center' },
-          1: { cellWidth: 65, halign: 'left' },
-          2: { cellWidth: 25, halign: 'right' },
-          3: { cellWidth: 25, halign: 'right' },
-          4: { cellWidth: 25, halign: 'right' },
-          5: { cellWidth: 30, halign: 'right' },
+          0: { cellWidth: 10, halign: 'center' },
+          1: { cellWidth: 35, halign: 'left' },
+          2: { cellWidth: 12, halign: 'right' },
+          3: { cellWidth: 12, halign: 'right' },
+          4: { cellWidth: 12, halign: 'right' },
+          5: { cellWidth: 15, halign: 'right' },
         },
-        tableWidth: pageWidth - margin * 2,
+        tableWidth: 96,
         foot: [
           [
             '',
@@ -520,21 +468,42 @@ const BatchProductionReport = () => {
 
       const leftTableFinalY = (doc as any).lastAutoTable.finalY;
 
-      // Right Table: Sub Products (Full Width) - Placed Below Left Table
+      // RIGHT Column: Table Stack (Parameters -> Shade -> Packaging)
+      const rightTableX = 112;
+      const rightTableWidth = 84;
+
+      // 1. Parameters Table
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('Quality & Variance Analysis', rightTableX, tableY - 2);
+
       autoTable(doc, {
-        startY: leftTableFinalY + 8,
-        margin: { left: margin, right: margin },
-        head: [['Shade', 'QTY', 'Filled Qty', 'LTR', 'KG']],
-        body: subProductsBody,
+        startY: tableY,
+        margin: { left: rightTableX, right: margin },
+        head: [['Parameter', 'Std', 'Act', 'Var']],
+        body: [
+          ['Density', stdDensity.toFixed(2), actDensity.toFixed(2), densityVariance.toFixed(2)],
+          [
+            'Viscosity',
+            stdViscosity > 0 ? stdViscosity.toString() : '-',
+            actViscosity > 0 ? actViscosity.toString() : '-',
+            viscosityVariance !== 0 ? viscosityVariance.toFixed(2) : '0.00',
+          ],
+          [
+            'Weight (Kg)',
+            stdTotalWeight.toFixed(2),
+            actTotalWeight.toFixed(2),
+            totalWeightVariance.toFixed(2),
+          ],
+        ],
         theme: 'grid',
         styles: {
           fontSize: 7,
-          cellPadding: 3,
+          cellPadding: 2,
           lineColor: [229, 231, 235],
           lineWidth: 0.1,
           textColor: colorGray700,
-          overflow: 'linebreak',
-          cellWidth: 'wrap',
         },
         headStyles: {
           fillColor: colorGray100,
@@ -545,13 +514,52 @@ const BatchProductionReport = () => {
           lineColor: [229, 231, 235],
         },
         columnStyles: {
-          0: { cellWidth: 65, halign: 'left' }, // Shade - product names
-          1: { cellWidth: 25, halign: 'right' }, // QTY
-          2: { cellWidth: 25, halign: 'right' }, // ACT QTY
-          3: { cellWidth: 30, halign: 'right' }, // LTR
-          4: { cellWidth: 30, halign: 'right' }, // KG
+          0: { cellWidth: 25 },
+          1: { cellWidth: 15, halign: 'right' },
+          2: { cellWidth: 15, halign: 'right' },
+          3: { cellWidth: 15, halign: 'right' },
         },
-        tableWidth: pageWidth - margin * 2,
+        tableWidth: rightTableWidth,
+      });
+
+      let rightStackY = (doc as any).lastAutoTable.finalY + 8;
+
+      // 2. Shade Table (Sub Products)
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Shade Table', rightTableX, rightStackY - 2);
+
+      autoTable(doc, {
+        startY: rightStackY,
+        margin: { left: rightTableX, right: margin },
+        head: [['Shade', 'QTY', 'Filled', 'LTR', 'KG']],
+        body: subProductsBody,
+        theme: 'grid',
+        styles: {
+          fontSize: 7,
+          cellPadding: 2,
+          lineColor: [229, 231, 235],
+          lineWidth: 0.1,
+          textColor: colorGray700,
+          overflow: 'linebreak',
+        },
+        headStyles: {
+          fillColor: colorGray100,
+          textColor: [0, 0, 0],
+          fontStyle: 'bold',
+          fontSize: 7,
+          lineWidth: 0.1,
+          lineColor: [229, 231, 235],
+        },
+        columnStyles: {
+          0: { cellWidth: 32, halign: 'left' },
+          1: { cellWidth: 10, halign: 'right' },
+          2: { cellWidth: 10, halign: 'right' },
+          3: { cellWidth: 10, halign: 'right' },
+          4: { cellWidth: 10, halign: 'right' },
+        },
+        tableWidth: rightTableWidth,
         foot: [
           [
             'Total',
@@ -562,8 +570,8 @@ const BatchProductionReport = () => {
           ],
         ],
         footStyles: {
-          fillColor: colorSuccess, // Green
-          textColor: [255, 255, 255], // White
+          fillColor: colorSuccess,
+          textColor: [255, 255, 255],
           fontStyle: 'bold',
           fontSize: 7,
           lineWidth: 0.1,
@@ -577,49 +585,42 @@ const BatchProductionReport = () => {
         },
       });
 
-      const rightTableFinalY = (doc as any).lastAutoTable.finalY;
-      let nextY = Math.max(leftTableFinalY, rightTableFinalY) + 10;
+      rightStackY = (doc as any).lastAutoTable.finalY;
 
-      // Packaging Materials Table (Below the split columns, full width or centered)
-      // Matches the "Based on Actual Output" table in Preview
-      // Filter to only show materials with actualQty > 0
+      let nextY = Math.max(leftTableFinalY, rightStackY) + 10;
+
+      // 3. Packaging Materials Table
       const filteredPackagingMaterials = (batch.packagingMaterials || []).filter(pm => {
-        const qty =
-          typeof pm.actualQty === 'number' ? pm.actualQty : parseFloat(String(pm.actualQty || '0'));
+        const qty = typeof pm.actualQty === 'number' ? pm.actualQty : parseFloat(String(pm.actualQty || '0'));
         return qty > 0;
       });
 
       if (filteredPackagingMaterials.length > 0) {
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
+        doc.setFontSize(8);
         doc.setTextColor(0, 0, 0);
-        doc.text('Packaging Materials Used (Based on Actual Output)', margin, nextY - 2);
+        doc.text('Packaging Materials Used', rightTableX, rightStackY - 2);
 
         const packagingBody = filteredPackagingMaterials.map(pm => [
           pm.packagingName,
           formatNumber(pm.actualQty),
         ]);
 
-        const totalPlannedPM = filteredPackagingMaterials.reduce(
-          (sum, pm) => sum + pm.plannedQty,
-          0
-        );
         const totalActualPM = filteredPackagingMaterials.reduce((sum, pm) => sum + pm.actualQty, 0);
 
         autoTable(doc, {
-          startY: nextY,
-          margin: { left: margin, right: margin },
-          head: [['Packaging Name', 'Actual Qty']],
+          startY: rightStackY,
+          margin: { left: rightTableX, right: margin },
+          head: [['Packaging Name', 'Qty']],
           body: packagingBody,
           theme: 'grid',
           styles: {
             fontSize: 7,
-            cellPadding: 3,
+            cellPadding: 2,
             lineColor: [229, 231, 235],
             lineWidth: 0.1,
             textColor: colorGray700,
             overflow: 'linebreak',
-            cellWidth: 'wrap',
           },
           headStyles: {
             fillColor: colorGray100,
@@ -630,14 +631,14 @@ const BatchProductionReport = () => {
             lineColor: [229, 231, 235],
           },
           columnStyles: {
-            0: { cellWidth: 140, halign: 'left' },
-            1: { cellWidth: 40, halign: 'right' },
+            0: { cellWidth: 64, halign: 'left' },
+            1: { cellWidth: 20, halign: 'right' },
           },
-          tableWidth: pageWidth - margin * 2,
+          tableWidth: rightTableWidth,
           foot: [['Total', formatNumber(totalActualPM)]],
           footStyles: {
-            fillColor: colorSuccess, // Green
-            textColor: [255, 255, 255], // White
+            fillColor: colorSuccess,
+            textColor: [255, 255, 255],
             fontStyle: 'bold',
             fontSize: 7,
             lineWidth: 0.1,
@@ -650,7 +651,6 @@ const BatchProductionReport = () => {
             }
           },
         });
-
         nextY = (doc as any).lastAutoTable.finalY + 10;
       }
 
