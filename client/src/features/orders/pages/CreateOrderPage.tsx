@@ -233,7 +233,7 @@ const CreateOrderPage: React.FC = () => {
               <Eye size={14} className="mr-1.5" />
               View
             </Button>
-            {(order.status === 'Accepted' || order.status === 'Confirmed' || order.status === 'Delivered' || order.status === 'Dispatched') && (
+            {(order.status === 'Accepted' || order.status === 'Confirmed' || order.status === 'Delivered' || order.status === 'Dispatched' || order.status === 'Verified' || order.status === 'Ready for Dispatch') && (
               <Button
                 variant="ghost"
                 size="sm"

@@ -22,6 +22,7 @@ export interface Order {
   | 'Started'
   | 'Dispatched'
   | 'Delivered'
+  | 'Verified'
   | 'Cancelled';
   priority?: 'Low' | 'Normal' | 'High' | 'Urgent';
   totalAmount: number;
