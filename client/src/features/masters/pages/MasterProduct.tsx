@@ -44,6 +44,10 @@ const MasterProduct = () => {
   // Table search state
   const [tableSearch, setTableSearch] = useState('');
 
+  // Name field autocomplete state
+  const [nameSearchQuery, setNameSearchQuery] = useState('');
+  const [showNameDropdown, setShowNameDropdown] = useState(false);
+
   // Pending edit ID from URL params (to be applied after products load)
   const [pendingEditId, setPendingEditId] = useState<number | null>(null);
 
@@ -291,6 +295,14 @@ const MasterProduct = () => {
         p.masterProductId.toString().includes(tableSearch))
   );
 
+  // Filter products for name field autocomplete
+  const nameFilteredProducts = products.filter(
+    p =>
+      p.productType === activeTab &&
+      nameSearchQuery.trim() !== '' &&
+      p.masterProductName.toLowerCase().includes(nameSearchQuery.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -346,37 +358,75 @@ const MasterProduct = () => {
             })}
           </div>
           <div className="flex-grow space-y-4 overflow-y-auto pr-2 min-h-0">
-            <Input
-              label="Name"
-              value={productName}
-              onChange={e => {
-                setProductName(e.target.value);
-              }}
-              onKeyDown={e => {
-                if (e.key === 'ArrowDown') {
-                  e.preventDefault();
-                  setHighlightedIndex(prev =>
-                    prev < filteredProducts.length - 1 ? prev + 1 : prev
-                  );
-                } else if (e.key === 'ArrowUp') {
-                  e.preventDefault();
-                  setHighlightedIndex(prev => (prev > 0 ? prev - 1 : 0));
-                } else if (e.key === 'Enter') {
-                  e.preventDefault();
-                  if (filteredProducts.length > 0 && highlightedIndex >= 0) {
-                    // Select highlighted product (like edit)
-                    handleEdit(filteredProducts[highlightedIndex]);
-                  } else if (filteredProducts.length > 0) {
-                    // Select first if nothing highlighted
-                    handleEdit(filteredProducts[0]);
+            <div className="relative">
+              <Input
+                label="Name"
+                value={productName}
+                onChange={e => {
+                  setProductName(e.target.value);
+                  setNameSearchQuery(e.target.value);
+                  setShowNameDropdown(e.target.value.length > 0);
+                }}
+                onFocus={() => {
+                  if (productName.length > 0) {
+                    setShowNameDropdown(true);
                   }
-                  // If no results, form is ready for new entry (do nothing)
-                }
-              }}
-              placeholder={`Enter ${activeTab} name`}
-              required
-              autoFocus
-            />
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setHighlightedIndex(prev =>
+                      prev < nameFilteredProducts.length - 1 ? prev + 1 : prev
+                    );
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setHighlightedIndex(prev => (prev > 0 ? prev - 1 : 0));
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (nameFilteredProducts.length > 0 && highlightedIndex >= 0) {
+                      handleEdit(nameFilteredProducts[highlightedIndex]);
+                      setShowNameDropdown(false);
+                    } else if (nameFilteredProducts.length > 0) {
+                      handleEdit(nameFilteredProducts[0]);
+                      setShowNameDropdown(false);
+                    }
+                  } else if (e.key === 'Escape') {
+                    setShowNameDropdown(false);
+                  }
+                }}
+                placeholder={`Enter ${activeTab} name`}
+                required
+                autoFocus
+              />
+
+              {/* Name autocomplete dropdown */}
+              {showNameDropdown && nameFilteredProducts.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  {nameFilteredProducts.map((product, index) => (
+                    <div
+                      key={product.masterProductId}
+                      onClick={() => {
+                        handleEdit(product);
+                        setShowNameDropdown(false);
+                        setNameSearchQuery('');
+                      }}
+                      className={`px-3 py-2 text-sm cursor-pointer transition-colors border-b border-[var(--border)] last:border-b-0 ${
+                        index === highlightedIndex
+                          ? 'bg-[var(--primary)]/10 text-[var(--text-primary)]'
+                          : 'hover:bg-[var(--surface-hover)] text-[var(--text-primary)]'
+                      }`}
+                    >
+                      <div className="font-medium">{product.masterProductName}</div>
+                      <div className="text-xs text-[var(--text-secondary)]">
+                        ID: {product.masterProductId} • {product.Subcategory || 'General'}
+                        {product.productType === 'RM' && ` • Density: ${product.RMDensity || '-'} • Solid%: ${product.RMSolids || '-'}`}
+                        {product.productType === 'PM' && ` • Capacity: ${product.Capacity || '-'}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {activeTab === 'FG' && (
               <div className="space-y-3 p-3 bg-[var(--surface-highlight)] rounded-md border border-[var(--border)]">
