@@ -54,6 +54,7 @@ export class ReportsService {
         }
       }
 
+      // 1. Fetch Main Batches with their direct relations
       const batches = await db.query.productionBatch.findMany({
         where: conditions.length > 0 ? and(...conditions) : undefined,
         with: {
@@ -86,245 +87,192 @@ export class ReportsService {
         orderBy: (productionBatch, { desc }) => [desc(productionBatch.scheduledDate)],
       });
 
-      // NO need for in-memory filtering anymore as it's handled in the DB query
-      const filteredBatches = batches;
+      if (batches.length === 0) return [];
 
-      // Debug: Log batchProducts data
-      console.log('Reports: Fetched batches count:', filteredBatches.length);
-      filteredBatches.forEach(b => {
-        console.log(
-          `Batch ${b.batchNo}: batchProducts count =`,
-          (b.batchProducts || []).length,
-          'batchProducts:',
-          b.batchProducts
-        );
+      // 2. Prepare for Bulk Fetching
+      const batchIds = batches.map(b => b.batchId);
+      const masterProductIdsWithMissingRef = batches
+        .filter(b => !b.productId && b.masterProductId)
+        .map(b => b.masterProductId);
+
+      // 3. Bulk Fetch Material Snapshots (Snapshotted recipe at batch creation)
+      const allBatchMaterials = await db
+        .select({
+          batchId: batchMaterials.batchId,
+          batchMaterialId: batchMaterials.batchMaterialId,
+          materialId: batchMaterials.materialId,
+          materialName: masterProducts.masterProductName,
+          productType: masterProducts.productType,
+          requiredQuantity: batchMaterials.requiredQuantity,
+          sequence: batchMaterials.sequence,
+          isAdditional: batchMaterials.isAdditional,
+          percentage: batchMaterials.requiredUsePer,
+        })
+        .from(batchMaterials)
+        .leftJoin(masterProducts, eq(batchMaterials.materialId, masterProducts.masterProductId))
+        .where(inArray(batchMaterials.batchId, batchIds))
+        .orderBy(batchMaterials.sequence);
+
+      // Group materials by batchId
+      const materialsByBatchMap = new Map();
+      const uniqueMaterialIds = new Set();
+      allBatchMaterials.forEach(bm => {
+        if (!materialsByBatchMap.has(bm.batchId)) materialsByBatchMap.set(bm.batchId, []);
+        materialsByBatchMap.get(bm.batchId).push(bm);
+        if (bm.materialId) uniqueMaterialIds.add(bm.materialId);
       });
 
-      // Fetch BOM data for all batches
-      const batchesWithBom = await Promise.all(
-        filteredBatches.map(async batch => {
-          const startTime = batch.startedAt ? new Date(batch.startedAt).getTime() : null;
-          const endTime = batch.completedAt ? new Date(batch.completedAt).getTime() : null;
-          // Calculate Time Required using actualTimeHours if available
-          let timeRequired = 'N/A';
-          if (batch.actualTimeHours) {
-            timeRequired = `${batch.actualTimeHours} Hrs`;
-          } else if (startTime && endTime) {
-            const diffMs = endTime - startTime;
-            const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-            const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-            timeRequired = `${diffHrs}h ${diffMins}m`;
+      // 4. Bulk Fetch Latest Unit Prices from Inwards
+      const materialIdsArr = Array.from(uniqueMaterialIds);
+      let latestPriceMap = new Map();
+      if (materialIdsArr.length > 0) {
+        // Fetch all inward rows for these materials, then pick the latest in-memory
+        // This is much faster than N separate subqueries
+        const inwardRows = await db
+          .select({
+            masterProductId: materialInward.masterProductId,
+            unitPrice: materialInward.unitPrice,
+            inwardDate: materialInward.inwardDate,
+          })
+          .from(materialInward)
+          .where(inArray(materialInward.masterProductId, materialIdsArr))
+          .orderBy(desc(materialInward.inwardDate));
+
+        inwardRows.forEach(row => {
+          if (!latestPriceMap.has(row.masterProductId)) {
+            latestPriceMap.set(row.masterProductId, row.unitPrice);
           }
+        });
+      }
 
-          // Fetch reference product for BOM
-          let referenceProductId = batch.productId;
-
-          // If batch only has masterProductId, find a child product to get BOM
-          if (!referenceProductId && batch.masterProductId) {
-            const refProduct = await db.query.products.findFirst({
-              where: (products, { eq }) => eq(products.masterProductId, batch.masterProductId),
-            });
-            if (refProduct) {
-              referenceProductId = refProduct.productId;
-            }
+      // 5. Bulk Fetch Reference Products (for MTS batches without direct productId)
+      const refProductMap = new Map();
+      if (masterProductIdsWithMissingRef.length > 0) {
+        const refProducts = await db.query.products.findMany({
+          where: inArray(products.masterProductId, masterProductIdsWithMissingRef),
+        });
+        // Group by masterProductId to take the first child
+        refProducts.forEach(p => {
+          if (!refProductMap.has(p.masterProductId)) {
+            refProductMap.set(p.masterProductId, p.productId);
           }
+        });
+      }
 
-          // Fetch raw materials (Actuals) for this batch from batch_materials table
-          const batchMaterialsData = await db
-            .select({
-              batchMaterialId: batchMaterials.batchMaterialId,
-              materialId: batchMaterials.materialId,
-              materialName: masterProducts.masterProductName,
-              productType: masterProducts.productType,
-              requiredQuantity: batchMaterials.requiredQuantity,
-              plannedQuantity: batchMaterials.requiredQuantity,
-              // actualQuantity: batchMaterials.actualQuantity, // Column removed from schema
-              sequence: batchMaterials.sequence,
-              isAdditional: batchMaterials.isAdditional,
-              percentage: batchMaterials.requiredUsePer,
-            })
-            .from(batchMaterials)
-            .leftJoin(masterProducts, eq(batchMaterials.materialId, masterProducts.masterProductId))
-            .where(eq(batchMaterials.batchId, batch.batchId))
-            .orderBy(batchMaterials.sequence);
+      // 6. Final Assembly Object construction
+      const batchesWithBom = batches.map(batch => {
+        const startTime = batch.startedAt ? new Date(batch.startedAt).getTime() : null;
+        const endTime = batch.completedAt ? new Date(batch.completedAt).getTime() : null;
 
-          // Merge BOM and Actuals - REFACTORED for Historical Accuracy
-          // We now rely ONLY on batch_materials which is a snapshot of the recipe at batch creation time.
-          // This prevents current recipe changes from altering historical reports.
+        let timeRequired = 'N/A';
+        if (batch.actualTimeHours) {
+          timeRequired = `${batch.actualTimeHours} Hrs`;
+        } else if (startTime && endTime) {
+          const diffMs = endTime - startTime;
+          const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+          const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+          timeRequired = `${diffHrs}h ${diffMins}m`;
+        }
 
-          // Fetch latest inward unit prices for these materials (if any)
-          const materialIds = batchMaterialsData
-            .map(bm => bm.materialId)
-            .filter(id => id !== null && id !== undefined);
+        // Resolve Reference Product ID
+        let referenceProductId = batch.productId || refProductMap.get(batch.masterProductId);
 
-          let latestPriceMap = new Map();
-          if (materialIds.length > 0) {
-            const inwardRows = await db
-              .select({
-                masterProductId: materialInward.masterProductId,
-                unitPrice: materialInward.unitPrice,
-              })
-              .from(materialInward)
-              .where(inArray(materialInward.masterProductId, materialIds))
-              .orderBy(desc(materialInward.inwardDate));
-
-            inwardRows.forEach(row => {
-              // first occurrence (descending by date) is the latest
-              if (!latestPriceMap.has(row.masterProductId)) {
-                latestPriceMap.set(row.masterProductId, row.unitPrice);
-              }
-            });
-          }
-
-          const rawMaterials = batchMaterialsData.map(bm => {
-            // Determine if it's "additional"
-            // 1. Explicitly flagged in DB
-            // 2. Name contains "Water" (legacy fallback)
-            // 3. No percentage/requiredUsePer was stored (implies added later)
-            const isWater = (bm.materialName || '').toLowerCase().includes('water');
-            const hasPercentage = bm.percentage != null && parseFloat(bm.percentage) > 0;
-
-            // If it's explicitly additional, or water, or has no planned percentage, treat as additional
-            const isAdditional = bm.isAdditional || isWater || !hasPercentage;
-
-            return {
-              bomId: bm.batchMaterialId,
-              rawMaterialId: bm.materialId,
-              rawMaterialName: bm.materialName || 'Unknown',
-              productType: bm.productType,
-              // Use stored percentage from snapshot, or 0 if not present
-              percentage: bm.percentage || 0,
-              // Since we don't track variance for regular items anymore, Actual = Planned (Required)
-              // For additional items, Actual = Required (which stores the added amount)
-              actualQty: bm.requiredQuantity,
-              // attach latest unit price if available from inward records
-              unitPrice: latestPriceMap.get(bm.materialId) || null,
-              isAdditional,
-            };
-          });
-
-          // Sort: Regular materials first, then Additional/Water
-          rawMaterials.sort((a, b) => {
-            // If one is additional and the other isn't
-            if (a.isAdditional !== b.isAdditional) {
-              return a.isAdditional ? 1 : -1; // Regular (false) first
-            }
-            // Maintain original sequence from DB if both are same type
-            return 0;
-          });
-
-          // Calculate Packaging Materials based on Batch Products (SKUs)
-          const packagingMap = new Map();
-
-          if (batch.batchProducts) {
-            batch.batchProducts.forEach(sp => {
-              const packaging = sp.product?.packaging;
-              if (packaging) {
-                const existing = packagingMap.get(packaging.masterProductId) || {
-                  packagingId: packaging.masterProductId,
-                  packagingName: packaging.masterProductName,
-                  plannedQty: 0,
-                  actualQty: 0,
-                };
-
-                // Add quantities (Assuming 1 SKU unit uses 1 Packaging unit)
-                // If packageQuantity is involved, logic might need adjustment, but usually 1 Unit = 1 Package
-                existing.plannedQty += parseFloat(sp.plannedUnits || '0');
-
-                // For actual, use producedUnits if available, else 0
-                existing.actualQty += parseFloat(sp.producedUnits || '0');
-
-                packagingMap.set(packaging.masterProductId, existing);
-              }
-            });
-          }
-
-          const calculatedPackagingMaterials = Array.from(packagingMap.values());
+        // Process Materials (Raw Materials)
+        const batchMaterialsData = materialsByBatchMap.get(batch.batchId) || [];
+        const rawMaterials = batchMaterialsData.map(bm => {
+          const isWater = (bm.materialName || '').toLowerCase().includes('water');
+          const hasPercentage = bm.percentage != null && parseFloat(bm.percentage) > 0;
+          const isAdditional = bm.isAdditional || isWater || !hasPercentage;
 
           return {
-            batchId: batch.batchId,
-            batchNo: batch.batchNo,
-            productId: referenceProductId, // Use the resolved ID
-            masterProductId: batch.masterProductId,
-            productName: batch.masterProduct?.masterProductName || 'Unknown Product',
-            productType: batch.masterProduct?.productType,
-            batchType:
-              batch.batchType ||
-              (batch.batchProducts?.some(sp => sp.orderId) ? 'MAKE_TO_ORDER' : 'MAKE_TO_STOCK'),
-            scheduledDate: batch.scheduledDate,
-            status: batch.status,
-            plannedQuantity: batch.plannedQuantity,
-            actualQuantity: batch.actualQuantity,
-            actualWeightKg: batch.actualWeightKg,
-            startedAt: batch.startedAt,
-            completedAt: batch.completedAt,
-            timeRequired,
-            // productionManager: ... // Removed as per request
-            supervisor: batch.supervisor
-              ? `${batch.supervisor.firstName} ${batch.supervisor.lastName}`
-              : null,
-            // SNAPSHOT: Use batch-stored values first (captured at batch creation time)
-            // Fallback to FG Master for backward compatibility with old batches
-            density: batch.density || batch.masterProduct?.fgDetails?.fgDensity, // Standard Density (snapshotted or FG Master fallback)
-            actualDensity: batch.actualDensity, // Lab Density
-            packingDensity:
-              batch.actualWeightKg && batch.actualQuantity && parseFloat(batch.actualQuantity) > 0
-                ? (parseFloat(batch.actualWeightKg) / parseFloat(batch.actualQuantity)).toFixed(4)
-                : batch.actualDensity, // Calculated or Fallback
-            viscosity: batch.viscosity || batch.masterProduct?.fgDetails?.viscosity, // Standard Viscosity (snapshotted or FG Master fallback)
-            actualViscosity: batch.actualViscosity,
-            waterPercentage:
-              batch.waterPercentage || batch.masterProduct?.fgDetails?.waterPercentage, // Standard Water % (snapshotted or FG Master fallback)
-            actualWaterPercentage: batch.actualWaterPercentage,
-            productionRemarks: batch.productionRemarks,
-            labourNames: batch.labourNames,
-            qualityStatus: batch.qualityStatus,
-            subProducts: (batch.batchProducts || []).map((sp, _, arr) => {
-              const capacity =
-                sp.product?.packaging?.pmDetails?.capacity || sp.product?.packageCapacityKg || 0;
-
-              console.log(
-                `Report Debug - Batch ${batch.batchNo} SKU ${sp.product?.productName}: Produced=${sp.producedUnits}, Planned=${sp.plannedUnits}, Capacity=${capacity}`
-              );
-
-              let actualQty = '-';
-              if (sp.producedUnits !== null && sp.producedUnits !== undefined) {
-                actualQty = sp.producedUnits;
-              } else if (batch.status === 'Completed') {
-                const planned = parseInt(sp.plannedUnits || 0);
-                if (planned > 0) {
-                  actualQty = planned;
-                } else if (
-                  batch.actualQuantity &&
-                  parseFloat(batch.actualQuantity) > 0 &&
-                  parseFloat(capacity) > 0 &&
-                  arr.length === 1
-                ) {
-                  // Legacy MTS Fix: Calculate units from total if single-SKU
-                  actualQty = Math.round(parseFloat(batch.actualQuantity) / parseFloat(capacity));
-                } else {
-                  actualQty = 0; // Show 0 if 0 planned and can't calculate
-                }
-              }
-
-              return {
-                subProductId: sp.batchProductId,
-                // Use SKU product name first, fallback to master product name
-                productName:
-                  sp.product?.productName ||
-                  sp.product?.masterProduct?.masterProductName ||
-                  'Unknown',
-                batchQty: sp.plannedUnits || 0,
-                actualQty,
-                capacity: capacity || null,
-                fillingDensity: sp.product?.fillingDensity || null,
-              };
-            }),
-            rawMaterials: rawMaterials.filter(rm => rm.productType !== 'PM'), // Remove PM from rawMaterials
-            packagingMaterials: calculatedPackagingMaterials, // Add calculated PMs
+            bomId: bm.batchMaterialId,
+            rawMaterialId: bm.materialId,
+            rawMaterialName: bm.materialName || 'Unknown',
+            productType: bm.productType,
+            percentage: bm.percentage || 0,
+            actualQty: bm.requiredQuantity,
+            unitPrice: latestPriceMap.get(bm.materialId) || null,
+            isAdditional,
           };
-        })
-      );
+        }).sort((a, b) => {
+          if (a.isAdditional !== b.isAdditional) return a.isAdditional ? 1 : -1;
+          return 0;
+        });
+
+        // Calculate Packaging Materials based on Batch Products
+        const packagingMap = new Map();
+        if (batch.batchProducts) {
+          batch.batchProducts.forEach(sp => {
+            const packaging = sp.product?.packaging;
+            if (packaging) {
+              const existing = packagingMap.get(packaging.masterProductId) || {
+                packagingId: packaging.masterProductId,
+                packagingName: packaging.masterProductName,
+                plannedQty: 0,
+                actualQty: 0,
+              };
+              existing.plannedQty += parseFloat(sp.plannedUnits || '0');
+              existing.actualQty += parseFloat(sp.producedUnits || '0');
+              packagingMap.set(packaging.masterProductId, existing);
+            }
+          });
+        }
+
+        return {
+          batchId: batch.batchId,
+          batchNo: batch.batchNo,
+          productId: referenceProductId,
+          masterProductId: batch.masterProductId,
+          productName: batch.masterProduct?.masterProductName || 'Unknown Product',
+          productType: batch.masterProduct?.productType,
+          batchType: batch.batchType ||
+            (batch.batchProducts?.some(sp => sp.orderId) ? 'MAKE_TO_ORDER' : 'MAKE_TO_STOCK'),
+          scheduledDate: batch.scheduledDate,
+          status: batch.status,
+          plannedQuantity: batch.plannedQuantity,
+          actualQuantity: batch.actualQuantity,
+          actualWeightKg: batch.actualWeightKg,
+          startedAt: batch.startedAt,
+          completedAt: batch.completedAt,
+          timeRequired,
+          supervisor: batch.supervisor
+            ? `${batch.supervisor.firstName} ${batch.supervisor.lastName}`
+            : null,
+          density: batch.density || batch.masterProduct?.fgDetails?.fgDensity,
+          actualDensity: batch.actualDensity,
+          packingDensity:
+            batch.actualWeightKg && batch.actualQuantity && parseFloat(batch.actualQuantity) > 0
+              ? (parseFloat(batch.actualWeightKg) / parseFloat(batch.actualQuantity)).toFixed(4)
+              : batch.actualDensity,
+          viscosity: batch.viscosity || batch.masterProduct?.fgDetails?.viscosity,
+          actualViscosity: batch.actualViscosity,
+          waterPercentage: batch.waterPercentage || batch.masterProduct?.fgDetails?.waterPercentage,
+          actualWaterPercentage: batch.actualWaterPercentage,
+          productionRemarks: batch.productionRemarks,
+          labourNames: batch.labourNames,
+          qualityStatus: batch.qualityStatus,
+          subProducts: (batch.batchProducts || []).map((sp, _, arr) => {
+            const capacity = sp.product?.packaging?.pmDetails?.capacity || sp.product?.packageCapacityKg || 0;
+            let actualQty = sp.producedUnits ?? (batch.status === 'Completed' ? (parseInt(sp.plannedUnits || 0) || '-') : '-');
+
+            // Legacy MTS fallback for single-SKU
+            if (actualQty === '-' && batch.status === 'Completed' && arr.length === 1 && parseFloat(batch.actualQuantity) > 0 && parseFloat(capacity) > 0) {
+              actualQty = Math.round(parseFloat(batch.actualQuantity) / parseFloat(capacity));
+            }
+
+            return {
+              subProductId: sp.batchProductId,
+              productName: sp.product?.productName || sp.product?.masterProduct?.masterProductName || 'Unknown',
+              batchQty: sp.plannedUnits || 0,
+              actualQty,
+              capacity: capacity || null,
+              fillingDensity: sp.product?.fillingDensity || null,
+            };
+          }),
+          rawMaterials: rawMaterials.filter(rm => rm.productType !== 'PM'),
+          packagingMaterials: Array.from(packagingMap.values()),
+        };
+      });
 
       return batchesWithBom;
     } catch (error) {
@@ -1416,13 +1364,13 @@ export class ReportsService {
       return {
         product: product
           ? {
-              ...product,
-              masterProductName: product.masterProduct?.masterProductName,
-              productType: product.masterProduct?.productType,
-              fgDetails: product.masterProduct?.fgDetails,
-              rmDetails: product.masterProduct?.rmDetails,
-              pmDetails: product.masterProduct?.pmDetails,
-            }
+            ...product,
+            masterProductName: product.masterProduct?.masterProductName,
+            productType: product.masterProduct?.productType,
+            fgDetails: product.masterProduct?.fgDetails,
+            rmDetails: product.masterProduct?.rmDetails,
+            pmDetails: product.masterProduct?.pmDetails,
+          }
           : null,
         transactions: processedTransactions,
         bom: bom.map(b => ({
