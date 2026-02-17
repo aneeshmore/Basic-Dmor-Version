@@ -611,7 +611,7 @@ export const routeRegistry: RouteNode[] = [
       },
       {
         id: 'accepted-orders',
-        path: '/operations/accepted-orders',
+        path: '/operations/accept-orders',
         label: 'Accept Order at Factory',
         icon: Factory,
         component: AcceptedOrdersPage,

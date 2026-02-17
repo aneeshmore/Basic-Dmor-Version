@@ -310,7 +310,7 @@ export function AcceptedOrdersDataTable({
                     title="Force dispatch despite shortage"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    Dispatch
+                    Accept
                   </button>
                   <button
                     onClick={() => handleProcessOrder(orderId, 'split')}
