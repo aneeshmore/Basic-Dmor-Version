@@ -68,6 +68,7 @@ export interface AuthUser {
   LastName?: string;
   Username: string;
   Role: string;
+  planType?: 'basic' | 'pro';
   landingPage?: string;
   permissions?: UserPermission[];
   // Dealer fields

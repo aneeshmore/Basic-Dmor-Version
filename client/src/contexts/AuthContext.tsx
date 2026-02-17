@@ -54,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             LastName: response.data.LastName,
             Username: response.data.Username,
             Role: response.data.Role,
+            planType: response.data.planType,
             landingPage: response.data.landingPage,
             permissions: response.data.permissions || [],
             // Dealer specific fields

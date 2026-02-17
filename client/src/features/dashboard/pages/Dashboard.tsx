@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -13,6 +12,7 @@ import {
   FileText,
   Download,
   CheckCircle,
+  Crown,
 } from 'lucide-react';
 import { productionManagerApi } from '@/features/production-manager/api/productionManagerApi';
 import { reportsApi } from '@/features/reports/api/reportsApi';
@@ -22,6 +22,7 @@ import { productApi } from '@/features/master-products/api';
 import { AlertsTicker } from '@/features/notifications/components/AlertsTicker';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { isBasicPlan } from '@/utils/planAccess';
 
 // Define Card Interface
 interface DashboardCard {
@@ -32,6 +33,7 @@ interface DashboardCard {
   color: string;
   bg: string;
   description?: string;
+  proOnly?: boolean;
   permission?: { module: string; action: string };
 }
 
@@ -118,6 +120,7 @@ export const Dashboard: React.FC = () => {
   // Define Cards for different Roles
   const getCards = (): DashboardCard[] => {
     const role = user?.Role?.toLowerCase() || '';
+    const basicUser = isBasicPlan(user);
 
     // --- SALES DASHBOARD ---
     if (role.includes('sales')) {
@@ -148,6 +151,7 @@ export const Dashboard: React.FC = () => {
           path: '/operations/quotation-requests',
           color: 'text-amber-500',
           bg: 'bg-amber-500/10',
+          proOnly: true,
         },
       ];
     }
@@ -183,6 +187,16 @@ export const Dashboard: React.FC = () => {
           bg: 'bg-green-500/10',
         },
         {
+          title: 'Accept Order at Factory',
+          icon: CheckCircle,
+          count: 'Accept',
+          description: 'Accept and process factory orders',
+          path: '/operations/accepted-orders',
+          color: 'text-rose-500',
+          bg: 'bg-rose-500/10',
+          proOnly: true,
+        },
+        {
           title: 'PM Dashboard',
           icon: Download,
           count: 'View',
@@ -190,7 +204,7 @@ export const Dashboard: React.FC = () => {
           path: '/operations/pm-dashboard',
           color: 'text-orange-500',
           bg: 'bg-orange-500/10',
-        }
+        },
       ];
     }
 
@@ -205,6 +219,7 @@ export const Dashboard: React.FC = () => {
           path: '/operations/admin-accounts',
           color: 'text-rose-500',
           bg: 'bg-rose-500/10',
+          proOnly: true,
         },
         {
           title: 'Create & Manage Orders/Quotations',
@@ -223,6 +238,7 @@ export const Dashboard: React.FC = () => {
           path: '/operations/quotation-requests',
           color: 'text-amber-500',
           bg: 'bg-amber-500/10',
+          proOnly: true,
         },
       ];
     }
@@ -246,6 +262,7 @@ export const Dashboard: React.FC = () => {
         path: '/masters/employees',
         color: 'text-emerald-500',
         bg: 'bg-emerald-500/10',
+        proOnly: true,
         permission: { module: 'employees', action: 'view' },
       },
       {
@@ -282,6 +299,7 @@ export const Dashboard: React.FC = () => {
         path: '/reports/low-stock',
         color: 'text-rose-500',
         bg: 'bg-rose-500/10',
+        proOnly: true,
         permission: { module: 'report-stock', action: 'view' },
       },
       {
@@ -297,7 +315,10 @@ export const Dashboard: React.FC = () => {
 
     // Filter default cards based on permissions
     return defaultCards.filter(
-      card => !card.permission || hasPermission(card.permission.module, card.permission.action as any)
+      card =>
+        (basicUser && card.proOnly) ||
+        !card.permission ||
+        hasPermission(card.permission.module, card.permission.action as any)
     );
   };
 
@@ -315,7 +336,8 @@ export const Dashboard: React.FC = () => {
   const getSubHeaderText = () => {
     const role = user?.Role?.toLowerCase() || '';
     if (role.includes('sales')) return 'Manage your sales, orders, and customers';
-    if (role.includes('production') || role.includes('factory')) return 'Manage production, reports, and batches';
+    if (role.includes('production') || role.includes('factory'))
+      return 'Manage production, reports, and batches';
     if (role.includes('account')) return 'Manage approvals, orders, and quotations';
     return 'Enterprise Resource Planning System';
   };
@@ -323,12 +345,8 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold text-[var(--text-primary)]">
-          {getHeaderText()}
-        </h1>
-        <p className="mt-2 text-sm text-[var(--text-secondary)]">
-          {getSubHeaderText()}
-        </p>
+        <h1 className="text-3xl font-semibold text-[var(--text-primary)]">{getHeaderText()}</h1>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">{getSubHeaderText()}</p>
       </div>
 
       <AlertsTicker />
@@ -336,17 +354,29 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {visibleCards.map(card => {
           const Icon = card.icon;
+          const isRestricted = card.proOnly && isBasicPlan(user);
           return (
             <button
               key={card.title}
-              onClick={() => navigate(card.path)}
-              className="group relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 text-left transition-all hover:shadow-lg hover:border-[var(--primary)]"
+              onClick={() => !isRestricted && navigate(card.path)}
+              disabled={isRestricted}
+              className={`group relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 text-left transition-all ${
+                isRestricted
+                  ? 'opacity-70 cursor-not-allowed'
+                  : 'hover:shadow-lg hover:border-[var(--primary)]'
+              }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className={`inline-flex p-3 rounded-lg ${card.bg} mb-4`}>
                     <Icon className={`h-6 w-6 ${card.color}`} />
                   </div>
+                  {isRestricted && (
+                    <div className="mb-2 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                      <Crown className="h-3 w-3" />
+                      Pro
+                    </div>
+                  )}
                   <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1">
                     {card.title}
                   </h3>
@@ -359,9 +389,9 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
               <div className="mt-4 flex items-center text-sm font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]">
-                {card.description ? 'Access' : 'View details'}
+                {isRestricted ? 'Pro feature' : card.description ? 'Access' : 'View details'}
                 <svg
-                  className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1"
+                  className={`ml-1 h-4 w-4 transition-transform ${isRestricted ? '' : 'group-hover:translate-x-1'}`}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"

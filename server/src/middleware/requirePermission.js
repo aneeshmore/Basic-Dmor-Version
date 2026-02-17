@@ -3,6 +3,7 @@ import logger from '../config/logger.js';
 import db from '../db/index.js';
 import { eq } from 'drizzle-orm';
 import * as schema from '../db/schema/index.js';
+import { isBasicPlan, PROTECTED_PLAN_FEATURE_ROUTES } from '../utils/planAccess.js';
 
 /**
  * Get effective permissions for a user
@@ -61,6 +62,18 @@ export const requirePermission = apiRoute => {
       if (req.user.role === 'Admin' || req.user.role === 'SuperAdmin') {
         req.permissionContext = { apiRoute, granted: true, isAdmin: true };
         return next();
+      }
+
+      if (isBasicPlan(req.user) && PROTECTED_PLAN_FEATURE_ROUTES.has(apiRoute)) {
+        logger.warn('Plan restriction denied route access', {
+          userId: req.user.employeeId,
+          username: req.user.username,
+          role: req.user.role,
+          planType: 'basic',
+          apiRoute,
+          ip: req.ip,
+        });
+        return next(new ForbiddenError('Upgrade to Pro plan to access this feature'));
       }
 
       // Get user's granted API routes

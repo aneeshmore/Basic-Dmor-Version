@@ -3,13 +3,12 @@ import {
   AlertCircle,
   LucideIcon,
   LayoutDashboard,
-  Database,
-  BarChart3,
-  Factory,
+  Crown,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { routeRegistry, findRouteByPath, RouteNode } from '@/config/routeRegistry';
+import { isBasicPlan } from '@/utils/planAccess';
 
 interface DynamicChildDashboardProps {
   parentPath: string;
@@ -262,6 +261,22 @@ export const DynamicChildDashboard: React.FC<DynamicChildDashboardProps> = ({
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
   const { user } = useAuth();
+  const basicUser = isBasicPlan(user);
+
+  const BASIC_PRO_RESTRICTED_ROUTE_IDS = new Set([
+    'employees',
+    'customer-types',
+    'departments',
+    'double-development',
+    // Operations cards
+    'quotation-master',
+    'admin-accounts',
+    'accepted-orders',
+    // Settings cards
+    'permission-management',
+    'lock-user',
+    'customer-transfer',
+  ]);
 
   // Find the parent route
   const parentRoute = findRouteByPath(routeRegistry, parentPath);
@@ -278,6 +293,10 @@ export const DynamicChildDashboard: React.FC<DynamicChildDashboardProps> = ({
     if (route.showInSidebar === false) return false;
 
     // 2. Permission Check
+    const isProOnlyInBasic =
+      basicUser && (route.proOnly === true || BASIC_PRO_RESTRICTED_ROUTE_IDS.has(route.id));
+    if (isProOnlyInBasic) return true;
+
     if (!route.permission) return true;
     return hasPermission(route.permission.module, 'view');
   });
@@ -306,12 +325,14 @@ export const DynamicChildDashboard: React.FC<DynamicChildDashboardProps> = ({
           const bgClass = meta.iconBg || DEFAULT_META.iconBg;
           const colorClass = meta.iconColor || DEFAULT_META.iconColor;
           const desc = meta.description || DEFAULT_META.description;
+          const isRestricted =
+            basicUser && (route.proOnly === true || BASIC_PRO_RESTRICTED_ROUTE_IDS.has(route.id));
 
           return (
             <div
               key={route.id}
-              className="card hover-lift p-6 group relative cursor-pointer"
-              onClick={() => navigate(route.path)}
+              className={`card p-6 group relative ${isRestricted ? 'opacity-70 cursor-not-allowed' : 'hover-lift cursor-pointer'}`}
+              onClick={() => !isRestricted && navigate(route.path)}
             >
               <div className="flex flex-col h-full">
                 <div
@@ -320,16 +341,23 @@ export const DynamicChildDashboard: React.FC<DynamicChildDashboardProps> = ({
                   <DisplayIcon size={24} />
                 </div>
 
+                {isRestricted && (
+                  <div className="mb-2 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 w-fit">
+                    <Crown className="h-3 w-3" />
+                    Pro
+                  </div>
+                )}
+
                 <h3 className="font-bold text-[var(--text-primary)] mb-2 uppercase text-sm tracking-wide">
                   {route.label}
                 </h3>
 
                 <p className="text-sm text-[var(--text-secondary)] flex-grow">{desc}</p>
 
-                <div className="mt-4 flex items-center text-xs font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
-                  Open Module
+                <div className="mt-4 flex items-center text-xs font-medium text-[var(--text-secondary)] transition-colors">
+                  {isRestricted ? 'Pro feature' : 'Open Module'}
                   <svg
-                    className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1"
+                    className={`ml-1 h-3 w-3 transition-transform ${isRestricted ? '' : 'group-hover:translate-x-1'}`}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"

@@ -52,6 +52,7 @@ export const authenticate = (req, res, next) => {
       employeeId: decoded.employeeId,
       username: decoded.username,
       role: decoded.role,
+      planType: decoded.planType,
       companyName: decoded.companyName,
     };
 
