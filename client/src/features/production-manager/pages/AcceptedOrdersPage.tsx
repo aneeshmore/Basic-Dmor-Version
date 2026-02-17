@@ -219,7 +219,7 @@ export default function AcceptedOrdersPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <PageHeader
-        title="Accepted Orders - Production Assessment"
+        title="Accept Orders by Production Department"
         description="Manage factory orders and dispatch"
       />
 
