@@ -1,41 +1,40 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import pg from 'pg';
-import dotenv from 'dotenv';
 import logger from '../config/logger.js';
-import * as schema from './schema/index.js';
+import { dbManager } from './manager.js';
+import { getTenantId } from './tenantContext.js';
 
-dotenv.config();
+/**
+ * Proxy object that dynamically resolves to the correct database instance
+ * based on the current tenant context.
+ */
+export const db = new Proxy({}, {
+  get(target, prop) {
+    const tenantId = getTenantId();
 
-// Validate required environment variables
-if (!process.env.DATABASE_URL) {
-  logger.error('DATABASE_URL environment variable is not set');
-  throw new Error('DATABASE_URL is required');
-}
+    // If no tenant context is set, we might be in a background job or initialization
+    if (!tenantId) {
+      // Check for manual override (useful for CLI scripts like migrations/seeds)
+      const overrideTenant = process.env.MIGRATION_TENANT || process.env.DEFAULT_TENANT;
 
-const { Pool } = pg;
+      if (overrideTenant) {
+        const overrideDb = dbManager.getTenantDB(overrideTenant);
+        if (overrideDb) return overrideDb[prop];
+      }
 
-// Create PostgreSQL pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+      logger.error(`Database access attempted without tenant context! Property: ${prop}`);
+      throw new Error(`Tenant context missing for database operation: ${prop}`);
+    }
+
+    const tenantDb = dbManager.getTenantDB(tenantId);
+    if (!tenantDb) {
+      logger.error(`Database instance not found for tenant: ${tenantId}`);
+      throw new Error(`Database connection failed for tenant: ${tenantId}`);
+    }
+
+    return tenantDb[prop];
+  }
 });
 
-// Initialize Drizzle ORM
-export const db = drizzle(pool, { schema, logger: process.env.NODE_ENV === 'development' });
-
-// Set search path using an initialization query/event if needed,
-// but Drizzle queries are usually fully qualified with schema names.
-pool.on('error', err => {
-  logger.error('Unexpected error on idle client', err);
-});
-
-// Verify connection
-pool
-  .query('SELECT 1')
-  .then(() => {
-    logger.info('Database connection established with Drizzle ORM (PostgreSQL)');
-  })
-  .catch(err => {
-    logger.error('Failed to connect to database', err);
-  });
+// Optionally validate connections on startup if needed
+// dbManager.validateConnections().catch(err => logger.error('Initial connection check failed', err));
 
 export default db;

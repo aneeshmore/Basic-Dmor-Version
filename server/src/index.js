@@ -10,6 +10,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/logger.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import logger from './config/logger.js';
+import { tenantMiddleware } from './middleware/tenant.js';
 
 // Handle BigInt serialization
 BigInt.prototype.toJSON = function () {
@@ -52,6 +53,9 @@ app.use(
     credentials: true,
   })
 );
+
+// Resolve tenant and set context
+app.use(tenantMiddleware);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
