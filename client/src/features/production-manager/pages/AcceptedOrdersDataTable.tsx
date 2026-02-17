@@ -299,7 +299,7 @@ export function AcceptedOrdersDataTable({
                   title="Send order directly to dispatch planning"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  Dispatch
+                  Accept
                 </button>
               ) : (
                 // Inventory shortage: Show Accept (to PM Dashboard) and Split Order buttons
