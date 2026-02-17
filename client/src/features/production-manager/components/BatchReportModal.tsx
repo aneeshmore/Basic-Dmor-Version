@@ -278,12 +278,22 @@ export default function BatchReportModal({
     const actViscosity = batch.actualViscosity ? parseFloat(batch.actualViscosity) : 0;
     const viscosityVariance = actViscosity - stdViscosity;
 
-    // Calculate total weight from actual quantity and density
-    const actualQty = batch.actualQuantity ? parseFloat(batch.actualQuantity) : 0;
-    const stdTotalWeight = batch.plannedQuantity
-      ? parseFloat(batch.plannedQuantity) * stdDensity
-      : 0;
-    const actTotalWeight = actualQty * actDensity;
+    // Calculate total weight and variance
+    // Standard = Sum of required quantities of raw materials
+    const stdTotalWeight = rawMaterialsOnly.reduce(
+      (sum: number, m: any) => sum + (m.requiredQuantity || 0),
+      0
+    );
+
+    // Actual = Total LTR * Actual Density
+    // Better way: use the orders array directly as it's available in scope
+    const totalLtrForActWeight = orders.reduce((s: number, o: any) => {
+      const actualQty = parseFloat(o.batchProduct?.producedUnits || '0');
+      const capacityLtr = parseFloat(o.packagingCapacity || '0');
+      return s + actualQty * capacityLtr;
+    }, 0);
+
+    const actTotalWeight = totalLtrForActWeight * actDensity;
     const totalWeightVariance = actTotalWeight - stdTotalWeight;
 
     // Raw Materials Table (Only raw materials, no packaging)
@@ -330,9 +340,7 @@ export default function BatchReportModal({
     // Packaging Materials Data
     const packagingData = packagingMaterials.map((p: any) => [
       p.materialName,
-      p.unitPrice.toFixed(2),
       p.requiredQuantity.toString(),
-      p.total.toFixed(2),
     ]);
 
     // Prepare Product Data (Right Side) - Show SKUs with production data
@@ -435,6 +443,8 @@ export default function BatchReportModal({
     const totalKg = productData.reduce((sum, row) => sum + (parseFloat(row[4] as string) || 0), 0);
     console.log('PDF: calculated totalKg', totalKg);
 
+    const sideBySideStartPage = doc.internal.pages.length;
+
     // Draw Material Table (Left Side)
     autoTable(doc, {
       startY: tablesStartY,
@@ -455,12 +465,12 @@ export default function BatchReportModal({
       styles: { fontSize: 8, cellPadding: 2, minCellHeight: 6, lineColor: 0, lineWidth: 0.2, fillColor: [255, 255, 255] },
       headStyles: { textColor: 0, fontStyle: 'bold', fillColor: [255, 255, 255] },
       bodyStyles: { fillColor: [255, 255, 255] },
-      margin: { left: 14, right: 105 },
-      tableWidth: 86,
+      margin: { left: 14, right: 108 }, // Increased right margin for wider gap
+      tableWidth: 84, // Slightly narrower
       pageBreak: 'avoid',
       columnStyles: {
         0: { cellWidth: 8 },
-        1: { cellWidth: 41 },
+        1: { cellWidth: 39 },
         2: { cellWidth: 10, halign: 'center' },
         3: { cellWidth: 15, halign: 'right' },
         4: { cellWidth: 12, halign: 'right' },
@@ -476,11 +486,15 @@ export default function BatchReportModal({
     });
 
     const leftTableFinalY = (doc as any).lastAutoTable.finalY;
+    const leftTableFinalPage = doc.internal.pages.length;
+
+    // Reset to starting page for Right Column
+    doc.setPage(sideBySideStartPage);
 
     // RIGHT Column: Table Stack (Parameters -> Shades -> Packaging)
     const rightMargin = 14;
-    const rightTableX = 105;
-    const rightTableWidth = 91;
+    const rightTableX = 108; // Increased from 105 for wider gap
+    const rightTableWidth = 88; // Slightly narrower
 
     // 1. Parameters Table
     doc.setFontSize(9);
@@ -490,7 +504,7 @@ export default function BatchReportModal({
     autoTable(doc, {
       startY: tablesStartY,
       margin: { left: rightTableX, right: rightMargin },
-      head: [['Parameter', 'Std', 'Act', 'Var']],
+      head: [['Parameter', 'Input', 'Output', 'Var']],
       body: [
         ['Density', stdDensity.toFixed(2), actDensity.toFixed(2), densityVariance.toFixed(2)],
         [
@@ -502,8 +516,8 @@ export default function BatchReportModal({
         [
           'Weight (Kg)',
           stdTotalWeight.toFixed(2),
-          actTotalWeight.toFixed(2),
-          totalWeightVariance.toFixed(2),
+          totalKg > 0 ? totalKg.toFixed(3) : '-', // Use totalKg from Shades table
+          (totalKg - stdTotalWeight).toFixed(2), // Update variance based on new totalKg
         ],
       ],
       theme: 'grid',
@@ -511,7 +525,7 @@ export default function BatchReportModal({
       headStyles: { textColor: 0, fontStyle: 'bold', fontSize: 7, fillColor: [255, 255, 255] },
       bodyStyles: { fillColor: [255, 255, 255] },
       columnStyles: {
-        0: { cellWidth: 30 },
+        0: { cellWidth: 28 },
         1: { cellWidth: 20, halign: 'right' },
         2: { cellWidth: 20, halign: 'right' },
         3: { cellWidth: 20, halign: 'right' },
@@ -548,7 +562,7 @@ export default function BatchReportModal({
       columnStyles: {
         0: { cellWidth: 31 },
         1: { cellWidth: 15, halign: 'center' },
-        2: { cellWidth: 15 },
+        2: { cellWidth: 12 },
         3: { cellWidth: 15 },
         4: { cellWidth: 15, halign: 'right' },
       },
@@ -574,7 +588,7 @@ export default function BatchReportModal({
         headStyles: { textColor: 0, fontStyle: 'bold', fillColor: [255, 255, 255] },
         bodyStyles: { fillColor: [255, 255, 255] },
         columnStyles: {
-          0: { cellWidth: 66 },
+          0: { cellWidth: 63 },
           1: { cellWidth: 25, halign: 'right' },
         },
         tableWidth: rightTableWidth,
@@ -583,8 +597,21 @@ export default function BatchReportModal({
       rightStackY = (doc as any).lastAutoTable.finalY;
     }
 
-    const finalYTotal = Math.max(leftTableFinalY, rightStackY) + 10;
-    let finalYTotalActual = finalYTotal;
+    const rightTableFinalPage = doc.internal.pages.length;
+
+    // Determine max page reached
+    const maxPage = Math.max(leftTableFinalPage, rightTableFinalPage);
+    doc.setPage(maxPage);
+
+    // Calculate finalYTotal based on which column is longer on the MAX page
+    let finalYTotal;
+    if (leftTableFinalPage > rightTableFinalPage) {
+      finalYTotal = leftTableFinalY + 10;
+    } else if (rightTableFinalPage > leftTableFinalPage) {
+      finalYTotal = rightStackY + 10;
+    } else {
+      finalYTotal = Math.max(leftTableFinalY, rightStackY) + 10;
+    }
 
     // Additional Materials - Now Merged into main table logic with bolditalic
     // if (additionalMaterials.length > 0) { ... } -> Removed
@@ -646,10 +673,10 @@ export default function BatchReportModal({
         rowPageBreak: 'avoid', // Try to avoid breaking rows across pages
       });
 
-      finalYTotalActual = (doc as any).lastAutoTable.finalY;
+      finalYTotal = (doc as any).lastAutoTable.finalY;
     }
 
-    const finalYFooter = (relatedSkus.length > 0) ? finalYTotalActual : finalYTotal;
+    const finalYFooter = finalYTotal;
 
     // Separator line
     doc.setLineWidth(0.2);
@@ -784,8 +811,8 @@ export default function BatchReportModal({
                     <thead>
                       <tr>
                         <th className="border border-gray-600 px-1 py-0.5">Parameter</th>
-                        <th className="border border-gray-600 px-1 py-0.5">Standard</th>
-                        <th className="border border-gray-600 px-1 py-0.5">Actual</th>
+                        <th className="border border-gray-600 px-1 py-0.5">Input</th>
+                        <th className="border border-gray-600 px-1 py-0.5">Output</th>
                         <th className="border border-gray-600 px-1 py-0.5">Variance</th>
                       </tr>
                     </thead>
@@ -812,10 +839,18 @@ export default function BatchReportModal({
                         const actualQty = batchData.actualQuantity
                           ? parseFloat(batchData.actualQuantity)
                           : 0;
-                        const stdTotalWeight = batchData.plannedQuantity
-                          ? parseFloat(batchData.plannedQuantity) * stdDensity
-                          : 0;
-                        const actTotalWeight = actualQty * actDensity;
+                        const stdTotalWeight = rawMaterialsOnly.reduce(
+                          (sum: number, m: any) => sum + (m.requiredQuantity || 0),
+                          0
+                        );
+
+                        const totalLtrForActWeight = orders.reduce((s: number, o: any) => {
+                          const actualQty = parseFloat(o.batchProduct?.producedUnits || '0');
+                          const capacityLtr = parseFloat(o.packagingCapacity || '0');
+                          return s + actualQty * capacityLtr;
+                        }, 0);
+
+                        const actTotalWeight = totalLtrForActWeight * actDensity;
                         const totalWeightVariance = actTotalWeight - stdTotalWeight;
 
                         return (
@@ -831,7 +866,7 @@ export default function BatchReportModal({
                               <td className="border border-gray-600 px-1 py-0.5 text-right">
                                 {densityVariance.toFixed(2)}
                               </td>
-                            </tr>
+                            </tr >
                             <tr>
                               <td className="border border-gray-600 px-1 py-0.5">Viscosity</td>
                               <td className="border border-gray-600 px-1 py-0.5 text-right">
@@ -852,10 +887,10 @@ export default function BatchReportModal({
                                 {stdTotalWeight.toFixed(2)}
                               </td>
                               <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                {actTotalWeight.toFixed(2)}
+                                {screenTotalKg > 0 ? screenTotalKg.toFixed(3) : '-'}
                               </td>
                               <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                {totalWeightVariance.toFixed(2)}
+                                {(screenTotalKg - stdTotalWeight).toFixed(2)}
                               </td>
                             </tr>
                           </>
@@ -1002,6 +1037,7 @@ export default function BatchReportModal({
                                 {actualQty > 0 ? actualQty : ''}
                               </td>
                               <td className="border border-gray-800 px-2 py-1 text-right">
+                                {ltr > 0 ? ltr.toFixed(3) : ''}
                               </td>
                               <td className="border border-gray-800 px-2 py-1 text-right">
                                 {kg > 0 ? kg.toFixed(3) : ''}
@@ -1051,6 +1087,7 @@ export default function BatchReportModal({
                               {actualQty > 0 ? actualQty : ''}
                             </td>
                             <td className="border border-gray-800 px-2 py-1 text-right">
+                              {ltr > 0 ? ltr.toFixed(3) : ''}
                             </td>
                             <td className="border border-gray-800 px-2 py-1 text-right">
                               {kg > 0 ? kg.toFixed(3) : ''}
@@ -1071,6 +1108,11 @@ export default function BatchReportModal({
                       <td className="border border-gray-800 px-2 py-1 text-center">
                       </td>
                       <td className="border border-gray-800 px-2 py-1 text-right">
+                        {(orders.reduce((s: number, o: any) => {
+                          const actualQty = parseFloat(o.batchProduct?.producedUnits || '0');
+                          const capacityLtr = parseFloat(o.packagingCapacity || '0');
+                          return s + actualQty * capacityLtr;
+                        }, 0) || 0).toFixed(3)}
                       </td>
                       <td className="border border-gray-800 px-2 py-1 text-right font-bold">
                         {screenTotalKg > 0 ? screenTotalKg.toFixed(3) : ''}

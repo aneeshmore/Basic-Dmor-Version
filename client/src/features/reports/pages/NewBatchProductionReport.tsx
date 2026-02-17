@@ -203,10 +203,8 @@ const NewBatchProductionReport = () => {
       // Right Info Block (Quality Fields)
       const rightInfoData = [
         [`Date:`, formatDate(new Date().toISOString())],
-        [`Actual Density:`, ''],
-        [`Product Viscosity:`, ''],
-        [`Mill Based Viscosity:`, ''],
-        [`Hegman gauge:`, ''],
+        [`Actual Density:`, batch.actualDensity || '-'],
+        [`Product Viscosity:`, batch.actualViscosity || '-'],
       ];
 
       const infoStartY = headerEndY + 5;
@@ -247,21 +245,6 @@ const NewBatchProductionReport = () => {
           1: { cellWidth: 60 },
         },
         tableWidth: 100,
-        didDrawCell: (data) => {
-          if (data.section === 'body' && data.column.index === 1 && data.row.index === 4) {
-            // Hegman gauge is at index 4 now in right table
-            let circleX = data.cell.x + 5;
-            const circleY = data.cell.y + data.cell.height / 2;
-            for (let i = 6; i <= 8; i++) {
-              doc.setLineWidth(0.1);
-              doc.setDrawColor(0, 0, 0);
-              doc.circle(circleX, circleY, 2);
-              doc.setFontSize(6);
-              doc.text(i.toString(), circleX, circleY + 0.6, { align: 'center' });
-              circleX += 6;
-            }
-          }
-        },
       });
 
       const infoBlockFinalY = (doc as any).lastAutoTable.finalY;
@@ -336,8 +319,8 @@ const NewBatchProductionReport = () => {
       // Standard = Total of Actual Column from Ingredients Table
       const stdTotalWeight = totalActualWeight;
 
-      // Actual = Total of LTR Column in Shade Table * Actual Density
-      const actTotalWeight = totalLtr * actDensity;
+      // Actual = Total KG from Shade Table
+      const actTotalWeight = totalKg;
       const totalWeightVariance = actTotalWeight - stdTotalWeight;
 
       let currentY = infoBlockFinalY + 10;
@@ -382,6 +365,7 @@ const NewBatchProductionReport = () => {
         ];
       });
 
+      const sideBySideStartPage = doc.internal.pages.length;
       const tableY = currentY;
 
       // Left Table: Ingredients (Side by Side - Left)
@@ -445,10 +429,14 @@ const NewBatchProductionReport = () => {
       });
 
       const leftTableFinalY = (doc as any).lastAutoTable.finalY;
+      const leftTableFinalPage = doc.internal.pages.length;
+
+      // Reset to starting page for Right Column
+      doc.setPage(sideBySideStartPage);
 
       // RIGHT Column: Table Stack (Parameters -> Shade -> Packaging)
       const rightTableX = 110;
-      const rightTableWidth = 91;
+      const rightTableWidth = 86;
 
       // 1. Parameters Table
       doc.setFontSize(8);
@@ -459,9 +447,9 @@ const NewBatchProductionReport = () => {
       autoTable(doc, {
         startY: tableY,
         margin: { left: rightTableX, right: margin },
-        head: [['Parameter', 'Std', 'Act', 'Var']],
+        head: [['Parameter', 'Input', 'Output', 'Var']],
         body: [
-          ['Density', stdDensity.toFixed(2), actDensity.toFixed(2), densityVariance.toFixed(2)],
+          ['Filling Density', stdDensity.toFixed(2), actDensity.toFixed(2), densityVariance.toFixed(2)],
           [
             'Viscosity',
             stdViscosity > 0 ? stdViscosity.toString() : '-',
@@ -492,7 +480,7 @@ const NewBatchProductionReport = () => {
           lineColor: [229, 231, 235],
         },
         columnStyles: {
-          0: { cellWidth: 25 },
+          0: { cellWidth: 26 },
           1: { cellWidth: 20, halign: 'right' },
           2: { cellWidth: 20, halign: 'right' },
           3: { cellWidth: 20, halign: 'right' },
@@ -526,11 +514,11 @@ const NewBatchProductionReport = () => {
           lineColor: [229, 231, 235],
         },
         columnStyles: {
-          0: { cellWidth: 31, halign: 'left' },
-          1: { cellWidth: 12, halign: 'right' },
-          2: { cellWidth: 12, halign: 'right' },
-          3: { cellWidth: 12, halign: 'right' },
-          4: { cellWidth: 12, halign: 'right' },
+          0: { cellWidth: 30, halign: 'left' },
+          1: { cellWidth: 14, halign: 'right' },
+          2: { cellWidth: 14, halign: 'right' },
+          3: { cellWidth: 14, halign: 'right' },
+          4: { cellWidth: 14, halign: 'right' },
         },
         tableWidth: rightTableWidth,
         foot: [
@@ -597,7 +585,7 @@ const NewBatchProductionReport = () => {
             lineColor: [229, 231, 235],
           },
           columnStyles: {
-            0: { cellWidth: 66, halign: 'left' },
+            0: { cellWidth: 61, halign: 'left' },
             1: { cellWidth: 25, halign: 'right' },
           },
           tableWidth: rightTableWidth,
@@ -615,7 +603,21 @@ const NewBatchProductionReport = () => {
         rightStackY = (doc as any).lastAutoTable.finalY;
       }
 
-      let nextY = Math.max(leftTableFinalY, rightStackY) + 10;
+      const rightTableFinalPage = doc.internal.pages.length;
+
+      // Determine max page reached
+      const maxPage = Math.max(leftTableFinalPage, rightTableFinalPage);
+      doc.setPage(maxPage);
+
+      // Calculate nextY based on which column is longer on the MAX page
+      let nextY;
+      if (leftTableFinalPage > rightTableFinalPage) {
+        nextY = leftTableFinalY + 10;
+      } else if (rightTableFinalPage > leftTableFinalPage) {
+        nextY = rightStackY + 10;
+      } else {
+        nextY = Math.max(leftTableFinalY, rightStackY) + 10;
+      }
 
       // 4. Footer: Remark & Signs
       // Ensure we don't fall off the page - simplistic check
@@ -740,7 +742,16 @@ const NewBatchProductionReport = () => {
     return { total, completed, inProgress, scheduled, cancelled };
   }, [data]);
 
-  const formatNumberForPreview = formatNumber;
+  const formatNumberForPreview = (val: any): string => {
+    if (val === null || val === undefined || val === '' || val === '-') return '-';
+    // Use formatNumber logic but with 2 decimals
+    const num = parseNumber(val);
+    if (isNaN(num)) return '-';
+    return num.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
 
   // Process data for Bar Chart (Weekly Batch Schedule & Production)
   // Bar Chart Data: Weekly Schedule (Grouped by Date)
@@ -1572,7 +1583,9 @@ const NewBatchProductionReport = () => {
           <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 max-w-4xl mx-auto printable-content">
             {/* Header */}
             <div className="text-center mb-6 border-b pb-4">
-              <h1 className="text-2xl font-bold text-gray-900">MOREX TECHNOLOGIES</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {companyInfo?.companyName || 'MOREX TECHNOLOGIES'}
+              </h1>
             </div>
 
             {/* Info Grid */}
@@ -1620,42 +1633,58 @@ const NewBatchProductionReport = () => {
                   <thead className="bg-gray-100">
                     <tr>
                       <th className="border border-gray-300 px-2 py-1 text-left">Parameter</th>
-                      <th className="border border-gray-300 px-2 py-1 text-right">Standard </th>
-                      <th className="border border-gray-300 px-2 py-1 text-right">Actual</th>
+                      <th className="border border-gray-300 px-2 py-1 text-right">Input </th>
+                      <th className="border border-gray-300 px-2 py-1 text-right">Output</th>
                       <th className="border border-gray-300 px-2 py-1 text-right">Difference</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(() => {
-                      const stdDensity = previewBatch.density
-                        ? parseFloat(previewBatch.density)
-                        : 0;
-                      const actDensity = previewBatch.actualDensity
-                        ? parseFloat(previewBatch.actualDensity)
-                        : 0;
+                      // Align calculations with handleDownloadBatch
+                      const stdDensity = previewBatch.density ? parseFloat(previewBatch.density) : 0;
+                      const actDensity = previewBatch.actualDensity ? parseFloat(previewBatch.actualDensity) : 0;
                       const densityVariance = actDensity - stdDensity;
 
-                      const stdViscosity = previewBatch.viscosity
-                        ? parseFloat(previewBatch.viscosity)
-                        : 0;
-                      const actViscosity = previewBatch.actualViscosity
-                        ? parseFloat(previewBatch.actualViscosity)
-                        : 0;
+                      const stdViscosity = previewBatch.viscosity ? parseFloat(previewBatch.viscosity) : 0;
+                      const actViscosity = previewBatch.actualViscosity ? parseFloat(previewBatch.actualViscosity) : 0;
                       const viscosityVariance = actViscosity - stdViscosity;
 
-                      const actualQty = previewBatch.actualQuantity
-                        ? parseFloat(previewBatch.actualQuantity)
-                        : 0;
-                      const stdTotalWeight = previewBatch.plannedQuantity
-                        ? parseFloat(previewBatch.plannedQuantity) * stdDensity
-                        : 0;
-                      const actTotalWeight = actualQty * actDensity;
+                      // 1. Ingredients Calculation (Standard Weight)
+                      const rms = (previewBatch.rawMaterials || []).filter(rm => rm.productType !== 'PM');
+                      const totalActualWeightFromIngredients = rms.reduce(
+                        (sum, rm) => sum + parseNumber(rm.actualQty || rm.percentage || '0'),
+                        0
+                      );
+
+                      // 2. Sub Products Calculation (Output Weight)
+                      const totalKg = (previewBatch.subProducts || []).reduce((s, x) => {
+                        const actualQty = parseFloat(String(x.actualQty || '0'));
+                        const plannedQty = parseFloat(String(x.batchQty || '0'));
+                        const effQty = actualQty > 0 ? actualQty : plannedQty;
+                        const capacity = x.capacity ? parseFloat(x.capacity.toString()) : 0;
+                        const ltr = effQty * capacity;
+                        const productDensity = parseFloat(String(x.fillingDensity || '0'));
+                        const density =
+                          productDensity > 0
+                            ? productDensity
+                            : parseFloat(
+                              previewBatch.packingDensity ||
+                              previewBatch.actualDensity ||
+                              previewBatch.density ||
+                              '0'
+                            );
+
+                        return s + ltr * density;
+                      }, 0);
+
+                      const stdTotalWeight = totalActualWeightFromIngredients;
+                      const actTotalWeight = totalKg;
                       const totalWeightVariance = actTotalWeight - stdTotalWeight;
 
                       return (
                         <>
                           <tr>
-                            <td className="border border-gray-300 px-2 py-1">Density</td>
+                            <td className="border border-gray-300 px-2 py-1">Filling Density</td>
                             <td className="border border-gray-300 px-2 py-1 text-right">
                               {stdDensity.toFixed(2)}
                             </td>
@@ -1844,8 +1873,22 @@ const NewBatchProductionReport = () => {
                             <td className="border border-gray-300 px-2 py-1 text-right">
                               {formatNumberForPreview(sp.actualQty)}
                             </td>
-                            <td className="border border-gray-300 px-2 py-1 text-right"></td>
-                            <td className="border border-gray-300 px-2 py-1 text-right"></td>
+                            <td className="border border-gray-300 px-2 py-1 text-right">
+                              {(() => {
+                                const qty = parseFloat(String(sp.actualQty || '0'));
+                                const capacity = sp.capacity ? parseFloat(sp.capacity.toString()) : 0;
+                                return formatNumberForPreview(qty * capacity);
+                              })()}
+                            </td>
+                            <td className="border border-gray-300 px-2 py-1 text-right">
+                              {(() => {
+                                const qty = parseFloat(String(sp.actualQty || '0'));
+                                const capacity = sp.capacity ? parseFloat(sp.capacity.toString()) : 0;
+                                const ltr = qty * capacity;
+                                const density = previewBatch.actualDensity ? parseFloat(previewBatch.actualDensity) : 0;
+                                return formatNumberForPreview(ltr * density);
+                              })()}
+                            </td>
                           </tr>
                         ))
                     ) : previewBatch.productName ? (
@@ -1859,8 +1902,22 @@ const NewBatchProductionReport = () => {
                         <td className="border border-gray-300 px-2 py-1 text-right">
                           {formatNumberForPreview(previewBatch.actualQuantity)}
                         </td>
-                        <td className="border border-gray-300 px-2 py-1"></td>
-                        <td className="border border-gray-300 px-2 py-1"></td>
+                        <td className="border border-gray-300 px-2 py-1 text-right">
+                          {(() => {
+                            const qty = parseFloat(String(previewBatch.actualQuantity || '0'));
+                            const capacity = (previewBatch as any).capacity ? parseFloat((previewBatch as any).capacity.toString()) : 0;
+                            return formatNumberForPreview(qty * capacity);
+                          })()}
+                        </td>
+                        <td className="border border-gray-300 px-2 py-1 text-right">
+                          {(() => {
+                            const qty = parseFloat(String(previewBatch.actualQuantity || '0'));
+                            const capacity = (previewBatch as any).capacity ? parseFloat((previewBatch as any).capacity.toString()) : 0;
+                            const ltr = qty * capacity;
+                            const density = previewBatch.actualDensity ? parseFloat(previewBatch.actualDensity) : 0;
+                            return formatNumberForPreview(ltr * density);
+                          })()}
+                        </td>
                       </tr>
                     ) : null}
                   </tbody>
@@ -1901,8 +1958,59 @@ const NewBatchProductionReport = () => {
                             .reduce((sum, sp) => sum + parseFloat(String(sp.actualQty) || '0'), 0)
                         )}
                       </td>
-                      <td className="border border-gray-300 px-2 py-1 text-right"></td>
-                      <td className="border border-gray-300 px-2 py-1 text-right"></td>
+                      <td className="border border-gray-300 px-2 py-1 text-right">
+                        {formatNumberForPreview(
+                          (previewBatch.subProducts || [])
+                            .filter(sp => {
+                              const actQty =
+                                typeof sp.actualQty === 'number'
+                                  ? sp.actualQty
+                                  : parseFloat(sp.actualQty || '0');
+                              const batchQty =
+                                typeof sp.batchQty === 'number'
+                                  ? sp.batchQty
+                                  : parseFloat(sp.batchQty || '0');
+                              return actQty > 0 || batchQty > 0;
+                            })
+                            .reduce((sum, sp) => {
+                              const qty = parseFloat(String(sp.actualQty || '0'));
+                              const capacity = sp.capacity ? parseFloat(sp.capacity.toString()) : 0;
+                              return sum + qty * capacity;
+                            }, 0)
+                        )}
+                      </td>
+                      <td className="border border-gray-300 px-2 py-1 text-right">
+                        {formatNumberForPreview(
+                          (previewBatch.subProducts || [])
+                            .filter(sp => {
+                              const actQty =
+                                typeof sp.actualQty === 'number'
+                                  ? sp.actualQty
+                                  : parseFloat(sp.actualQty || '0');
+                              const batchQty =
+                                typeof sp.batchQty === 'number'
+                                  ? sp.batchQty
+                                  : parseFloat(sp.batchQty || '0');
+                              return actQty > 0 || batchQty > 0;
+                            })
+                            .reduce((sum, sp) => {
+                              const qty = parseFloat(String(sp.actualQty || '0'));
+                              const capacity = sp.capacity ? parseFloat(sp.capacity.toString()) : 0;
+                              const ltr = qty * capacity;
+                              const productDensity = parseFloat(String(sp.fillingDensity || '0'));
+                              const density =
+                                productDensity > 0
+                                  ? productDensity
+                                  : parseFloat(
+                                    previewBatch.packingDensity ||
+                                    previewBatch.actualDensity ||
+                                    previewBatch.density ||
+                                    '0'
+                                  );
+                              return sum + ltr * density;
+                            }, 0)
+                        )}
+                      </td>
                     </tr>
                   </tfoot>
                 </table>
@@ -1944,9 +2052,6 @@ const NewBatchProductionReport = () => {
                           <tr key={idx}>
                             <td className="border border-gray-300 px-2 py-1">{pm.packagingName}</td>
                             <td className="border border-gray-300 px-2 py-1 text-right">
-                              {formatNumberForPreview(pm.plannedQty)}
-                            </td>
-                            <td className="border border-gray-300 px-2 py-1 text-right">
                               {formatNumberForPreview(pm.actualQty)}
                             </td>
                           </tr>
@@ -1955,19 +2060,6 @@ const NewBatchProductionReport = () => {
                     <tfoot className="bg-[var(--color-success)] text-white font-bold">
                       <tr>
                         <td className="border border-gray-300 px-2 py-1">Total</td>
-                        <td className="border border-gray-300 px-2 py-1 text-right">
-                          {formatNumberForPreview(
-                            previewBatch.packagingMaterials
-                              .filter(pm => {
-                                const qty =
-                                  typeof pm.actualQty === 'number'
-                                    ? pm.actualQty
-                                    : parseFloat(String(pm.actualQty || '0'));
-                                return qty > 0;
-                              })
-                              .reduce((sum, pm) => sum + pm.plannedQty, 0)
-                          )}
-                        </td>
                         <td className="border border-gray-300 px-2 py-1 text-right">
                           {formatNumberForPreview(
                             previewBatch.packagingMaterials
