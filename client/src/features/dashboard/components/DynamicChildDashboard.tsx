@@ -334,19 +334,18 @@ export const DynamicChildDashboard: React.FC<DynamicChildDashboardProps> = ({
               className={`card p-6 group relative ${isRestricted ? 'opacity-70 cursor-not-allowed' : 'hover-lift cursor-pointer'}`}
               onClick={() => !isRestricted && navigate(route.path)}
             >
+              {isRestricted && (
+                <div className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                  <Crown className="h-3 w-3" />
+                  Pro
+                </div>
+              )}
               <div className="flex flex-col h-full">
                 <div
                   className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${bgClass} ${colorClass}`}
                 >
                   <DisplayIcon size={24} />
                 </div>
-
-                {isRestricted && (
-                  <div className="mb-2 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 w-fit">
-                    <Crown className="h-3 w-3" />
-                    Pro
-                  </div>
-                )}
 
                 <h3 className="font-bold text-[var(--text-primary)] mb-2 uppercase text-sm tracking-wide">
                   {route.label}

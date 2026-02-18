@@ -366,17 +366,17 @@ export const Dashboard: React.FC = () => {
                   : 'hover:shadow-lg hover:border-[var(--primary)]'
               }`}
             >
+              {isRestricted && (
+                <div className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                  <Crown className="h-3 w-3" />
+                  Pro
+                </div>
+              )}
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className={`inline-flex p-3 rounded-lg ${card.bg} mb-4`}>
                     <Icon className={`h-6 w-6 ${card.color}`} />
                   </div>
-                  {isRestricted && (
-                    <div className="mb-2 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                      <Crown className="h-3 w-3" />
-                      Pro
-                    </div>
-                  )}
                   <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1">
                     {card.title}
                   </h3>
