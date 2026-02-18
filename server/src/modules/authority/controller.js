@@ -3,6 +3,7 @@ import logger from '../../config/logger.js';
 import { AppError, UnauthorizedError, NotFoundError, ConflictError } from '../../utils/AppError.js';
 import { compareHash } from '../../utils/encryption.js';
 import { AuthorityRepository } from './repository.js';
+import { resolvePlanType } from '../../utils/planAccess.js';
 
 // Import validated JWT_SECRET from auth middleware
 import { JWT_SECRET } from '../../middleware/auth.js';
@@ -83,6 +84,7 @@ class AuthorityController {
           employeeId: user.employeeId,
           username: user.username,
           role: role?.roleName,
+          planType: resolvePlanType({ planType: user.planType, role: role?.roleName }),
           isSalesRole: role?.isSalesRole || false,
           isSupervisorRole: role?.isSupervisorRole || false,
           companyName: user.companyName,
@@ -98,6 +100,7 @@ class AuthorityController {
         LastName: user.lastName,
         Username: user.username,
         Role: role?.roleName,
+        planType: resolvePlanType({ planType: user.planType, role: role?.roleName }),
         landingPage: '/dashboard', // Force default to Dashboard as per user request
         permissions,
         // Dealer specific fields
@@ -266,6 +269,7 @@ class AuthorityController {
           LastName: user.lastName,
           Username: user.username,
           Role: role?.roleName,
+          planType: resolvePlanType({ planType: user.planType, role: role?.roleName }),
           landingPage: role?.landingPage || '/dashboard',
           landingPage: role?.landingPage || '/dashboard',
           permissions,

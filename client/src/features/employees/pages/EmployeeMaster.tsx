@@ -8,6 +8,8 @@ import { PageHeader } from '@/components/common';
 import { Input, Button, Select, Modal } from '@/components/ui';
 import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table';
 import { showToast } from '@/utils/toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { isBasicPlan } from '@/utils/planAccess';
 import { Edit2, Trash2, Eye, X, Plus, RefreshCw } from 'lucide-react';
 
 const EmployeeForm = ({
@@ -20,6 +22,7 @@ const EmployeeForm = ({
   roles,
   onDepartmentChange,
   salesPersons,
+  isBasicPlanUser = false,
 }: {
   item: Partial<Employee> | null;
   onSave: (item: Employee) => void;
@@ -30,6 +33,7 @@ const EmployeeForm = ({
   roles: { value: number; label: string }[];
   onDepartmentChange: (departmentId: number | undefined) => void;
   salesPersons: Employee[];
+  isBasicPlanUser?: boolean;
 }) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -272,6 +276,7 @@ const EmployeeForm = ({
   }, [isDealerDept, roles]);
 
   const isEditMode = !!item?.EmployeeID;
+  const creationLocked = isBasicPlanUser && !isEditMode;
 
   // Reset form when item changes (switching between add/edit or different employee)
   useEffect(() => {
@@ -1093,6 +1098,7 @@ const EmployeeForm = ({
                 <Button
                   variant="secondary"
                   onClick={generateUsername}
+                  disabled={creationLocked}
                   className="w-full text-xs font-bold bg-white border-2 border-blue-500 text-blue-600 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all duration-300 rounded-lg h-11 shadow-sm"
                   leftIcon={<RefreshCw size={14} />}
                   type="button"
@@ -1117,6 +1123,7 @@ const EmployeeForm = ({
                 <Button
                   variant="secondary"
                   onClick={generatePassword}
+                  disabled={creationLocked}
                   className="w-full text-xs font-bold bg-white border-2 border-green-500 text-green-600 hover:bg-green-600 hover:text-white hover:border-green-600 transition-all duration-300 rounded-lg h-10 shadow-sm"
                   leftIcon={<RefreshCw size={14} />}
                   type="button"
@@ -1305,7 +1312,7 @@ const EmployeeForm = ({
             variant="primary"
             onClick={handleSubmit}
             className="w-full sm:w-auto"
-            disabled={isSaving}
+            disabled={isSaving || creationLocked}
           >
             {isSaving ? (
               <span className="flex items-center gap-2">
@@ -1333,17 +1340,26 @@ const EmployeeForm = ({
               </span>
             ) : isEditMode ? (
               'Save Changes'
+            ) : creationLocked ? (
+              'Basic Plan: Single User'
             ) : (
-              'Add '
+              'Add Employee'
             )}
           </Button>
         </div>
+        {creationLocked && (
+          <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+            Basic plan supports a single user only. Upgrade to Pro to create additional users.
+          </p>
+        )}
       </div>
     </>
   );
 };
 
 export default function EmployeeMaster() {
+  const { user } = useAuth();
+  const basicPlanUser = isBasicPlan(user);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<{ value: number; label: string }[]>([]);
   const [roles, setRoles] = useState<{ value: number; label: string }[]>([]);
@@ -1906,6 +1922,7 @@ export default function EmployeeMaster() {
           onSave={handleSave}
           onCancel={handleCancelEdit}
           isSaving={saving}
+          isBasicPlanUser={basicPlanUser}
           existingUsernames={employees.map(e => e.Username).filter((u): u is string => !!u)}
           departments={departments}
           roles={roles}

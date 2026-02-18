@@ -1,9 +1,11 @@
 import { ColumnDef } from '@tanstack/react-table';
-import { AlertCircle, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle, XCircle, RefreshCw, Crown } from 'lucide-react';
 import { PageHeader } from '@/components/common';
 import { useProductStock } from '../hooks/useDashboard';
 import { ProductStock } from '../api/dashboardApi';
 import { DataTable } from '@/components/common/DataTable';
+import { useAuth } from '@/contexts/AuthContext';
+import { isBasicPlan } from '@/utils/planAccess';
 
 const getStockStatusBadge = (status: string) => {
   switch (status) {
@@ -89,6 +91,8 @@ const columns: ColumnDef<ProductStock>[] = [
 ];
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
+  const basicUser = isBasicPlan(user);
   const { data: stocks, isLoading, error, refetch } = useProductStock();
 
   if (error) {
@@ -131,29 +135,45 @@ export default function AdminDashboard() {
         actions={
           <button
             onClick={() => refetch()}
-            disabled={isLoading}
+            disabled={isLoading || basicUser}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--surface)] border border-[var(--border)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--surface-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            {basicUser ? 'Pro Feature' : 'Refresh'}
           </button>
         }
       />
 
-      <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] overflow-hidden">
-        <div className="p-6">
+      <div className="relative bg-[var(--surface)] rounded-xl border border-[var(--border)] overflow-hidden">
+        <div className={`p-6 ${basicUser ? 'opacity-60 pointer-events-none' : ''}`}>
           <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
             Product Stock Status
           </h2>
 
           <DataTable columns={columns} data={stocks || []} searchPlaceholder="Search products..." />
         </div>
+        {basicUser && (
+          <div className="absolute top-4 right-4 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+            <Crown className="h-3 w-3" />
+            Pro
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}
       {stocks && stocks.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6">
+          <div
+            className={`relative bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6 ${
+              basicUser ? 'opacity-60' : ''
+            }`}
+          >
+            {basicUser && (
+              <div className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                <Crown className="h-3 w-3" />
+                Pro
+              </div>
+            )}
             <div className="flex items-center gap-3">
               <div className="p-3 bg-[var(--success)]/10 rounded-lg">
                 <CheckCircle className="h-6 w-6 text-[var(--success)]" />
@@ -167,7 +187,17 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6">
+          <div
+            className={`relative bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6 ${
+              basicUser ? 'opacity-60' : ''
+            }`}
+          >
+            {basicUser && (
+              <div className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                <Crown className="h-3 w-3" />
+                Pro
+              </div>
+            )}
             <div className="flex items-center gap-3">
               <div className="p-3 bg-[var(--warning)]/10 rounded-lg">
                 <AlertCircle className="h-6 w-6 text-[var(--warning)]" />
@@ -181,7 +211,17 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6">
+          <div
+            className={`relative bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6 ${
+              basicUser ? 'opacity-60' : ''
+            }`}
+          >
+            {basicUser && (
+              <div className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                <Crown className="h-3 w-3" />
+                Pro
+              </div>
+            )}
             <div className="flex items-center gap-3">
               <div className="p-3 bg-[var(--danger)]/10 rounded-lg">
                 <XCircle className="h-6 w-6 text-[var(--danger)]" />

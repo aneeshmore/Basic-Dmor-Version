@@ -3,6 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { RoutePermission } from '@/config/routeRegistry';
 import { ShieldOff, Loader2 } from 'lucide-react';
+import { isBasicPlan } from '@/utils/planAccess';
 
 interface PrivateRouteProps {
   children: ReactNode;
@@ -87,6 +88,16 @@ function AccessDenied({ module }: { module?: string }) {
 export function PrivateRoute({ children, permission }: PrivateRouteProps) {
   const { isAuthenticated, loading, hasPermission, user } = useAuth();
   const location = useLocation();
+  const basicUser = isBasicPlan(user);
+
+  const BASIC_BLOCKED_PATHS = new Set([
+    '/masters/employees',
+    '/masters/customer-types',
+    '/masters/departments',
+    '/masters/double-development',
+    '/reports/stock',
+    '/reports/low-stock',
+  ]);
 
   // Show loading spinner while checking auth state
   if (loading) {
@@ -96,6 +107,10 @@ export function PrivateRoute({ children, permission }: PrivateRouteProps) {
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (basicUser && BASIC_BLOCKED_PATHS.has(location.pathname)) {
+    return <AccessDenied module="pro-plan-required" />;
   }
 
   // Check permission if specified

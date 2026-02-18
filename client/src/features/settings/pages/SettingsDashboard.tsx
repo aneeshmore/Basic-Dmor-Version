@@ -8,10 +8,12 @@ import {
   Users,
   AlertCircle,
   LucideIcon,
+  Crown,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { routeRegistry, findRouteByPath, RouteNode } from '@/config/routeRegistry';
+import { isBasicPlan } from '@/utils/planAccess';
 
 // Metadata for styling and descriptions that aren't in the registry
 const ROUTE_METADATA: Record<
@@ -58,7 +60,8 @@ const ROUTE_METADATA: Record<
 
 const SettingsDashboard = () => {
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
+  const basicUser = isBasicPlan(user);
 
   // Find the settings route group
   const settingsRoute = findRouteByPath(routeRegistry, '/settings');
@@ -68,6 +71,9 @@ const SettingsDashboard = () => {
 
   // Filter based on permissions
   const visibleRoutes = settingRoutes.filter((route: RouteNode) => {
+    const isProOnlyInBasic = basicUser && route.proOnly === true;
+    if (isProOnlyInBasic) return true;
+
     // If no permission defined, show it (or should we hide it? safely show if public, but Settings usually restricted)
     // Actually, usually if no permission, it's public.
     // But check hasPermission if permission exists.
@@ -97,13 +103,22 @@ const SettingsDashboard = () => {
 
           // Use icon from registry if available, else from meta, else default
           const Icon = route.icon || meta.icon || AlertCircle;
+          const isRestricted = basicUser && route.proOnly === true;
 
           return (
             <div
               key={route.id}
-              className="card hover-lift p-6 group relative cursor-pointer"
-              onClick={() => navigate(route.path)}
+              className={`card p-6 group relative ${
+                isRestricted ? 'opacity-70 cursor-not-allowed' : 'hover-lift cursor-pointer'
+              }`}
+              onClick={() => !isRestricted && navigate(route.path)}
             >
+              {isRestricted && (
+                <div className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                  <Crown className="h-3 w-3" />
+                  Pro
+                </div>
+              )}
               <div className="flex flex-col h-full">
                 <div
                   className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${meta.iconBg} ${meta.iconColor}`}

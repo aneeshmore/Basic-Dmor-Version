@@ -101,6 +101,8 @@ export interface RouteNode {
   redirect?: string;
   /** Group for organizing in sidebar */
   group?: string;
+  /** Plan flag: when true, route is restricted to Pro plan */
+  proOnly?: boolean;
 }
 
 // Export NavItem as alias for RouteNode for backward compatibility
@@ -1000,6 +1002,7 @@ export const routeRegistry: RouteNode[] = [
         icon: Shield,
         component: lazy(() => import('@/features/authority/pages/PermissionManagement')),
         permission: { module: 'permissions' },
+        proOnly: true,
         apis: [
           { route: '/auth/roles', method: 'GET', label: 'View Roles' },
           { route: '/auth/permissions', method: 'GET', label: 'View Permissions' },
@@ -1014,6 +1017,7 @@ export const routeRegistry: RouteNode[] = [
         icon: Lock,
         component: LockUserPage,
         permission: { module: 'lock-user' },
+        proOnly: true,
         apis: [
           { route: '/employees', method: 'GET', label: 'View Employees' },
           { route: '/employees/:id/status', method: 'PATCH', label: 'Update Status' },
@@ -1038,6 +1042,7 @@ export const routeRegistry: RouteNode[] = [
         icon: ArrowRightLeft,
         component: CustomerTransferPage,
         permission: { module: 'customer-transfer' },
+        proOnly: true,
         apis: [
           { route: '/masters/customers', method: 'GET', label: 'View Customers' },
           { route: '/employees', method: 'GET', label: 'View Sales Persons' },
