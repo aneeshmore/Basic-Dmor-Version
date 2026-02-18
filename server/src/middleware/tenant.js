@@ -1,6 +1,11 @@
 import { tenantContext } from '../db/tenantContext.js';
 import logger from '../config/logger.js';
 
+// Build the set of valid tenant IDs from the environment at startup
+const VALID_TENANTS = new Set(
+    (process.env.TENANTS || '').split(',').map(t => t.trim()).filter(Boolean)
+);
+
 /**
  * Middleware to resolve the tenant from the subdomain and set the context.
  */
@@ -17,16 +22,18 @@ export const tenantMiddleware = (req, res, next) => {
     let tenantId = req.headers['x-tenant-id'] || req.query.tenantId;
 
     // Priority 2: Origin Header (Request source domain) - BEST for centralized API
+    // e.g. origin = https://mundle.paintos.in -> subdomain = "mundle" -> valid tenant
+    // e.g. origin = https://morex.paintos.in  -> subdomain = "morex"  -> NOT in TENANTS, skip
     if (!tenantId && req.headers.origin) {
         try {
             const originHost = new URL(req.headers.origin).hostname;
             const parts = originHost.split('.');
-            // If it's a subdomain (e.g., dmor.paintos.in -> parts.length is 3)
-            // Or a 2-part domain that isn't localhost
-            if (parts.length >= 2 && !originHost.includes('localhost')) {
-                // Ignore "basic-api" if it somehow ends up in origin
-                if (parts[0] !== 'basic-api') {
-                    tenantId = parts[0];
+            // Require at least 3 parts (subdomain.domain.tld) and not localhost
+            if (parts.length >= 3 && !originHost.includes('localhost')) {
+                const candidate = parts[0];
+                // Only accept if it's a known tenant (not an API subdomain like "morex-api")
+                if (VALID_TENANTS.has(candidate)) {
+                    tenantId = candidate;
                 }
             }
         } catch (e) {
@@ -35,25 +42,37 @@ export const tenantMiddleware = (req, res, next) => {
     }
 
     // Priority 3: Host Header (Subdomain of the request itself)
+    // e.g. host = morex-api.paintos.in -> subdomain = "morex-api" -> NOT in TENANTS, skip
     if (!tenantId) {
         const parts = host.split('.');
 
         // Development logic for localhost
         if (host.includes('localhost') || host.includes('127.0.0.1')) {
             if (parts.length >= 2 && !host.startsWith('localhost')) {
-                tenantId = parts[0];
+                let candidate = parts[0];
+                if (candidate.endsWith('-api')) {
+                    candidate = candidate.replace('-api', '');
+                }
+
+                if (VALID_TENANTS.has(candidate)) tenantId = candidate;
             }
         }
         // Production logic
         else if (parts.length >= 2) {
-            // Ignore "basic-api" or root domains
-            if (parts[0] !== 'basic-api' && parts[0] !== 'www') {
-                // For paintos.in, strictly require 3 parts (subdomain.paintos.in)
-                if (host.endsWith('paintos.in')) {
-                    if (parts.length >= 3) tenantId = parts[0];
-                } else {
-                    tenantId = parts[0];
+            let candidate = parts[0];
+
+            // Handle cleanup for API domains (e.g. demopro-api -> demopro)
+            if (candidate.endsWith('-api')) {
+                candidate = candidate.replace('-api', '');
+            }
+
+            // For paintos.in, strictly require 3 parts (subdomain.paintos.in)
+            if (host.endsWith('paintos.in')) {
+                if (parts.length >= 3 && VALID_TENANTS.has(candidate)) {
+                    tenantId = candidate;
                 }
+            } else if (VALID_TENANTS.has(candidate)) {
+                tenantId = candidate;
             }
         }
     }
