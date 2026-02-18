@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, ChevronLeft, ChevronRight, Search, ChevronDown, X } from 'lucide-react';
+import { LogOut, ChevronLeft, ChevronRight, Search, ChevronDown, X, Lock } from 'lucide-react';
 import { NavItem } from '@/config/routeRegistry';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/utils/cn';
+import { isBasicPlan } from '@/utils/planAccess';
 
 interface SidebarProps {
   items: NavItem[];
@@ -241,6 +242,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ items, activePath, onNavigate,
                 const isMobileExpanded = mobileExpandedItem === item.id;
                 const hasChildren = item.children && item.children.length > 0;
 
+                const isProLocked = item.proOnly && isBasicPlan(user);
+
                 return (
                   <div
                     key={item.id}
@@ -249,16 +252,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ items, activePath, onNavigate,
                     className="relative"
                   >
                     <button
-                      onClick={() => handleParentClick(item, !!hasChildren)}
+                      onClick={() => !isProLocked && handleParentClick(item, !!hasChildren)}
+                      disabled={isProLocked}
                       className={cn(
                         'group flex w-full items-center gap-3 rounded px-3 py-2.5 text-sm font-medium transition-all relative cursor-pointer',
                         isActive
                           ? 'bg-[var(--primary)] text-white shadow-md'
                           : 'text-[var(--sidebar-text)] hover:bg-[var(--sidebar-border)] hover:text-[var(--sidebar-text-active)]',
-                        isCollapsed && 'justify-center px-2'
+                        isCollapsed && 'justify-center px-2',
+                        isProLocked && 'opacity-60 grayscale cursor-not-allowed hover:bg-transparent'
                       )}
                     >
-                      <span className="shrink-0">
+                      <span className="shrink-0 relative">
                         {item.icon && (
                           <item.icon
                             size={18}
@@ -273,7 +278,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ items, activePath, onNavigate,
                       </span>
                       {!isCollapsed && (
                         <>
-                          <span className="flex-1 text-left">{item.label}</span>
+                          <span className="flex-1 text-left flex items-center gap-2">
+                            {item.label}
+                            {isProLocked && <Lock size={14} className="text-amber-700 shrink-0" />}
+                          </span>
                           {hasChildren && (
                             <ChevronDown
                               size={14}
@@ -298,15 +306,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ items, activePath, onNavigate,
                             const isChildActive = activePath === child.path;
                             const ChildIcon = child.icon;
 
+                            const isChildProLocked = (child as any).proOnly && isBasicPlan(user);
+
                             return (
                               <button
                                 key={child.id}
-                                onClick={() => handleNavigate(child.path)}
+                                onClick={() => !isChildProLocked && handleNavigate(child.path)}
+                                disabled={isChildProLocked}
                                 className={cn(
                                   'group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer ml-6',
                                   isChildActive
                                     ? 'bg-[var(--primary)] text-white'
-                                    : 'text-[var(--sidebar-text-active)] hover:bg-[var(--sidebar-border)]'
+                                    : 'text-[var(--sidebar-text-active)] hover:bg-[var(--sidebar-border)]',
+                                  isChildProLocked && 'opacity-60 grayscale cursor-not-allowed hover:bg-transparent'
                                 )}
                               >
                                 {ChildIcon && (
@@ -315,7 +327,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ items, activePath, onNavigate,
                                     className="shrink-0 text-[var(--sidebar-text)]"
                                   />
                                 )}
-                                <span className="flex-1 text-left">{child.label}</span>
+                                <span className="flex-1 text-left flex items-center gap-2">
+                                  {child.label}
+                                  {isChildProLocked && <Lock size={14} className="text-amber-700 shrink-0" />}
+                                </span>
                               </button>
                             );
                           })}

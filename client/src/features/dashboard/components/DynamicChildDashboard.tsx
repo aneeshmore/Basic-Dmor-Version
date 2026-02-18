@@ -4,6 +4,7 @@ import {
   LucideIcon,
   LayoutDashboard,
   Crown,
+  Lock,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,7 +44,7 @@ const ROUTE_METADATA: Record<
     iconColor: 'text-amber-600',
   },
   employees: {
-    description: 'Manage employee records',
+    description: 'Manage user records',
     iconBg: 'bg-emerald-50',
     iconColor: 'text-emerald-600',
   },
@@ -263,21 +264,6 @@ export const DynamicChildDashboard: React.FC<DynamicChildDashboardProps> = ({
   const { user } = useAuth();
   const basicUser = isBasicPlan(user);
 
-  const BASIC_PRO_RESTRICTED_ROUTE_IDS = new Set([
-    'employees',
-    'customer-types',
-    'departments',
-    'double-development',
-    // Operations cards
-    'quotation-master',
-    'admin-accounts',
-    'accepted-orders',
-    // Settings cards
-    'permission-management',
-    'lock-user',
-    'customer-transfer',
-  ]);
-
   // Find the parent route
   const parentRoute = findRouteByPath(routeRegistry, parentPath);
 
@@ -293,9 +279,13 @@ export const DynamicChildDashboard: React.FC<DynamicChildDashboardProps> = ({
     if (route.showInSidebar === false) return false;
 
     // 2. Permission Check
-    const isProOnlyInBasic =
-      basicUser && (route.proOnly === true || BASIC_PRO_RESTRICTED_ROUTE_IDS.has(route.id));
-    if (isProOnlyInBasic) return true;
+    // STRICTLY HIDE Pro routes for Basic users - REMOVED to show as locked
+    // if (route.proOnly && basicUser) return false;
+
+    // Remove old manual check
+    // const isProOnlyInBasic =
+    //   basicUser && (route.proOnly === true || BASIC_PRO_RESTRICTED_ROUTE_IDS.has(route.id));
+    // if (isProOnlyInBasic) return true;
 
     if (!route.permission) return true;
     return hasPermission(route.permission.module, 'view');
@@ -325,19 +315,22 @@ export const DynamicChildDashboard: React.FC<DynamicChildDashboardProps> = ({
           const bgClass = meta.iconBg || DEFAULT_META.iconBg;
           const colorClass = meta.iconColor || DEFAULT_META.iconColor;
           const desc = meta.description || DEFAULT_META.description;
-          const isRestricted =
-            basicUser && (route.proOnly === true || BASIC_PRO_RESTRICTED_ROUTE_IDS.has(route.id));
+          // const isRestricted = basicUser && route.proOnly; 
+          // We are now hiding them, so isRestricted logic is irrelevant for rendering
+
+          const isProLocked = route.proOnly && basicUser;
 
           return (
             <div
               key={route.id}
-              className={`card p-6 group relative ${isRestricted ? 'opacity-70 cursor-not-allowed' : 'hover-lift cursor-pointer'}`}
-              onClick={() => !isRestricted && navigate(route.path)}
+              className={`card p-6 group relative hover-lift cursor-pointer ${isProLocked ? 'opacity-60 grayscale cursor-not-allowed hover:transform-none' : ''
+                }`}
+              onClick={() => !isProLocked && navigate(route.path)}
             >
-              {isRestricted && (
+              {isProLocked && (
                 <div className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                  <Crown className="h-3 w-3" />
-                  Pro
+                  <Lock className="h-3 w-3" />
+                  Locked
                 </div>
               )}
               <div className="flex flex-col h-full">
@@ -354,20 +347,26 @@ export const DynamicChildDashboard: React.FC<DynamicChildDashboardProps> = ({
                 <p className="text-sm text-[var(--text-secondary)] flex-grow">{desc}</p>
 
                 <div className="mt-4 flex items-center text-xs font-medium text-[var(--text-secondary)] transition-colors">
-                  {isRestricted ? 'Pro feature' : 'Open Module'}
-                  <svg
-                    className={`ml-1 h-3 w-3 transition-transform ${isRestricted ? '' : 'group-hover:translate-x-1'}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
+                  {isProLocked ? (
+                    'Pro Feature'
+                  ) : (
+                    <>
+                      Open Module
+                      <svg
+                        className={`ml-1 h-3 w-3 transition-transform group-hover:translate-x-1`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

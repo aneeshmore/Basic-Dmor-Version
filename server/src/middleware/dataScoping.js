@@ -19,7 +19,13 @@ const ADMIN_ROLES = ['SuperAdmin', 'Admin', 'Accounts Manager', 'Production Mana
 export function isAdmin(user) {
   if (!user) return false;
   const role = user.role || user.Role;
-  return ADMIN_ROLES.includes(role);
+  if (!role) return false;
+
+  // Normalize both to lowercase for comparison
+  const roleLower = role.toLowerCase();
+  const adminRolesLower = ADMIN_ROLES.map(r => r.toLowerCase());
+
+  return adminRolesLower.includes(roleLower);
 }
 
 /**

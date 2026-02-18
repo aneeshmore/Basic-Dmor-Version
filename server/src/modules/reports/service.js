@@ -281,7 +281,7 @@ export class ReportsService {
     }
   }
 
-  async getSalesmanRevenueReport(startDate, endDate) {
+  async getSalesmanRevenueReport(startDate, endDate, salespersonId) {
     try {
       const conditions = [];
 
@@ -300,6 +300,11 @@ export class ReportsService {
 
       // Include valid salespersons (where salespersonId is set)
       conditions.push(isNotNull(orders.salespersonId));
+
+      // Optional: Filter by specific salesperson (e.g. for Basic Plan restriction)
+      if (salespersonId) {
+        conditions.push(eq(orders.salespersonId, salespersonId));
+      }
 
       const salesmanOrders = await db.query.orders.findMany({
         where: and(...conditions),

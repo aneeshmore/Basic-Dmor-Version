@@ -12,7 +12,9 @@ export class QuotationsController {
         ...req.body,
         createdBy: req.user?.employeeId || req.user?.EmployeeID || null,
       };
-      const quotation = await this.service.createQuotation(data);
+
+      const planType = req.tenantConfig?.planType || 'basic';
+      const quotation = await this.service.createQuotation(data, planType);
       res.status(201).json({ success: true, data: quotation });
     } catch (error) {
       next(error);
@@ -108,7 +110,10 @@ export class QuotationsController {
       const updated = await this.service.updateQuotation(
         parseInt(id),
         req.body,
-        { isAdmin, userId } // Pass user context for ownership check
+        parseInt(id),
+        req.body,
+        { isAdmin, userId }, // Pass user context for ownership check
+        req.tenantConfig?.planType || 'basic'
       );
       res.json({
         success: true,

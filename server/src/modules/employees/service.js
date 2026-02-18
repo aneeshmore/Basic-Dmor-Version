@@ -21,7 +21,13 @@ export class EmployeesService {
     return new EmployeeDTO(employee);
   }
 
-  async getSalesPersons(userContext) {
+  async getSalesPersons(userContext, planType = 'basic') {
+    // For Basic Plan, return the SuperAdmin (single user) as the sales person
+    if (planType === 'basic') {
+      const employees = await this.repository.findBasicPlanAdmin();
+      return employees.map(e => new EmployeeDTO(e));
+    }
+
     let filterId = null;
 
     // Scope for non-admin users (e.g. Sales Persons see only themselves)
@@ -132,8 +138,13 @@ export class EmployeesService {
     return new EmployeeDTO(freshEmployee);
   }
 
-  async updateEmployee(employeeId, updateData) {
+  async updateEmployee(employeeId, updateData, planType = 'basic', currentUser = {}) {
     console.log('UpdateEmployee called for:', employeeId);
+
+    // Basic Plan Restriction: Users can only edit their own profile
+    if (planType === 'basic' && currentUser.employeeId !== employeeId) {
+      throw new AppError('Basic plan users can only edit their own profile.', 403);
+    }
     const existing = await this.repository.findById(employeeId);
     if (!existing) {
       throw new AppError('Employee not found', 404);
@@ -241,7 +252,12 @@ export class EmployeesService {
     return new EmployeeDTO(freshEmployee);
   }
 
-  async deleteEmployee(employeeId) {
+  async deleteEmployee(employeeId, planType = 'basic') {
+    // Basic Plan Restriction: Cannot delete employees
+    if (planType === 'basic') {
+      throw new AppError('Basic plan does not support deleting employees.', 403);
+    }
+
     const existing = await this.repository.findById(employeeId);
     if (!existing) {
       throw new AppError('Employee not found', 404);

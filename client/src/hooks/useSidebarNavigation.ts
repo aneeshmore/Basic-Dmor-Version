@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { routeRegistry, RouteNode, NavItem, NavSubItem } from '@/config/routeRegistry';
+import { isBasicPlan } from '@/utils/planAccess';
 import { LucideIcon } from 'lucide-react';
 
 /**
@@ -21,9 +22,11 @@ export function useSidebarNavigation() {
     const mapAndFilter = (nodes: RouteNode[]): NavItem[] => {
       return nodes
         .map(node => {
-          // Skip hidden items
           if (node.showInSidebar === false) return null;
           if (!node.label) return null;
+
+          // Pro Plan guard - REMOVED to show in sidebar (will be locked in UI)
+          // if (node.proOnly && isBasicPlan(user)) return null;
 
           // Admin bypass - show everything
           if (isAdmin) {
@@ -36,6 +39,7 @@ export function useSidebarNavigation() {
                   label: c.label,
                   path: c.path,
                   icon: c.icon,
+                  proOnly: c.proOnly, // Pass proOnly prop
                 }));
               }
             }
@@ -45,6 +49,7 @@ export function useSidebarNavigation() {
               icon: node.icon as LucideIcon,
               path: node.path,
               group: node.group || 'Main',
+              proOnly: node.proOnly, // Pass proOnly prop
               children,
             };
           }
@@ -59,6 +64,7 @@ export function useSidebarNavigation() {
                 label: c.label,
                 path: c.path,
                 icon: c.icon,
+                proOnly: c.proOnly, // Pass proOnly prop
               }));
             }
           }
@@ -71,6 +77,7 @@ export function useSidebarNavigation() {
               icon: node.icon as LucideIcon,
               path: node.path,
               group: node.group || 'Main',
+              proOnly: node.proOnly, // Pass proOnly prop
               children,
             };
           }
@@ -94,6 +101,7 @@ export function useSidebarNavigation() {
             icon: node.icon as LucideIcon,
             path: node.path,
             group: node.group || 'Main',
+            proOnly: node.proOnly, // Pass proOnly prop
             children,
           };
         })
@@ -106,7 +114,7 @@ export function useSidebarNavigation() {
 
   const groupedNavItems = useMemo(() => {
     const groups: Record<string, NavItem[]> = {};
-    navItems.forEach(item => {
+    navItems.forEach((item: NavItem) => {
       const group = item.group || 'Main';
       if (!groups[group]) {
         groups[group] = [];

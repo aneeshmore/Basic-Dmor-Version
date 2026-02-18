@@ -16,8 +16,12 @@ export class SplitOrdersService {
    * @param {Object} splitData - Data containing details for the two new orders
    * @returns {Object} Result containing the original order and the two new orders
    */
-  async splitOrder(originalOrderId, splitData) {
+  async splitOrder(originalOrderId, splitData, userContext = {}) {
     const { order1, order2 } = splitData;
+    const { resolvePlanType } = await import('../../utils/planAccess.js');
+    const { AdminAccountsService } = await import('../admin-accounts/service.js');
+    const adminService = new AdminAccountsService();
+    const planType = resolvePlanType(userContext);
 
     logger.info(`Splitting order ${originalOrderId}`);
 
@@ -76,6 +80,43 @@ export class SplitOrdersService {
       }
     } else {
       logger.info('No second order created - dispatching full quantity');
+    }
+
+    // [NEW] Auto-accept split orders for Basic Plan
+    if (planType === 'basic') {
+      try {
+        logger.info('[Basic Plan] Auto-accepting split orders at Accounts level');
+
+        // Accept Order 1
+        if (newOrder1) {
+          // Move to Verified first
+          await this.ordersService.repository.update(newOrder1.orderId, { status: 'Verified' });
+          // Then accept by accounts
+          await adminService.acceptOrder(newOrder1.orderId, {
+            billNo: order1.billNo || newOrder1.orderNumber, // Use provided or generated? splits usually have billNo
+            adminRemarks: 'Auto-approved Split Order (Basic Plan)',
+          });
+
+          // Reload logic if needed, but return object usually serves enough info
+          const updated1 = await this.ordersService.getOrderById(newOrder1.orderId);
+          Object.assign(newOrder1, updated1.order); // naive update
+        }
+
+        // Accept Order 2
+        if (newOrder2) {
+          await this.ordersService.repository.update(newOrder2.orderId, { status: 'Verified' });
+          await adminService.acceptOrder(newOrder2.orderId, {
+            billNo: order2.billNo || newOrder2.orderNumber,
+            adminRemarks: 'Auto-approved Split Order (Basic Plan)',
+          });
+          const updated2 = await this.ordersService.getOrderById(newOrder2.orderId);
+          Object.assign(newOrder2, updated2.order);
+        }
+
+      } catch (err) {
+        logger.error('[Basic Plan] Failed to auto-accept split orders', err);
+        // Don't throw, let the split finish successfully, user can manually accept if auto fails
+      }
     }
 
     return {

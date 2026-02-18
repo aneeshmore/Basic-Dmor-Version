@@ -48,7 +48,8 @@ export class EmployeesController {
           ) || canViewAllSalesPersons,
       };
 
-      const salesPersons = await this.service.getSalesPersons(userContext);
+      const planType = req.tenantConfig?.planType || 'basic';
+      const salesPersons = await this.service.getSalesPersons(userContext, planType);
       res.json({
         success: true,
         data: salesPersons,
@@ -93,8 +94,10 @@ export class EmployeesController {
     try {
       const employeeId = parseInt(req.params.id);
       const validatedData = updateEmployeeSchema.parse(req.body);
+      const planType = req.tenantConfig?.planType || 'basic';
+      const currentUser = req.user;
 
-      const employee = await this.service.updateEmployee(employeeId, validatedData);
+      const employee = await this.service.updateEmployee(employeeId, validatedData, planType, currentUser);
 
       logger.info('Employee updated', { employeeId });
 
@@ -110,7 +113,9 @@ export class EmployeesController {
   deleteEmployee = async (req, res, next) => {
     try {
       const employeeId = parseInt(req.params.id);
-      await this.service.deleteEmployee(employeeId);
+      const planType = req.tenantConfig?.planType || 'basic';
+
+      await this.service.deleteEmployee(employeeId, planType);
 
       logger.info('Employee status toggled', { employeeId });
 

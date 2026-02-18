@@ -107,7 +107,7 @@ export class QuotationsRepository {
       .update(quotations)
       .set({
         ...data,
-        status: 'Pending', // Reset to Pending for re-approval
+        // status is now controlled by the service layer
         rejectionRemark: null, // Clear previous rejection
         updatedAt: new Date(),
       })

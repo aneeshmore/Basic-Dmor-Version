@@ -1199,12 +1199,30 @@ const QuotationMaker: React.FC<QuotationMakerProps> = ({
                   </div>
                   <div className="p-1">
                     <span className="font-bold block text-[8pt]">Sales Person</span>
-                    <EditableInput
-                      isPdfMode={isPdfMode}
-                      readOnly={isPdfMode}
-                      value={data.otherRef}
-                      onChange={v => updateField('otherRef', v)}
-                    />
+                    {isPdfMode ? (
+                      <EditableInput
+                        isPdfMode={true}
+                        readOnly={true}
+                        value={data.otherRef}
+                        onChange={() => { }}
+                      />
+                    ) : (
+                      <select
+                        className="w-full text-[8pt] border-b border-dashed border-gray-300 bg-transparent outline-none focus:border-blue-500 py-1"
+                        value={data.otherRef}
+                        onChange={e => updateField('otherRef', e.target.value)}
+                      >
+                        <option value="">Select Sales Person</option>
+                        {salesPersonEmployees.map(emp => {
+                          const name = `${emp.FirstName || emp.FirstName} ${emp.LastName || emp.LastName}`;
+                          return (
+                            <option key={emp.EmployeeID || emp.EmployeeID} value={name}>
+                              {name}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    )}
                   </div>
                 </div>
 

@@ -119,6 +119,36 @@ export class EmployeesRepository {
     }
   }
 
+  async findBasicPlanAdmin() {
+    try {
+      // For Basic Plan, return only the SuperAdmin/Admin user
+      // This strictly enforces that only the main account holder appears in dropdowns
+      const results = await db
+        .select({
+          employeeId: employees.employeeId,
+          firstName: employees.firstName,
+          lastName: employees.lastName,
+          role: roles.roleName,
+        })
+        .from(employees)
+        .innerJoin(employeeRoles, eq(employees.employeeId, employeeRoles.employeeId))
+        .innerJoin(roles, eq(employeeRoles.roleId, roles.roleId))
+        .where(
+          and(
+            eq(employees.status, 'Active'),
+            // Check for SuperAdmin OR Admin to be safe, as the main user might be either
+            sql`${roles.roleName} IN ('SuperAdmin', 'Admin')`
+          )
+        )
+        .orderBy(employees.firstName);
+
+      return results;
+    } catch (error) {
+      console.error('Employees findBasicPlanAdmin error:', error);
+      throw error;
+    }
+  }
+
   async findById(employeeId) {
     const result = await db
       .select({

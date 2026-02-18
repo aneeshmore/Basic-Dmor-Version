@@ -309,6 +309,7 @@ export const routeRegistry: RouteNode[] = [
           { route: '/masters/departments/:id', method: 'PUT', label: 'Update Department' },
           { route: '/masters/departments/:id', method: 'DELETE', label: 'Delete Department' },
         ],
+        proOnly: true,
       },
       {
         id: 'notifications-master',
@@ -323,11 +324,12 @@ export const routeRegistry: RouteNode[] = [
           { route: '/notifications/:id', method: 'DELETE', label: 'Delete Notification' },
           { route: '/notifications/all', method: 'GET', label: 'View All (Admin)' },
         ],
+        proOnly: true,
       },
       {
         id: 'employees',
         path: '/masters/employees',
-        label: 'Employee Master',
+        label: 'User Master',
         icon: Users,
         component: EmployeeMaster,
         permission: { module: 'employees' },
@@ -420,6 +422,7 @@ export const routeRegistry: RouteNode[] = [
           { route: '/masters/customer-types', method: 'POST', label: 'Create Customer Type' },
           { route: '/masters/customer-types/:id', method: 'PUT', label: 'Update Customer Type' },
         ],
+        proOnly: true,
       },
       {
         id: 'development',
@@ -554,6 +557,7 @@ export const routeRegistry: RouteNode[] = [
           { route: '/quotations/:id/approve', method: 'POST', label: 'Approve Quotation' },
           { route: '/quotations/:id/reject', method: 'POST', label: 'Reject Quotation' },
         ],
+        proOnly: true,
       },
       {
         id: 'admin-accounts',
@@ -585,6 +589,7 @@ export const routeRegistry: RouteNode[] = [
           { route: '/admin-accounts/:id/bill-no', method: 'PUT', label: 'Update Bill No' },
           { route: '/admin-accounts/:id/resume', method: 'PUT', label: 'Resume Order' },
         ],
+        proOnly: true,
       },
       {
         id: 'payment-entry',
@@ -638,6 +643,7 @@ export const routeRegistry: RouteNode[] = [
           },
           { route: '/production-manager/auto-schedule', method: 'POST', label: 'Auto Schedule' },
         ],
+        // proOnly: true, // Unlocked for Basic
       },
       {
         id: 'pm-dashboard',
@@ -664,6 +670,7 @@ export const routeRegistry: RouteNode[] = [
             label: 'Check Group Feasibility',
           },
         ],
+        // proOnly: true, // Unlocked for Basic
       },
 
       {
@@ -688,6 +695,7 @@ export const routeRegistry: RouteNode[] = [
             label: 'Get Planning Dashboard',
           },
         ],
+        // proOnly: true, // Unlocked for Basic
       },
       {
         id: 'delivery-status',
@@ -701,6 +709,7 @@ export const routeRegistry: RouteNode[] = [
           { route: '/delivery-complete/:id/return', method: 'PATCH', label: 'Return Delivery' },
           { route: '/delivery-complete', method: 'GET', label: 'View Delivery Complete' },
         ],
+        // proOnly: true, // Unlocked for Basic
       },
       {
         id: 'cancel-order',
@@ -749,6 +758,7 @@ export const routeRegistry: RouteNode[] = [
           { route: '/inventory/products/:id', method: 'GET', label: 'Load Product Details' },
           { route: '/employees', method: 'GET', label: 'Load Supervisors' },
         ],
+        // proOnly: true, // Unlocked for Basic
       },
       {
         id: 'pm-inward',
@@ -781,6 +791,7 @@ export const routeRegistry: RouteNode[] = [
           { route: '/orders/:id', method: 'GET', label: 'View Order' },
           { route: '/catalog/products', method: 'GET', label: 'Load Products' },
         ],
+        // proOnly: true, // Unlocked for Basic
       },
       {
         id: 'discard',
@@ -794,6 +805,7 @@ export const routeRegistry: RouteNode[] = [
           { route: '/discard', method: 'POST', label: 'Create Discard' },
           { route: '/inventory/products', method: 'GET', label: 'Load Products' },
         ],
+        proOnly: true,
       },
       {
         id: 'crm',
@@ -802,6 +814,7 @@ export const routeRegistry: RouteNode[] = [
         icon: MapPin,
         component: CrmDashboard,
         permission: { module: 'crm' },
+        // proOnly: true, // Unlocked for Basic
         apis: [
           { route: '/crm/visits', method: 'GET', label: 'View Visits' },
           { route: '/crm/visits', method: 'POST', label: 'Create Visit' },

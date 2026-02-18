@@ -1,10 +1,9 @@
 export const PROTECTED_PLAN_FEATURE_ROUTES = new Set([
   // Employee Management (Restricted to Pro after first user)
-  'get:/employees',
-  'get:/employees/:param',
-  'post:/employees',
-  'put:/employees/:param',
-  'delete:/employees/:param',
+  // 'get:/employees', // Enabled for Basic Plan (Service layer handles restrictions)
+  // 'get:/employees/:param',
+  // 'post:/employees',
+  // 'delete:/employees/:param',
 
   // Master Settings (Pro only)
   'get:/masters/departments',
@@ -19,41 +18,41 @@ export const PROTECTED_PLAN_FEATURE_ROUTES = new Set([
   'delete:/masters/customer-types/:param',
 
   // CRM Module (Pro only)
-  'get:/crm/visits',
-  'post:/crm/visits',
-  'patch:/crm/visits/:param',
+  // 'get:/crm/visits', // ENABLED FOR BASIC PLAN
+  // 'post:/crm/visits', // ENABLED FOR BASIC PLAN
+  // 'patch:/crm/visits/:param', // ENABLED FOR BASIC PLAN
 
-  // Reports (Pro only)
-  'get:/reports/batch-production',
-  'get:/reports/daily-consumption',
-  'get:/reports/material-inward',
-  'get:/reports/stock',
-  'get:/reports/profit-loss',
-  'get:/reports/product-wise',
-  'get:/reports/order-counts',
-  'get:/reports/cancelled-orders',
-  'get:/reports/salesman-revenue',
-  'get:/reports/salesperson-incentives',
+  // Reports (Pro only) - ENABLED FOR BASIC PLAN AS PER REQUEST
+  // 'get:/reports/batch-production',
+  // 'get:/reports/daily-consumption',
+  // 'get:/reports/material-inward',
+  // 'get:/reports/stock',
+  // 'get:/reports/profit-loss',
+  // 'get:/reports/product-wise',
+  // 'get:/reports/order-counts',
+  // 'get:/reports/cancelled-orders',
+  // 'get:/reports/salesman-revenue',
+  // 'get:/reports/salesperson-incentives',
 
   // Quotations (Pro only)
-  'get:/quotations',
-  'post:/quotations',
-  'put:/quotations/:param',
-  'patch:/quotations/:param/status',
-  'post:/quotations/:param/approve',
-  'post:/quotations/:param/reject',
-  'post:/quotations/:param/convert',
+  // 'get:/quotations',
+  // 'post:/quotations',
+  // 'put:/quotations/:param',
+  // 'patch:/quotations/:param/status',
+  // 'post:/quotations/:param/approve',
+  // 'post:/quotations/:param/reject',
+  // 'post:/quotations/:param/convert',
 
-  // Product Development (Pro only)
-  'post:/product-development',
-  'get:/product-development/master/:param',
-  'get:/product-development/ratios/:param/:param',
+  // Product Development (Enabled for Basic now - "2k product development")
+  // 'post:/product-development',
+  // 'get:/product-development/master/:param',
+  // 'get:/product-development/ratios/:param/:param',
 
   // Production Management Hub (Pro only - Basic is viewing allowed, Batching is manual)
-  'get:/pm-orders/approval-queue',
+  // 'get:/pm-orders/approval-queue', // ENABLED FOR BASIC PLAN
 
   // Advanced Inventory
-  'get:/inventory/products/low-stock',
+  // 'get:/inventory/products/low-stock', // ENABLED FOR BASIC PLAN
 ]);
 
 const normalizePlan = value => {

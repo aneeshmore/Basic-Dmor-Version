@@ -728,17 +728,36 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
 
         // Auto-populate sales person from customer
         const customerSalesPersonId = customer.SalesPersonID || customer.salesPersonId;
-        if (customerSalesPersonId) {
+
+        // Validation: Check if this salesperson is actually in the allowed list
+        // This is critical for Basic Plan where we restrict the list to Super Admin only
+        const isValidSalesPerson = salesPersonEmployees.some(
+          sp => (sp.employeeId || sp.EmployeeID) === customerSalesPersonId
+        );
+
+        if (customerSalesPersonId && isValidSalesPerson) {
           setSalesPersonId(customerSalesPersonId);
           // Clear sales person error since it's auto-populated
           setValidationErrors(prev => ({ ...prev, salesPersonId: false }));
         } else {
-          // If customer has no sales person, clear the field
+          // Fallback: If strict list (like Basic Plan) has only 1 option, select it
+          // This overrides the customer's linked salesperson if it's not valid for the current plan
+          if (salesPersonEmployees.length === 1) {
+            const singleSpId =
+              salesPersonEmployees[0].employeeId || salesPersonEmployees[0].EmployeeID;
+            if (singleSpId) {
+              setSalesPersonId(singleSpId);
+              setValidationErrors(prev => ({ ...prev, salesPersonId: false }));
+              return; // Exit here to keep the forced selection
+            }
+          }
+
+          // If customer has no sales person or invalid, clear the field
           setSalesPersonId('');
         }
       }
     },
-    [customers, getCompanyName, user]
+    [customers, getCompanyName, user, salesPersonEmployees]
   );
 
   // Auto-fill for Dealer Role

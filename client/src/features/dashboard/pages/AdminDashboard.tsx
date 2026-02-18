@@ -1,5 +1,5 @@
 import { ColumnDef } from '@tanstack/react-table';
-import { AlertCircle, CheckCircle, XCircle, RefreshCw, Crown } from 'lucide-react';
+import { AlertCircle, CheckCircle, XCircle, RefreshCw, Crown, Lock } from 'lucide-react';
 import { PageHeader } from '@/components/common';
 import { useProductStock } from '../hooks/useDashboard';
 import { ProductStock } from '../api/dashboardApi';
@@ -139,13 +139,17 @@ export default function AdminDashboard() {
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--surface)] border border-[var(--border)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--surface-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            {basicUser ? 'Pro Feature' : 'Refresh'}
+            {basicUser ? (
+              <span className="flex items-center gap-1 text-amber-500 font-bold">
+                <Lock size={14} /> Pro Feature
+              </span>
+            ) : 'Refresh'}
           </button>
         }
       />
 
       <div className="relative bg-[var(--surface)] rounded-xl border border-[var(--border)] overflow-hidden">
-        <div className={`p-6 ${basicUser ? 'opacity-60 pointer-events-none' : ''}`}>
+        <div className={`p-6 ${basicUser ? 'opacity-60 grayscale pointer-events-none' : ''}`}>
           <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
             Product Stock Status
           </h2>
@@ -154,8 +158,8 @@ export default function AdminDashboard() {
         </div>
         {basicUser && (
           <div className="absolute top-4 right-4 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-            <Crown className="h-3 w-3" />
-            Pro
+            <Lock className="h-3 w-3" />
+            Locked
           </div>
         )}
       </div>
@@ -164,16 +168,15 @@ export default function AdminDashboard() {
       {stocks && stocks.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div
-            className={`relative bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6 ${
-              basicUser ? 'opacity-60' : ''
-            }`}
+            className={`relative bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6 ${basicUser ? 'opacity-60 grayscale' : ''
+              }`}
           >
-            {basicUser && (
+            {/* {basicUser && (
               <div className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
                 <Crown className="h-3 w-3" />
                 Pro
               </div>
-            )}
+            )} */}
             <div className="flex items-center gap-3">
               <div className="p-3 bg-[var(--success)]/10 rounded-lg">
                 <CheckCircle className="h-6 w-6 text-[var(--success)]" />
@@ -188,16 +191,15 @@ export default function AdminDashboard() {
           </div>
 
           <div
-            className={`relative bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6 ${
-              basicUser ? 'opacity-60' : ''
-            }`}
+            className={`relative bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6 ${basicUser ? 'opacity-60 grayscale' : ''
+              }`}
           >
-            {basicUser && (
+            {/* {basicUser && (
               <div className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
                 <Crown className="h-3 w-3" />
                 Pro
               </div>
-            )}
+            )} */}
             <div className="flex items-center gap-3">
               <div className="p-3 bg-[var(--warning)]/10 rounded-lg">
                 <AlertCircle className="h-6 w-6 text-[var(--warning)]" />
@@ -212,16 +214,15 @@ export default function AdminDashboard() {
           </div>
 
           <div
-            className={`relative bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6 ${
-              basicUser ? 'opacity-60' : ''
-            }`}
+            className={`relative bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6 ${basicUser ? 'opacity-60 grayscale' : ''
+              }`}
           >
-            {basicUser && (
+            {/* {basicUser && (
               <div className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
                 <Crown className="h-3 w-3" />
                 Pro
               </div>
-            )}
+            )} */}
             <div className="flex items-center gap-3">
               <div className="p-3 bg-[var(--danger)]/10 rounded-lg">
                 <XCircle className="h-6 w-6 text-[var(--danger)]" />

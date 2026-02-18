@@ -18,7 +18,7 @@ export const splitOrder = async (req, res, next) => {
 
     // order2 is optional - if not provided, only order1 is created (no balance order)
 
-    const result = await splitOrdersService.splitOrder(originalOrderId, { order1, order2 });
+    const result = await splitOrdersService.splitOrder(originalOrderId, { order1, order2 }, req.user);
 
     res.status(200).json({
       status: 'success',

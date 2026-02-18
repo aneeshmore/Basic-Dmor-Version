@@ -1341,9 +1341,9 @@ const EmployeeForm = ({
             ) : isEditMode ? (
               'Save Changes'
             ) : creationLocked ? (
-              'Basic Plan: Single User'
+              'Basic Plan: 1 Super Admin Limit'
             ) : (
-              'Add Employee'
+              'Add User'
             )}
           </Button>
         </div>
@@ -1612,13 +1612,12 @@ export default function EmployeeMaster() {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => (
         <span
-          className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-            row.original.Status === 'Active'
-              ? 'bg-green-100 text-green-700'
-              : row.original.Status === 'Inactive'
+          className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${row.original.Status === 'Active'
+            ? 'bg-green-100 text-green-700'
+            : row.original.Status === 'Inactive'
               ? 'bg-red-100 text-red-700'
               : 'bg-gray-100 text-gray-700'
-          }`}
+            }`}
         >
           {row.original.Status}
         </span>
@@ -1627,33 +1626,54 @@ export default function EmployeeMaster() {
     {
       id: 'actions',
       header: 'Actions',
-      cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-2">
-          <button
-            onClick={() => handleView(row.original)}
-            className="p-2 rounded-lg hover:bg-[var(--surface-highlight)] text-[var(--text-secondary)] hover:text-blue-600 transition-colors border border-transparent hover:border-[var(--border)] focus-ring"
-            title="View Details"
-          >
-            <Eye size={16} />
-          </button>
-          <button
-            onClick={() => handleEdit(row.original)}
-            className="p-2 rounded-lg hover:bg-[var(--surface-highlight)] text-[var(--text-secondary)] hover:text-[var(--primary)] transition-colors border border-transparent hover:border-[var(--border)] focus-ring"
-            title="Edit"
-          >
-            <Edit2 size={16} />
-          </button>
-          {row.original.Role?.toLowerCase() !== 'superadmin' && (
+      cell: ({ row }) => {
+        // Basic Plan Restrictions
+        // 1. Cannot delete employees
+        // 2. Can only edit their own profile
+        const isSelf = user?.EmployeeID === row.original.EmployeeID;
+        const canEdit = !basicPlanUser || isSelf;
+        const canDelete = !basicPlanUser && row.original.Role?.toLowerCase() !== 'superadmin';
+
+        return (
+          <div className="flex items-center justify-end gap-2">
             <button
-              onClick={() => handleDelete(row.original.EmployeeID)}
-              className="p-2 rounded-lg hover:bg-red-50 text-[var(--text-secondary)] hover:text-[var(--danger)] transition-colors border border-transparent hover:border-red-200 focus-ring"
-              title="Delete"
+              onClick={() => handleView(row.original)}
+              className="p-2 rounded-lg hover:bg-[var(--surface-highlight)] text-[var(--text-secondary)] hover:text-blue-600 transition-colors border border-transparent hover:border-[var(--border)] focus-ring"
+              title="View Details"
             >
-              <Trash2 size={16} />
+              <Eye size={16} />
             </button>
-          )}
-        </div>
-      ),
+
+            {canEdit ? (
+              <button
+                onClick={() => handleEdit(row.original)}
+                className="p-2 rounded-lg hover:bg-[var(--surface-highlight)] text-[var(--text-secondary)] hover:text-[var(--primary)] transition-colors border border-transparent hover:border-[var(--border)] focus-ring"
+                title="Edit"
+              >
+                <Edit2 size={16} />
+              </button>
+            ) : (
+              <button
+                disabled
+                className="p-2 rounded-lg text-gray-300 cursor-not-allowed border border-transparent"
+                title="Basic Plan: Can only edit own profile"
+              >
+                <Edit2 size={16} />
+              </button>
+            )}
+
+            {canDelete && (
+              <button
+                onClick={() => handleDelete(row.original.EmployeeID)}
+                className="p-2 rounded-lg hover:bg-red-50 text-[var(--text-secondary)] hover:text-[var(--danger)] transition-colors border border-transparent hover:border-red-200 focus-ring"
+                title="Delete"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
@@ -1668,7 +1688,26 @@ export default function EmployeeMaster() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Page Header */}
-      <PageHeader title="Employee Master" description="Manage your employee records" />
+      <PageHeader title="User Master" description="Manage your user records" />
+
+      {/* Basic Plan Limitation Banner */}
+      {basicPlanUser && (
+        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r shadow-sm mx-1">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-amber-700">
+                <span className="font-bold">Basic Plan Limitation:</span> You are restricted to <strong>1 Super Admin user</strong>.
+                You cannot add new users or delete the existing account.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* View Employee Details Modal */}
       <Modal
@@ -1825,13 +1864,12 @@ export default function EmployeeMaster() {
                   <span className="text-xs font-medium text-[var(--text-secondary)]">Status</span>
                   <p className="text-[var(--text-primary)] font-medium">
                     <span
-                      className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        viewingEmployee.Status === 'Active'
-                          ? 'bg-green-100 text-green-700'
-                          : viewingEmployee.Status === 'Inactive'
+                      className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${viewingEmployee.Status === 'Active'
+                        ? 'bg-green-100 text-green-700'
+                        : viewingEmployee.Status === 'Inactive'
                           ? 'bg-red-100 text-red-700'
                           : 'bg-gray-100 text-gray-700'
-                      }`}
+                        }`}
                     >
                       {viewingEmployee.Status}
                     </span>
@@ -1913,7 +1951,7 @@ export default function EmployeeMaster() {
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <h2 className="text-xl font-semibold text-[var(--text-primary)]">
-            {editingEmployee ? 'Edit Employee' : 'Add New Employee'}
+            {editingEmployee ? 'Edit User' : 'Add New User'}
           </h2>
         </div>
         <EmployeeForm
@@ -1934,7 +1972,7 @@ export default function EmployeeMaster() {
             return (
               e.Status === 'Active' &&
               (e.EmployeeType === 'SalesPerson' ||
-              e.Role?.toLowerCase().includes('sales'))
+                e.Role?.toLowerCase().includes('sales'))
             );
           })}
         />
@@ -1943,14 +1981,13 @@ export default function EmployeeMaster() {
       {/* Employee Table Section */}
       <div className="bg-[var(--surface)] rounded-lg border border-[var(--border)] shadow-sm overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border-b border-[var(--border)]">
-          <h3 className="text-lg font-semibold text-[var(--text-primary)]">Employee Records</h3>
+          <h3 className="text-lg font-semibold text-[var(--text-primary)]">User Records</h3>
           <button
             onClick={() => setShowHidden(!showHidden)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              showHidden
-                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${showHidden
+              ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             {showHidden ? '✓ Showing Hidden Records' : '○ Hide Hidden Records'}
           </button>

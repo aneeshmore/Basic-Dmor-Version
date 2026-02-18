@@ -91,12 +91,10 @@ export function PrivateRoute({ children, permission }: PrivateRouteProps) {
   const basicUser = isBasicPlan(user);
 
   const BASIC_BLOCKED_PATHS = new Set([
-    '/masters/employees',
     '/masters/customer-types',
     '/masters/departments',
-    '/masters/double-development',
-    '/reports/stock',
-    '/reports/low-stock',
+    // '/reports/stock', // Enabled for Basic
+    // '/reports/low-stock', // Enabled for Basic
   ]);
 
   // Show loading spinner while checking auth state

@@ -13,6 +13,7 @@ import {
   Download,
   CheckCircle,
   Crown,
+  Lock,
 } from 'lucide-react';
 import { productionManagerApi } from '@/features/production-manager/api/productionManagerApi';
 import { reportsApi } from '@/features/reports/api/reportsApi';
@@ -360,16 +361,15 @@ export const Dashboard: React.FC = () => {
               key={card.title}
               onClick={() => !isRestricted && navigate(card.path)}
               disabled={isRestricted}
-              className={`group relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 text-left transition-all ${
-                isRestricted
-                  ? 'opacity-70 cursor-not-allowed'
-                  : 'hover:shadow-lg hover:border-[var(--primary)]'
-              }`}
+              className={`group relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 text-left transition-all ${isRestricted
+                ? 'opacity-60 grayscale cursor-not-allowed'
+                : 'hover:shadow-lg hover:border-[var(--primary)]'
+                }`}
             >
               {isRestricted && (
                 <div className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                  <Crown className="h-3 w-3" />
-                  Pro
+                  <Lock className="h-3 w-3" />
+                  Locked
                 </div>
               )}
               <div className="flex items-start justify-between">
@@ -389,20 +389,26 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
               <div className="mt-4 flex items-center text-sm font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]">
-                {isRestricted ? 'Pro feature' : card.description ? 'Access' : 'View details'}
-                <svg
-                  className={`ml-1 h-4 w-4 transition-transform ${isRestricted ? '' : 'group-hover:translate-x-1'}`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
+                {isRestricted ? (
+                  'Pro Feature'
+                ) : (
+                  <>
+                    {card.description ? 'Access' : 'View details'}
+                    <svg
+                      className={`ml-1 h-4 w-4 transition-transform ${isRestricted ? '' : 'group-hover:translate-x-1'}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </>
+                )}
               </div>
             </button>
           );

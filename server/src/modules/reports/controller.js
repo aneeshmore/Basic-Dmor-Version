@@ -1,4 +1,5 @@
 import { ReportsService } from './service.js';
+import { isBasicPlan } from '../../utils/planAccess.js';
 
 const reportsService = new ReportsService();
 
@@ -121,7 +122,30 @@ export const getCancelledOrders = async (req, res, next) => {
 export const getSalesmanRevenueReport = async (req, res, next) => {
   try {
     const { startDate, endDate } = req.query;
-    const data = await reportsService.getSalesmanRevenueReport(startDate, endDate);
+
+    // Basic Plan Restriction: Only show own data
+    let salespersonId = null;
+    const effectiveUserContext = { ...req.user, planType: req.tenantConfig?.planType || req.user.planType };
+    if (isBasicPlan(effectiveUserContext) && req.user.role !== 'Admin' && req.user.role !== 'SuperAdmin') {
+      // Wait, the user said "super admin to be visible only".
+      // In Basic plan, there is only 1 super admin.
+      // So if I am the super admin loggen in, I should see my own data.
+      // If I am a basic user (which shouldn't exist in strict basic plan but might in testing), I should see mine.
+      // The requirement "report of super admin to be visible only" implies the logged-in user (who is the super admin) sees their own.
+      salespersonId = req.user.employeeId;
+    }
+
+    // Actually, looking at the code, existing restriction for Basic Plan allows only 1 Super Admin.
+    // So req.user.employeeId IS the super admin's ID.
+    // However, if we ever allow other users, this logic holds: restrict to SELF.
+
+    // STRICT interpretation of "super admin visible only":
+    // If I am Basic Plan, I pass my own ID.
+    if (isBasicPlan(effectiveUserContext)) {
+      salespersonId = req.user.employeeId;
+    }
+
+    const data = await reportsService.getSalesmanRevenueReport(startDate, endDate, salespersonId);
     res.status(200).json({
       success: true,
       data,

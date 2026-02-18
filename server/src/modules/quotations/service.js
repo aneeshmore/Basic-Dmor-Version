@@ -10,9 +10,13 @@ export class QuotationsService {
     this.ordersService = new OrdersService();
   }
 
-  async createQuotation(data) {
+  async createQuotation(data, planType = 'basic') {
     // Generate quotation number if not provided
     const quotationNo = data.quotationNo || (await this.repository.getNextQuotationNumber());
+
+    // Basic Plan: Auto-approve
+    // Others: Pending
+    const status = planType === 'basic' ? 'Approved' : 'Pending';
 
     return await this.repository.create({
       quotationNo,
@@ -26,7 +30,7 @@ export class QuotationsService {
       buyerName: data.buyerName,
       customerId: data.customerId || null,
       content: data.content || data, // Support both formats
-      status: 'Pending',
+      status: status,
       createdBy: data.createdBy || null,
     });
   }
@@ -50,7 +54,7 @@ export class QuotationsService {
     return await this.updateStatus(id, 'Rejected', remark);
   }
 
-  async updateQuotation(id, data, userContext = {}) {
+  async updateQuotation(id, data, userContext = {}, planType = 'basic') {
     const existing = await this.repository.findById(id);
     if (!existing) throw new Error('Quotation not found');
 
@@ -63,6 +67,10 @@ export class QuotationsService {
       throw new Error('Only rejected, pending, or approved quotations can be updated');
     }
 
+    // Basic Plan: Auto-approve
+    // Others: Reset to Pending for re-approval
+    const status = planType === 'basic' ? 'Approved' : 'Pending';
+
     return await this.repository.update(id, {
       quotationNo: data.quotationNo || existing.quotationNo,
       quotationDate: data.quotationDate || existing.quotationDate,
@@ -70,7 +78,7 @@ export class QuotationsService {
       buyerName: data.buyerName || existing.buyerName,
       customerId: data.customerId || existing.customerId,
       content: data.content || data,
-      status: 'Pending', // Reset status to Pending when updated for re-approval
+      status: status,
     });
   }
 

@@ -108,15 +108,14 @@ const SettingsDashboard = () => {
           return (
             <div
               key={route.id}
-              className={`card p-6 group relative ${
-                isRestricted ? 'opacity-70 cursor-not-allowed' : 'hover-lift cursor-pointer'
-              }`}
+              className={`card p-6 group relative ${isRestricted ? 'opacity-70 cursor-not-allowed' : 'hover-lift cursor-pointer'
+                }`}
               onClick={() => !isRestricted && navigate(route.path)}
             >
               {isRestricted && (
                 <div className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                  <Crown className="h-3 w-3" />
-                  Pro
+                  <Lock className="h-3 w-3" />
+                  Locked
                 </div>
               )}
               <div className="flex flex-col h-full">

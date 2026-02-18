@@ -10,6 +10,8 @@ import { Suspense, useMemo } from 'react';
 import { routeRegistry, flattenRoutes } from '@/config/routeRegistry';
 import { PrivateRoute } from '@/components/auth/PrivateRoute';
 import { DashboardRedirect } from '@/features/dashboard/components/DashboardRedirect';
+import { useAuth } from '@/contexts/AuthContext';
+import { isBasicPlan } from '@/utils/planAccess';
 
 /**
  * Loading fallback for lazy-loaded routes
@@ -48,6 +50,25 @@ function RouteLoadingFallback() {
 }
 
 /**
+ * Route Guard for Pro Plan
+ */
+function RouteGuard({
+  children,
+  proOnly
+}: {
+  children: React.ReactElement;
+  proOnly?: boolean;
+}) {
+  const { user } = useAuth();
+
+  if (proOnly && isBasicPlan(user)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}
+
+/**
  * Main App Router Component
  */
 export function AppRouter() {
@@ -74,9 +95,11 @@ export function AppRouter() {
               key={route.id}
               path={route.path}
               element={
-                <PrivateRoute permission={route.permission}>
-                  <Component />
-                </PrivateRoute>
+                <RouteGuard proOnly={route.proOnly}>
+                  <PrivateRoute permission={route.permission}>
+                    <Component />
+                  </PrivateRoute>
+                </RouteGuard>
               }
             />
           );
