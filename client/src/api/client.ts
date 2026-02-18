@@ -109,8 +109,9 @@ apiClient.interceptors.response.use(
       logger.error('[Error]', error.message);
     }
 
-    // Auto-show error toast unless skipped
-    if (!error.config?.skipErrorToast) {
+    // Auto-show error toast unless skipped or it's a plan restriction message
+    const isPlanRestriction = errorMessage === 'Upgrade to Pro plan to access this feature';
+    if (!error.config?.skipErrorToast && !isPlanRestriction) {
       showToast.error(errorMessage, 'singleton-error-toast');
     }
 

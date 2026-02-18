@@ -33,8 +33,9 @@ export const TopAlertBanner: React.FC<TopAlertBannerProps> = ({ className }) => 
 
   const { hasPermission, loading: authLoading, user } = useAuth();
 
-  // Fetch low stock products - ONLY if auth is complete AND user has 'report-low-stock' permission
-  const canViewInventory = !authLoading && !!user && hasPermission('report-low-stock', 'view');
+  // Fetch low stock products - ONLY if auth is complete AND user has 'report-low-stock' permission AND is NOT on basic plan
+  const isBasic = user?.planType === 'basic';
+  const canViewInventory = !authLoading && !!user && !isBasic && hasPermission('report-low-stock', 'view');
 
   const { data: lowStockProducts = [] } = useQuery({
     queryKey: ['lowStockProducts'],

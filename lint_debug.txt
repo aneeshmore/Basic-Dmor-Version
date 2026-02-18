@@ -1,9 +1,0 @@
-
-C:\Users\ss\Desktop\webDev\DMOR-OMS-Internship\server\src\modules\production-supervisor\service.js
-   20:3  warning  'masterProductPM' is defined but never used                      no-unused-vars
-  341:9  warning  'transactionsRecorded' is assigned a value but never used        no-unused-vars
-  341:9  error    'transactionsRecorded' is never reassigned. Use 'const' instead  prefer-const
-
-✖ 3 problems (1 error, 2 warnings)
-  1 error and 0 warnings potentially fixable with the `--fix` option.
-

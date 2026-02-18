@@ -11,3 +11,5 @@ export * from './tnc.js';
 export * from './idempotency-keys.js';
 
 export * from './relations.js';
+export * from './tenant-settings.js';
+

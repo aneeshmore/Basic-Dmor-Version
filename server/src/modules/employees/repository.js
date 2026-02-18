@@ -1,4 +1,4 @@
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, sql } from 'drizzle-orm';
 import db from '../../db/index.js';
 import { employees, departments, employeeRoles, roles } from '../../db/schema/index.js';
 
@@ -246,10 +246,10 @@ export class EmployeesRepository {
     if (!employee) {
       throw new Error('Employee not found');
     }
-    
+
     // Toggle: Active → Inactive, Inactive → Active
     const newStatus = employee.status === 'Active' ? 'Inactive' : 'Active';
-    
+
     // Update status without removing rows
     await db
       .update(employees)
@@ -285,5 +285,17 @@ export class EmployeesRepository {
     const result = await db.select().from(roles).where(eq(roles.roleId, roleId)).limit(1);
 
     return result[0] || null;
+  }
+
+  /**
+   * Count active users for the current tenant
+   */
+  async countActiveUsers() {
+    const result = await db
+      .select({ count: sql`count(*)`.mapWith(Number) })
+      .from(employees)
+      .where(eq(employees.status, 'Active'));
+
+    return result[0]?.count || 0;
   }
 }

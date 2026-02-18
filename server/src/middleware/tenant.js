@@ -62,8 +62,28 @@ export const tenantMiddleware = (req, res, next) => {
     }
 
     // Set the tenant ID in the AsyncLocalStorage context
-    tenantContext.run(tenantId, () => {
-        next();
+    tenantContext.run(tenantId, async () => {
+        try {
+            // Lazy load dependencies to avoid circular deps
+            const { db } = await import('../db/index.js');
+            const { tenantSettings } = await import('../db/schema/core/tenant-settings.js');
+
+            // Fetch tenant settings
+            const settings = await db.select().from(tenantSettings).limit(1);
+            const planType = settings.length > 0 ? settings[0].planType : 'basic'; // Default to basic
+
+            // Attach to request for easy access
+            req.tenantConfig = {
+                planType
+            };
+
+            next();
+        } catch (error) {
+            logger.error(`Failed to load tenant settings for ${tenantId}`, error);
+            // Fallback to basic if DB fails (don't block request)
+            req.tenantConfig = { planType: 'basic' };
+            next();
+        }
     });
 };
 

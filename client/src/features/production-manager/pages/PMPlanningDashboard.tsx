@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { productionManagerApi } from '../api/productionManagerApi';
 import { showToast } from '@/utils/toast';
 import { PageHeader } from '@/components/common';
@@ -85,6 +86,8 @@ export default function PMPlanningDashboard() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const { user } = useAuth();
 
   const fetchData = async () => {
     try {

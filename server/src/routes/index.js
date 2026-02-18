@@ -35,10 +35,13 @@ import { companyRoutes } from '../modules/company/index.js';
 
 const router = Router();
 
+import webhookRoutes from '../modules/webhooks/routes.js';
+
 // ============================================
 // PUBLIC ROUTES (No authentication required)
 // ============================================
 router.use('/auth', authorityRoutes);
+router.use('/webhooks', webhookRoutes);
 
 // Health check endpoint (public for monitoring)
 router.get('/health', (req, res) => {

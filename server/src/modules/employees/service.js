@@ -33,7 +33,15 @@ export class EmployeesService {
     return employees.map(e => new EmployeeDTO(e));
   }
 
-  async createEmployee(employeeData) {
+  async createEmployee(employeeData, planType = 'basic') {
+    // Check user limit for Basic plan
+    if (planType === 'basic') {
+      const activeCount = await this.repository.countActiveUsers();
+      if (activeCount >= 1) {
+        throw new AppError('Basic plan supports only one active admin user. Upgrade to Pro for multiple users.', 403);
+      }
+    }
+
     // Check if username already exists
     if (employeeData.username) {
       const existing = await this.repository.findByUsername(employeeData.username);

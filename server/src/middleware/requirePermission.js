@@ -58,27 +58,37 @@ export const requirePermission = apiRoute => {
         return next(new UnauthorizedError('Not authenticated'));
       }
 
-      // Admin bypass
-      if (req.user.role === 'Admin' || req.user.role === 'SuperAdmin') {
-        req.permissionContext = { apiRoute, granted: true, isAdmin: true };
-        return next();
-      }
+      // Use tenant-level plan configuration if available, otherwise fall back to user's token
+      const effectiveUserContext = {
+        ...req.user,
+        planType: req.tenantConfig?.planType || req.user.planType
+      };
 
-      if (isBasicPlan(req.user) && PROTECTED_PLAN_FEATURE_ROUTES.has(apiRoute)) {
+      const normalizedTarget = normalizeRoute(apiRoute);
+
+      // CRITICAL: Plan restriction check MUST come before Admin bypass
+      // This ensures even Super Admins on a Basic plan are restricted from Pro features.
+      if (isBasicPlan(effectiveUserContext) && PROTECTED_PLAN_FEATURE_ROUTES.has(normalizedTarget)) {
         logger.warn('Plan restriction denied route access', {
           userId: req.user.employeeId,
           username: req.user.username,
           role: req.user.role,
-          planType: 'basic',
+          planType: effectiveUserContext.planType,
           apiRoute,
+          normalizedTarget,
           ip: req.ip,
         });
         return next(new ForbiddenError('Upgrade to Pro plan to access this feature'));
       }
 
+      // Admin bypass (only for non-restricted features)
+      if (req.user.role === 'Admin' || req.user.role === 'SuperAdmin') {
+        req.permissionContext = { apiRoute, granted: true, isAdmin: true };
+        return next();
+      }
+
       // Get user's granted API routes
       const grantedRoutes = await getEffectivePermissions(req.user.employeeId);
-      const normalizedTarget = normalizeRoute(apiRoute);
 
       // Check if user has this route granted
       const hasAccess = grantedRoutes.some(route => normalizeRoute(route) === normalizedTarget);
@@ -140,6 +150,6 @@ export const requireAnyPermission = apiRoutes => {
 /**
  * Clear permission cache (stub - no caching)
  */
-export const clearPermissionCache = () => {};
+export const clearPermissionCache = () => { };
 
 export default requirePermission;

@@ -34,6 +34,34 @@ export class OrdersRepository {
     return `ORD-${year}-${monthPadded}-${next}`;
   }
 
+  async getNextBillNumber() {
+    // Find the maximum bill number (assuming numeric or simple string sort)
+    // This is a simple implementation. For production, might need more robust sequence handling.
+    const result = await db
+      .select({ billNo: accounts.billNo })
+      .from(accounts)
+      .where(sql`${accounts.billNo} IS NOT NULL`)
+      // Convert to integer for correct sorting if they are numeric strings
+      // Or just sort by text if alphanumeric
+      // Using length then value for better alphanumeric sorting (e.g. 10 > 2)
+      .orderBy(sql`LENGTH(${accounts.billNo}) DESC`, desc(accounts.billNo))
+      .limit(1);
+
+    if (result.length === 0) {
+      return '1';
+    }
+
+    const maxBillNo = result[0].billNo;
+    const nextNum = parseInt(maxBillNo, 10);
+
+    if (!isNaN(nextNum)) {
+      return (nextNum + 1).toString();
+    }
+
+    // Fallback if bill numbers are not purely numeric
+    return `${maxBillNo}-1`;
+  }
+
   /**
    * Find all orders with optional filtering
    * @param {Object} options - Query options

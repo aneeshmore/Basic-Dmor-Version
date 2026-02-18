@@ -75,7 +75,8 @@ export class EmployeesController {
   createEmployee = async (req, res, next) => {
     try {
       const validatedData = createEmployeeSchema.parse(req.body);
-      const employee = await this.service.createEmployee(validatedData);
+      const planType = req.tenantConfig?.planType || 'basic';
+      const employee = await this.service.createEmployee(validatedData, planType);
 
       logger.info('Employee created', { employeeId: employee.employeeId });
 

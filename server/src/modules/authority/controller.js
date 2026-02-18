@@ -84,7 +84,10 @@ class AuthorityController {
           employeeId: user.employeeId,
           username: user.username,
           role: role?.roleName,
-          planType: resolvePlanType({ planType: user.planType, role: role?.roleName }),
+          planType: resolvePlanType({
+            planType: req.tenantConfig?.planType || user.planType,
+            role: role?.roleName
+          }),
           isSalesRole: role?.isSalesRole || false,
           isSupervisorRole: role?.isSupervisorRole || false,
           companyName: user.companyName,
@@ -100,7 +103,10 @@ class AuthorityController {
         LastName: user.lastName,
         Username: user.username,
         Role: role?.roleName,
-        planType: resolvePlanType({ planType: user.planType, role: role?.roleName }),
+        planType: resolvePlanType({
+          planType: req.tenantConfig?.planType || user.planType,
+          role: role?.roleName
+        }),
         landingPage: '/dashboard', // Force default to Dashboard as per user request
         permissions,
         // Dealer specific fields
@@ -269,7 +275,14 @@ class AuthorityController {
           LastName: user.lastName,
           Username: user.username,
           Role: role?.roleName,
-          planType: resolvePlanType({ planType: user.planType, role: role?.roleName }),
+          planType: (() => {
+            const resolved = resolvePlanType({
+              planType: req.tenantConfig?.planType || user.planType,
+              role: role?.roleName
+            });
+            console.log(`[AuthorityController] Resolved plan for ${user.username}: ${resolved} (Tenant: ${req.tenantConfig?.planType}, User: ${user.planType}, Role: ${role?.roleName})`);
+            return resolved;
+          })(),
           landingPage: role?.landingPage || '/dashboard',
           landingPage: role?.landingPage || '/dashboard',
           permissions,

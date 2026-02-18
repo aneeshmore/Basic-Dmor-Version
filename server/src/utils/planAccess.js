@@ -1,21 +1,59 @@
 export const PROTECTED_PLAN_FEATURE_ROUTES = new Set([
-  'GET:/employees',
-  'GET:/employees/:id',
-  'POST:/employees',
-  'PUT:/employees/:id',
-  'DELETE:/employees/:id',
-  'GET:/masters/departments',
-  'GET:/masters/departments/:id',
-  'POST:/masters/departments',
-  'PUT:/masters/departments/:id',
-  'DELETE:/masters/departments/:id',
-  'GET:/masters/customer-types',
-  'GET:/masters/customer-types/:id',
-  'POST:/masters/customer-types',
-  'PUT:/masters/customer-types/:id',
-  'DELETE:/masters/customer-types/:id',
-  'GET:/reports/stock',
-  'GET:/inventory/products/low-stock',
+  // Employee Management (Restricted to Pro after first user)
+  'get:/employees',
+  'get:/employees/:param',
+  'post:/employees',
+  'put:/employees/:param',
+  'delete:/employees/:param',
+
+  // Master Settings (Pro only)
+  'get:/masters/departments',
+  'get:/masters/departments/:param',
+  'post:/masters/departments',
+  'put:/masters/departments/:param',
+  'delete:/masters/departments/:param',
+  'get:/masters/customer-types',
+  'get:/masters/customer-types/:param',
+  'post:/masters/customer-types',
+  'put:/masters/customer-types/:param',
+  'delete:/masters/customer-types/:param',
+
+  // CRM Module (Pro only)
+  'get:/crm/visits',
+  'post:/crm/visits',
+  'patch:/crm/visits/:param',
+
+  // Reports (Pro only)
+  'get:/reports/batch-production',
+  'get:/reports/daily-consumption',
+  'get:/reports/material-inward',
+  'get:/reports/stock',
+  'get:/reports/profit-loss',
+  'get:/reports/product-wise',
+  'get:/reports/order-counts',
+  'get:/reports/cancelled-orders',
+  'get:/reports/salesman-revenue',
+  'get:/reports/salesperson-incentives',
+
+  // Quotations (Pro only)
+  'get:/quotations',
+  'post:/quotations',
+  'put:/quotations/:param',
+  'patch:/quotations/:param/status',
+  'post:/quotations/:param/approve',
+  'post:/quotations/:param/reject',
+  'post:/quotations/:param/convert',
+
+  // Product Development (Pro only)
+  'post:/product-development',
+  'get:/product-development/master/:param',
+  'get:/product-development/ratios/:param/:param',
+
+  // Production Management Hub (Pro only - Basic is viewing allowed, Batching is manual)
+  'get:/pm-orders/approval-queue',
+
+  // Advanced Inventory
+  'get:/inventory/products/low-stock',
 ]);
 
 const normalizePlan = value => {

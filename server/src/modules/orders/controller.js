@@ -49,7 +49,8 @@ export class OrdersController {
   createOrder = async (req, res, next) => {
     try {
       const validatedData = createOrderSchema.parse(req.body);
-      const order = await this.service.createOrder(validatedData);
+      const planType = req.tenantConfig?.planType || 'basic'; // Default to basic if not set
+      const order = await this.service.createOrder(validatedData, planType);
 
       logger.info('Order created', { orderId: order.orderId });
 

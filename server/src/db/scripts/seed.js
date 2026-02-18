@@ -2,12 +2,15 @@ import db from '../index.js';
 import {
   // Core
   units,
-  // vehicles,
+  vehicles,
   suppliers,
+  tnc,
+  tenantSettings,
   // Organization
   branches,
   departments,
   employees,
+  company,
   // Auth
   roles,
   permissions,
@@ -28,16 +31,18 @@ import {
   orderDetails,
   // dispatches,
   // Production
-  // productionBatch,
-  // batchProducts,
-  // batchMaterials,
-  // batchActivityLog,
+  productionBatch,
+  batchProducts,
+  batchMaterials,
+  batchActivityLog,
   // Inventory
-  // materialInward,
+  materialInward,
   // materialDiscard,
   // stockLedger,
   // inventoryTransactions,
   // notifications,
+  // CRM
+  visits,
 } from '../schema/index.js';
 import { sql } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
@@ -72,6 +77,10 @@ async function seedDatabase() {
       console.log('🗑️  Clearing existing data...');
       await db.execute(
         sql`TRUNCATE TABLE 
+          app.crm_visits,
+          app.company,
+          app.tenant_settings,
+          app.tnc,
           app.inventory_transactions,
           app.stock_ledger, 
           app.material_discard, 
@@ -1881,8 +1890,239 @@ async function seedDatabase() {
     console.log('   ✓ Order details added');
 
     // ============================================================
-    // Summary
+    // LEVEL 9: Vehicles
     // ============================================================
+    console.log('\n🚚 Level 9: Vehicles...');
+
+    const vehicleRows = await db
+      .insert(vehicles)
+      .values([
+        {
+          vehicleNumber: 'DL-1L-AA-1234',
+          driverName: 'Ramesh Driver',
+          capacity: '1000.00',
+          isAvailable: true,
+        },
+        {
+          vehicleNumber: 'HR-26-BB-5678',
+          driverName: 'Suresh Driver',
+          capacity: '2500.00',
+          isAvailable: true,
+        },
+        {
+          vehicleNumber: 'UP-16-CC-9012',
+          driverName: 'Mahesh Driver',
+          capacity: '500.00',
+          isAvailable: false,
+        },
+      ])
+      .returning();
+    console.log(`   ✓ ${vehicleRows.length} vehicles created`);
+
+    // ============================================================
+    // LEVEL 10: Company & Settings
+    // ============================================================
+    console.log('\n🏢 Level 10: Company & Settings...');
+
+    await db.insert(tnc).values([
+      {
+        type: 'Sales',
+        description: 'Goods once sold will not be taken back.',
+      },
+      {
+        type: 'Sales',
+        description: 'Payment to be made within 30 days of invoice.',
+      },
+      {
+        type: 'Purchase',
+        description: 'Material must be accompanied by Test Certificate.',
+      },
+    ]);
+    console.log('   ✓ Terms & Conditions added');
+
+    await db.insert(tenantSettings).values({
+      planType: 'pro',
+    });
+    console.log('   ✓ Tenant Settings configured (Pro Plan)');
+
+    await db.insert(company).values({
+      companyName: 'Morex Technologies Pvt Ltd',
+      address: 'Plot 123, Sector 18, Gurugram, Haryana - 122015',
+      gstNumber: '06AAACM1234A1Z5',
+      email: 'contact@morex.com',
+      contactNumber: '+91-9876543210',
+      panNumber: 'AAACM1234A',
+      bankName: 'HDFC Bank',
+      accountNumber: '50200012345678',
+      ifscCode: 'HDFC0001234',
+      branch: 'Sector 18, Gurugram',
+      termsAndConditions: 'Subject to Gurugram Jurisdiction',
+      udyamRegistrationNumber: 'UDYAM-HR-05-1234567',
+      pincode: '122015',
+      cgst: '9%',
+      sgst: '9%',
+      igst: '18%',
+    });
+    console.log('   ✓ Company Profile created');
+
+    // ============================================================
+    // LEVEL 11: Production
+    // ============================================================
+    console.log('\n🏭 Level 11: Production Batches...');
+
+    // Batch 1: Completed (Make-to-Stock)
+    const batch1 = await db
+      .insert(productionBatch)
+      .values({
+        batchNo: 'B-2024-001',
+        masterProductId: masterProductRows[3].masterProductId, // Interior Premium Emulsion
+        scheduledDate: '2024-12-01',
+        plannedQuantity: '1000.00', // Liters
+        actualQuantity: '980.00',
+        startedAt: new Date('2024-12-01T09:00:00Z'),
+        completedAt: new Date('2024-12-01T17:00:00Z'),
+        status: 'Completed',
+        batchType: 'MAKE_TO_STOCK',
+        supervisorId: employeeRows[4].employeeId, // Production Supervisor
+        createdBy: employeeRows[1].employeeId, // Production Manager
+        completedBy: employeeRows[4].employeeId,
+      })
+      .returning();
+
+    // Link Batch 1 to Product SKU (20L Bucket)
+    await db.insert(batchProducts).values({
+      batchId: batch1[0].batchId,
+      productId: productRows[7].productId, // Interior Emulsion 20L
+      plannedUnits: 50, // 50 * 20L = 1000L
+      packageCapacityKg: '20.00', // Simplified capacity
+      plannedWeightKg: '1000.00',
+      producedUnits: 49,
+      producedWeightKg: '980.00',
+      fulfillmentType: 'MAKE_TO_STOCK',
+      isFulfilled: true,
+      fulfilledAt: new Date('2024-12-01T17:30:00Z'),
+      inventoryUpdated: true,
+      inventoryUpdatedAt: new Date('2024-12-01T18:00:00Z'),
+    });
+
+    // Batch 2: In Progress (Make-to-Order)
+    const batch2 = await db
+      .insert(productionBatch)
+      .values({
+        batchNo: 'B-2024-002',
+        masterProductId: masterProductRows[0].masterProductId, // Epoxy Base White Coat
+        scheduledDate: '2024-12-20',
+        plannedQuantity: '200.00',
+        status: 'In Progress',
+        batchType: 'MAKE_TO_ORDER',
+        supervisorId: employeeRows[4].employeeId,
+        createdBy: employeeRows[1].employeeId,
+        startedAt: new Date('2024-12-20T08:30:00Z'),
+      })
+      .returning();
+
+    // Link Batch 2 to Order #1 (Customer Order)
+    // Finding order detail for Epoxy White 20L in Order 1
+    // Order 1 is orderRows[0]
+    // Product is productRows[0] (Epoxy 20L)
+
+    // We need to fetch the order detail ID. Since valid seeding is sequential, we can assume its the first one.
+    // Instead of assumption, let's query what we just inserted if we could, but here we can just insert a new one if needed or skip strict linking if complex.
+    // But wait, we inserted orderDetails earlier in Level 8.
+    // Let's just create a loose link for now or try to be precise if indices match.
+    // Order 1 has 1 item: productRows[0].
+
+    // NOTE: In a real app we'd query this. For seeding, we'll skip the direct orderDetailId link to avoid complexity 
+    // without fetching, OR we can rely on deterministic ID generation if we reset.
+    // Let's link to the Order ID at least.
+
+    await db.insert(batchProducts).values({
+      batchId: batch2[0].batchId,
+      productId: productRows[0].productId, // Epoxy 20L
+      orderId: orderRows[0].orderId,
+      plannedUnits: 10,
+      packageCapacityKg: '20.00',
+      plannedWeightKg: '200.00',
+      fulfillmentType: 'MAKE_TO_ORDER',
+      isFulfilled: false,
+    });
+
+    console.log('   ✓ Production batches created (1 Completed, 1 In Progress)');
+
+    // ============================================================
+    // LEVEL 12: Inventory (Inward)
+    // ============================================================
+    console.log('\n📦 Level 12: Material Inward...');
+
+    await db.insert(materialInward).values([
+      {
+        masterProductId: masterProductRows[10].masterProductId, // PU 929
+        supplierId: supplierRows[0].supplierId,
+        billNo: 'BILL-001',
+        quantity: '5000.00',
+        unitPrice: '170.00',
+        totalCost: '850000.00',
+        inwardDate: new Date('2024-11-01'),
+      },
+      {
+        masterProductId: masterProductRows[11].masterProductId, // TiO2
+        supplierId: supplierRows[0].supplierId,
+        billNo: 'BILL-001',
+        quantity: '1000.00',
+        unitPrice: '250.00',
+        totalCost: '250000.00',
+        inwardDate: new Date('2024-11-01'),
+      },
+      {
+        masterProductId: masterProductRows[21].masterProductId, // Xylene
+        supplierId: supplierRows[1].supplierId,
+        billNo: 'INV-999',
+        quantity: '2000.00',
+        unitPrice: '90.00',
+        totalCost: '180000.00',
+        inwardDate: new Date('2024-11-05'),
+      },
+    ]);
+    console.log('   ✓ Material Inward records created');
+
+    // ============================================================
+    // LEVEL 13: CRM Visits
+    // ============================================================
+    console.log('\n🤝 Level 13: CRM Visits...');
+
+    await db.insert(visits).values([
+      {
+        visitDate: new Date('2024-12-10T10:00:00Z'),
+        salesExecutiveId: employeeRows[3].employeeId, // Amit
+        customerId: customerRows[0].customerId,
+        visitType: 'New Visit',
+        leadStatus: 'Interested',
+        notes: 'Met with Mr. Rakesh. Interested in bulk epoxy orders.',
+        isNextVisitRequired: true,
+        nextVisitDate: new Date('2024-12-20T10:00:00Z'),
+        nextVisitNotes: 'Discuss pricing and samples',
+      },
+      {
+        visitDate: new Date('2024-12-12T14:30:00Z'),
+        salesExecutiveId: employeeRows[2].employeeId, // Priya
+        customerId: customerRows[2].customerId,
+        visitType: 'Follow-up Visit',
+        leadStatus: 'Converted',
+        notes: 'Finalized annual contract.',
+        isNextVisitRequired: false,
+      },
+      {
+        visitDate: new Date('2024-12-14T11:00:00Z'),
+        salesExecutiveId: employeeRows[3].employeeId,
+        customerId: customerRows[1].customerId,
+        visitType: 'Routine Check',
+        leadStatus: 'Client',
+        notes: 'Stock checking and feedback collection.',
+        isNextVisitRequired: true,
+        nextVisitDate: new Date('2025-01-15'),
+      },
+    ]);
+    console.log('   ✓ CRM Visits recorded');
     console.log('\n' + '='.repeat(60));
     console.log('✅ DATABASE SEED COMPLETED SUCCESSFULLY!');
     console.log('='.repeat(60));

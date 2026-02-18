@@ -1,7 +1,7 @@
 import { AuthUser } from '@/types';
 
 export type PlanType = 'basic' | 'pro';
-const FORCE_DEMO_BASIC_PLAN = true;
+const FORCE_DEMO_BASIC_PLAN = false;
 
 const PLAN_STORAGE_KEYS = ['dmor_plan_type', 'morex_plan_type', 'selected_plan'];
 
