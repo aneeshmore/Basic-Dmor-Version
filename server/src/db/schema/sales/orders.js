@@ -44,6 +44,10 @@ export const orders = appSchema.table('orders', {
   dispatchId: integer('dispatch_id'), // References dispatches.dispatchId (added circularly in relations)
   dispatchRemarks: text('dispatch_remarks'),
 
+  // Stock availability status (Derived from inventory check)
+  // 'Stock Ready' (Green) or 'Production Needed' (Yellow)
+  stockStatus: varchar('stock_status', { length: 50 }),
+
   // Ownership: The employee who created this order
   createdBy: integer('created_by'),
 

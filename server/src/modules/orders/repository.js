@@ -172,6 +172,7 @@ export class OrdersRepository {
         companyName: customers.companyName,
         contactPerson: customers.contactPerson,
         billNo: accounts.billNo,
+        paymentCleared: accounts.paymentCleared,
         paymentMethod: accounts.paymentMethod,
       })
       .from(orders)

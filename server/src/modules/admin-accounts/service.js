@@ -100,7 +100,10 @@ export class AdminAccountsService {
     // Only perform Production checks/notifications if fully Accepted
     if (newStatus === 'Accepted') {
       // Check for material shortages after payment clearance
-      await this.checkMaterialRequirements(orderId);
+      const stockStatus = await this.checkMaterialRequirements(orderId);
+
+      // Update stock status
+      await this.repository.updateOrder(orderId, { stockStatus });
 
       // Send Notification
       try {
@@ -361,11 +364,12 @@ export class AdminAccountsService {
       const orderDetails = await this.repository.getOrderDetails(orderId);
       if (!orderDetails || !orderDetails.items) {
         console.log(`No order details found for order ${orderId}`);
-        return;
+        return 'Production Needed'; // Default to safe state
       }
 
       console.log(`Found ${orderDetails.items.length} items in order ${orderId}`);
       const shortages = [];
+      let allStockAvailable = true;
 
       // Check each product in the order
       for (const item of orderDetails.items) {
@@ -375,9 +379,10 @@ export class AdminAccountsService {
 
         // 1. Check Finished Good Stock
         const productData = await this.productsRepository.findProductById(productId);
-        const availableFG = productData ? productData.product.availableQuantity : 0;
+        const availableFG = parseFloat(productData ? productData.product.availableQuantity : 0);
 
         if (availableFG < quantity) {
+          allStockAvailable = false;
           const productionNeeded = quantity - availableFG;
 
           // Alert for Finished Good Shortage
@@ -434,9 +439,13 @@ export class AdminAccountsService {
       } else {
         console.log(`No critical shortages found for order ${orderId}`);
       }
+
+      return allStockAvailable ? 'Stock Ready' : 'Production Needed';
+
     } catch (error) {
-      // Log error but don't fail the payment acceptance
+      // Log error but don't fail, ensuring we return safeguards
       console.error('Error checking material requirements:', error);
+      return 'Production Needed';
     }
   }
 }

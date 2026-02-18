@@ -13,6 +13,7 @@ export class OrderDTO {
     this.status = order.status;
     this.priority = order.priorityLevel || order.priority_level;
     this.totalAmount = order.totalAmount || order.total_amount;
+    this.stockStatus = order.stockStatus || order.stock_status; // 'Stock Ready' or 'Production Needed'
     // Accountant-managed fields
     this.billNo = order.billNo || order.bill_no;
     this.paymentCleared = order.paymentCleared || order.payment_cleared || false;
