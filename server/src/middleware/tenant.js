@@ -21,7 +21,7 @@ export const tenantMiddleware = (req, res, next) => {
         try {
             const originHost = new URL(req.headers.origin).hostname;
             const parts = originHost.split('.');
-            // If it's a subdomain (e.g., dmor.morex.cloud -> parts.length is 3)
+            // If it's a subdomain (e.g., dmor.paintos.in -> parts.length is 3)
             // Or a 2-part domain that isn't localhost
             if (parts.length >= 2 && !originHost.includes('localhost')) {
                 // Ignore "basic-api" if it somehow ends up in origin
