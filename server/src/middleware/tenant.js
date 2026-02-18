@@ -12,47 +12,55 @@ export const tenantMiddleware = (req, res, next) => {
         return res.status(400).json({ error: 'Missing Host header' });
     }
 
-    // Extract subdomain (e.g., client1.paintos.in -> client1)
-    let tenantId = null;
+    // 1. Resolve Tenant ID with Priority:
+    // Priority 1: Explicit header (e.g., from Mobile App or specialized Client)
+    let tenantId = req.headers['x-tenant-id'] || req.query.tenantId;
 
-    // Production/Staging logic for paintos.in
-    // Check if the host strictly ends with paintos.in
-    if (host.endsWith('paintos.in')) {
-        const parts = host.split('.');
-        // Expecting: subdomain.paintos.in (3 parts)
-        // If strict match, we need at least 3 parts
-        if (parts.length >= 3) {
-            // Take the part before paintos.in (which works out to be the first part if exactly 3)
-            // But if we have deep subdomains like a.b.paintos.in, this might need care.
-            // Assuming simple 1-level subdomain for tenants:
-            tenantId = parts[0];
-        } else {
-            // Root domain (paintos.in) or invalid
-            // We can either set no tenant (null) or a default if desired.
-            // Leaving null to trigger 404 below unless specific landing page logic exists.
-            logger.info(`Access to root domain ${host} without subdomain`);
+    // Priority 2: Origin Header (Request source domain) - BEST for centralized API
+    if (!tenantId && req.headers.origin) {
+        try {
+            const originHost = new URL(req.headers.origin).hostname;
+            const parts = originHost.split('.');
+            // If it's a subdomain (e.g., dmor.morex.cloud -> parts.length is 3)
+            // Or a 2-part domain that isn't localhost
+            if (parts.length >= 2 && !originHost.includes('localhost')) {
+                // Ignore "basic-api" if it somehow ends up in origin
+                if (parts[0] !== 'basic-api') {
+                    tenantId = parts[0];
+                }
+            }
+        } catch (e) {
+            // URL parse failure, skip origin resolution
         }
     }
-    // Development logic
-    else if (host.includes('localhost') || host.includes('127.0.0.1')) {
-        // Development fallback
-        // standard localhost: sub.localhost -> sub
+
+    // Priority 3: Host Header (Subdomain of the request itself)
+    if (!tenantId) {
         const parts = host.split('.');
-        if (parts.length >= 2 && !host.startsWith('localhost')) {
-            tenantId = parts[0];
-        } else {
-            // Explicit header/query/default for localhost dev without subdomains
-            tenantId = req.headers['x-tenant-id'] || req.query.tenantId || process.env.DEFAULT_TENANT;
+
+        // Development logic for localhost
+        if (host.includes('localhost') || host.includes('127.0.0.1')) {
+            if (parts.length >= 2 && !host.startsWith('localhost')) {
+                tenantId = parts[0];
+            }
+        }
+        // Production logic
+        else if (parts.length >= 2) {
+            // Ignore "basic-api" or root domains
+            if (parts[0] !== 'basic-api' && parts[0] !== 'www') {
+                // For paintos.in, strictly require 3 parts (subdomain.paintos.in)
+                if (host.endsWith('paintos.in')) {
+                    if (parts.length >= 3) tenantId = parts[0];
+                } else {
+                    tenantId = parts[0];
+                }
+            }
         }
     }
-    // Fallback for other domains (legacy behavior, optional)
-    else {
-        // Keeping original behavior for flexibility or other domains if needed, 
-        // but strictly prefer paintos.in as requested.
-        const parts = host.split('.');
-        if (parts.length >= 2) {
-            tenantId = parts[0];
-        }
+
+    // Priority 4: Default fallback from environment
+    if (!tenantId) {
+        tenantId = process.env.DEFAULT_TENANT;
     }
 
     if (!tenantId) {
