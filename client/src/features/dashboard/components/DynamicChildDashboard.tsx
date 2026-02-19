@@ -264,6 +264,18 @@ export const DynamicChildDashboard: React.FC<DynamicChildDashboardProps> = ({
   const { user } = useAuth();
   const basicUser = isBasicPlan(user);
 
+  const BASIC_PRO_RESTRICTED_ROUTE_IDS = new Set([
+    'employees',
+    'customer-types',
+    'departments',
+    'double-development',
+    // Operations cards
+    'quotation-master',
+    'admin-accounts',
+    'permission-management',
+    'lock-user',
+    'customer-transfer',
+  ]);
   // Find the parent route
   const parentRoute = findRouteByPath(routeRegistry, parentPath);
 

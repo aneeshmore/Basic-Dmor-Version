@@ -312,9 +312,50 @@ export class OrdersService {
       logger.error('Failed to send new order notification:', notifErr);
     }
 
-    // [REMOVED] Basic Plan Automation: Auto-Accept Order (Accounts Only)
-    // Orders should remain Pending until manually accepted by Admin/Accounts.
-    // if (planType === 'basic') { ... }
+    // [NEW] Basic Plan Automation: Auto-Accept Order
+    if (planType === 'basic') {
+      try {
+        logger.info(`[Basic Plan] Auto-approving order #${order.orderNumber}`);
+
+        // Generate Bill Number
+        const billNo = await this.repository.getNextBillNumber();
+        logger.info(`[Basic Plan] Generated Bill No: ${billNo}`);
+
+        const { AdminAccountsService } = await import('../admin-accounts/service.js');
+        const adminService = new AdminAccountsService();
+
+        // Step 1: Force move to 'Verified' status (Accounts Approved)
+        // This ensures the next step (acceptOrder) moves it to 'Accepted' (Factory Accepted)
+        await this.repository.update(order.orderId, { status: 'Verified' });
+
+        // Step 2: Call standard acceptance logic (Clears payment, generates notifications, checks BOM)
+        await adminService.acceptOrder(order.orderId, {
+          billNo,
+          adminRemarks: 'Auto-approved (Basic Plan)',
+        });
+
+        // Step 3: Move to 'Scheduled for Production' (Factory Accepted)
+        // [MODIFIED] Disable auto-scheduling for Basic Plan to mimic Pro flow
+        // The order will remain in 'Accepted' status and appear in "Accept Order at Factory"
+        /*
+        await this.repository.update(order.orderId, {
+          status: 'Scheduled for Production',
+          factoryAccepted: true // Flag used for PM tracking in DTO
+        });
+
+        logger.info(`[Basic Plan] Order #${order.orderNumber} auto-scheduled (PM Dashboard visible)`);
+        */
+
+        // Refresh order object to return updated status
+        const updatedOrder = await this.repository.findById(order.orderId);
+        if (updatedOrder) {
+          Object.assign(order, updatedOrder);
+        }
+
+      } catch (autoErr) {
+        logger.error(`[Basic Plan] Failed to auto-approve order #${order.orderNumber}`, autoErr);
+      }
+    }
 
     return new OrderWithDetailsDTO(order, details);
   }
