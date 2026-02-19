@@ -271,8 +271,6 @@ export const DynamicChildDashboard: React.FC<DynamicChildDashboardProps> = ({
     // Operations cards
     'quotation-master',
     'admin-accounts',
-    'accepted-orders',
-    // Settings cards
     'permission-management',
     'lock-user',
     'customer-transfer',

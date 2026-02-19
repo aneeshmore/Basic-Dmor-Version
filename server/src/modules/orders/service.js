@@ -335,13 +335,16 @@ export class OrdersService {
         });
 
         // Step 3: Move to 'Scheduled for Production' (Factory Accepted)
-        // This ensures visibility in PM Planning Dashboard
+        // [MODIFIED] Disable auto-scheduling for Basic Plan to mimic Pro flow
+        // The order will remain in 'Accepted' status and appear in "Accept Order at Factory"
+        /*
         await this.repository.update(order.orderId, {
           status: 'Scheduled for Production',
           factoryAccepted: true // Flag used for PM tracking in DTO
         });
 
         logger.info(`[Basic Plan] Order #${order.orderNumber} auto-scheduled (PM Dashboard visible)`);
+        */
 
         // Refresh order object to return updated status
         const updatedOrder = await this.repository.findById(order.orderId);
