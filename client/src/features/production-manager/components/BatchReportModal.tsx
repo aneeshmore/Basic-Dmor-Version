@@ -720,7 +720,7 @@ export default function BatchReportModal({
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]"></div>
           </div>
         ) : batchData ? (
-          <div className="border-2 border-gray-800 p-6 min-h-[600px] bg-white text-black">
+          <div className="border-2 border-gray-800 p-4 md:p-6 min-h-[600px] bg-white text-black text-xs md:text-sm">
             {/* Header */}
             <div className="text-center mb-4">
               <h1 className="text-2xl font-bold">{companyInfo?.companyName || 'DMOR PAINTS'}</h1>
@@ -728,7 +728,7 @@ export default function BatchReportModal({
             </div>
 
             {/* Batch Info */}
-            <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-sm">
               <div>
                 <p>
                   <span className="font-semibold">Batch No:</span> {batchData.batchNo}
@@ -807,106 +807,109 @@ export default function BatchReportModal({
                   <h4 className="font-bold text-xs mb-1 text-gray-700">
                     Quality & Variance Analysis
                   </h4>
-                  <table className="w-full border-collapse border border-gray-600 text-xs">
-                    <thead>
-                      <tr>
-                        <th className="border border-gray-600 px-1 py-0.5">Parameter</th>
-                        <th className="border border-gray-600 px-1 py-0.5">Input</th>
-                        <th className="border border-gray-600 px-1 py-0.5">Output</th>
-                        <th className="border border-gray-600 px-1 py-0.5">Variance</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(() => {
-                        const stdDensity = batchData.fgDensity
-                          ? parseFloat(batchData.fgDensity)
-                          : batchData.density
-                            ? parseFloat(batchData.density)
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-600 text-xs">
+                      <thead>
+                        <tr>
+                          <th className="border border-gray-600 px-1 py-0.5">Parameter</th>
+                          <th className="border border-gray-600 px-1 py-0.5">Input</th>
+                          <th className="border border-gray-600 px-1 py-0.5">Output</th>
+                          <th className="border border-gray-600 px-1 py-0.5">Variance</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const stdDensity = batchData.fgDensity
+                            ? parseFloat(batchData.fgDensity)
+                            : batchData.density
+                              ? parseFloat(batchData.density)
+                              : 0;
+                          const actDensity = batchData.actualDensity
+                            ? parseFloat(batchData.actualDensity)
                             : 0;
-                        const actDensity = batchData.actualDensity
-                          ? parseFloat(batchData.actualDensity)
-                          : 0;
-                        const densityVariance = actDensity - stdDensity;
+                          const densityVariance = actDensity - stdDensity;
 
-                        const stdViscosity = batchData.viscosity
-                          ? parseFloat(batchData.viscosity)
-                          : 0;
-                        const actViscosity = batchData.actualViscosity
-                          ? parseFloat(batchData.actualViscosity)
-                          : 0;
-                        const viscosityVariance = actViscosity - stdViscosity;
+                          const stdViscosity = batchData.viscosity
+                            ? parseFloat(batchData.viscosity)
+                            : 0;
+                          const actViscosity = batchData.actualViscosity
+                            ? parseFloat(batchData.actualViscosity)
+                            : 0;
+                          const viscosityVariance = actViscosity - stdViscosity;
 
-                        const actualQty = batchData.actualQuantity
-                          ? parseFloat(batchData.actualQuantity)
-                          : 0;
-                        const stdTotalWeight = rawMaterialsOnly.reduce(
-                          (sum: number, m: any) => sum + (m.requiredQuantity || 0),
-                          0
-                        );
+                          const actualQty = batchData.actualQuantity
+                            ? parseFloat(batchData.actualQuantity)
+                            : 0;
+                          const stdTotalWeight = rawMaterialsOnly.reduce(
+                            (sum: number, m: any) => sum + (m.requiredQuantity || 0),
+                            0
+                          );
 
-                        const totalLtrForActWeight = orders.reduce((s: number, o: any) => {
-                          const actualQty = parseFloat(o.batchProduct?.producedUnits || '0');
-                          const capacityLtr = parseFloat(o.packagingCapacity || '0');
-                          return s + actualQty * capacityLtr;
-                        }, 0);
+                          const totalLtrForActWeight = orders.reduce((s: number, o: any) => {
+                            const actualQty = parseFloat(o.batchProduct?.producedUnits || '0');
+                            const capacityLtr = parseFloat(o.packagingCapacity || '0');
+                            return s + actualQty * capacityLtr;
+                          }, 0);
 
-                        const actTotalWeight = totalLtrForActWeight * actDensity;
-                        const totalWeightVariance = actTotalWeight - stdTotalWeight;
+                          const actTotalWeight = totalLtrForActWeight * actDensity;
+                          const totalWeightVariance = actTotalWeight - stdTotalWeight;
 
-                        return (
-                          <>
-                            <tr>
-                              <td className="border border-gray-600 px-1 py-0.5">Standard Density</td>
-                              <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                {stdDensity.toFixed(2)}
-                              </td>
-                              <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                {actDensity.toFixed(2)}
-                              </td>
-                              <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                {densityVariance.toFixed(2)}
-                              </td>
-                            </tr >
-                            <tr>
-                              <td className="border border-gray-600 px-1 py-0.5">Viscosity</td>
-                              <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                {stdViscosity > 0 ? stdViscosity : '-'}
-                              </td>
-                              <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                {actViscosity > 0 ? actViscosity : '-'}
-                              </td>
-                              <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                {viscosityVariance.toFixed(2)}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td className="border border-gray-600 px-1 py-0.5">
-                                Total Weight (Kg)
-                              </td>
-                              <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                {stdTotalWeight.toFixed(2)}
-                              </td>
-                              <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                {screenTotalKg > 0 ? screenTotalKg.toFixed(3) : '-'}
-                              </td>
-                              <td className="border border-gray-600 px-1 py-0.5 text-right">
-                                {(screenTotalKg - stdTotalWeight).toFixed(2)}
-                              </td>
-                            </tr>
-                          </>
-                        );
-                      })()}
-                    </tbody>
-                  </table>
+                          return (
+                            <>
+                              <tr>
+                                <td className="border border-gray-600 px-1 py-0.5">Standard Density</td>
+                                <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                  {stdDensity.toFixed(2)}
+                                </td>
+                                <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                  {actDensity.toFixed(2)}
+                                </td>
+                                <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                  {densityVariance.toFixed(2)}
+                                </td>
+                              </tr >
+                              <tr>
+                                <td className="border border-gray-600 px-1 py-0.5">Viscosity</td>
+                                <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                  {stdViscosity > 0 ? stdViscosity : '-'}
+                                </td>
+                                <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                  {actViscosity > 0 ? actViscosity : '-'}
+                                </td>
+                                <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                  {viscosityVariance.toFixed(2)}
+                                </td>
+                              </tr>
+                              <tr>
+                                <td className="border border-gray-600 px-1 py-0.5">
+                                  Total Weight (Kg)
+                                </td>
+                                <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                  {stdTotalWeight.toFixed(2)}
+                                </td>
+                                <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                  {screenTotalKg > 0 ? screenTotalKg.toFixed(3) : '-'}
+                                </td>
+                                <td className="border border-gray-600 px-1 py-0.5 text-right">
+                                  {(screenTotalKg - stdTotalWeight).toFixed(2)}
+                                </td>
+                              </tr>
+                            </>
+                          );
+                        })()}
+                      </tbody>
+
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
 
 
             {/* Main Content Areas: Side-by-Side Tables */}
-            <div className="flex gap-4 items-start">
+            <div className="flex flex-col md:flex-row gap-4 items-start">
               {/* Left Side: Materials Table */}
-              <div className="flex-1">
+              <div className="flex-1 w-full overflow-x-auto">
                 <table className="w-full border-collapse border border-gray-800 text-sm mb-4">
                   <thead>
                     <tr>
@@ -997,7 +1000,7 @@ export default function BatchReportModal({
               </div>
 
               {/* Right Side: Products (SKUs) Table */}
-              <div className="flex-1">
+              <div className="flex-1 w-full overflow-x-auto">
                 <table className="w-full border-collapse border border-gray-800 text-sm mb-4">
                   <thead>
                     <tr>
@@ -1199,7 +1202,7 @@ export default function BatchReportModal({
             </div>
 
             {/* Signatures */}
-            <div className="grid grid-cols-2 gap-8 mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
               <div>
                 <p className="font-semibold">Labours Sign:</p>
                 <p className="mt-2">{batchData.labourNames || ''}</p>
