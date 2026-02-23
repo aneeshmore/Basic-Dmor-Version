@@ -643,7 +643,7 @@ export const routeRegistry: RouteNode[] = [
           },
           { route: '/production-manager/auto-schedule', method: 'POST', label: 'Auto Schedule' },
         ],
-        // proOnly: true, // Unlocked for Basic
+        proOnly: true,
       },
       {
         id: 'pm-dashboard',

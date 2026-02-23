@@ -317,6 +317,14 @@ export class OrdersService {
       try {
         logger.info(`[Basic Plan] Auto-approving order #${order.orderNumber}`);
 
+        // Set default expected delivery date to today if not provided
+        if (!orderInfo.expectedDeliveryDate) {
+          const today = new Date().toISOString().split('T')[0];
+          await this.repository.update(order.orderId, { expectedDeliveryDate: today });
+          order.expectedDeliveryDate = today;
+          logger.info(`[Basic Plan] Set default expected delivery date: ${today}`);
+        }
+
         // Generate Bill Number
         const billNo = await this.repository.getNextBillNumber();
         logger.info(`[Basic Plan] Generated Bill No: ${billNo}`);
@@ -328,23 +336,30 @@ export class OrdersService {
         // This ensures the next step (acceptOrder) moves it to 'Accepted' (Factory Accepted)
         await this.repository.update(order.orderId, { status: 'Verified' });
 
-        // Step 2: Call standard acceptance logic (Clears payment, generates notifications, checks BOM)
+        // Step 2: Call standard acceptance logic (Clears payment, generates notifications, checks stocks)
+        // Note: adminService.acceptOrder will set status to 'Accepted' and update order.stockStatus
         await adminService.acceptOrder(order.orderId, {
           billNo,
           adminRemarks: 'Auto-approved (Basic Plan)',
         });
 
-        // Step 3: Move to 'Scheduled for Production' (Factory Accepted)
-        // [MODIFIED] Disable auto-scheduling for Basic Plan to mimic Pro flow
-        // The order will remain in 'Accepted' status and appear in "Accept Order at Factory"
-        /*
+        // Step 3: Refresh order to get the calculated stockStatus
+        const refreshedOrder = await this.repository.findById(order.orderId);
+        const currentStockStatus = refreshedOrder?.stockStatus;
+        logger.info(`[Basic Plan] Order #${order.orderNumber} stock status: ${currentStockStatus}`);
+
+        // Step 4: Advance status based on stock availability
+        let finalStatus = 'Scheduled for Production'; // Default for out of stock
+        if (currentStockStatus === 'Stock Ready') {
+          finalStatus = 'Ready for Dispatch';
+        }
+
         await this.repository.update(order.orderId, {
-          status: 'Scheduled for Production',
-          factoryAccepted: true // Flag used for PM tracking in DTO
+          status: finalStatus,
+          factoryAccepted: true // Flag used for PM tracking
         });
 
-        logger.info(`[Basic Plan] Order #${order.orderNumber} auto-scheduled (PM Dashboard visible)`);
-        */
+        logger.info(`[Basic Plan] Order #${order.orderNumber} advanced to ${finalStatus}`);
 
         // Refresh order object to return updated status
         const updatedOrder = await this.repository.findById(order.orderId);
