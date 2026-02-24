@@ -192,7 +192,7 @@ export const productionManagerApi = {
     const response = await apiClient.post<{ success: boolean; data: any }>(
       `/production-manager/orders/${orderId}/send-to-dispatch`,
       {},
-      { successMessage: 'Order sent to dispatch successfully!' }
+      { successMessage: 'Order sent to Accept successfully!' }
     );
     return response.data.data;
   },

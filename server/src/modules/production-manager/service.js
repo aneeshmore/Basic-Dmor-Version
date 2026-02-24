@@ -625,7 +625,7 @@ export class ProductionManagerService {
       updatedAt: new Date(),
     });
 
-    logger.info('Order sent to dispatch successfully', { orderId });
+    logger.info('Order sent to Accept successfully', { orderId });
 
     return { success: true, orderId, status: 'Ready for Dispatch' };
   }
