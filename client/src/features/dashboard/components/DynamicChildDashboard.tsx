@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  AlertCircle,
-  LucideIcon,
-  LayoutDashboard,
-  Crown,
-  Lock,
-} from 'lucide-react';
+import { AlertCircle, LucideIcon, LayoutDashboard, Crown, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { routeRegistry, findRouteByPath, RouteNode } from '@/config/routeRegistry';
@@ -327,7 +321,7 @@ export const DynamicChildDashboard: React.FC<DynamicChildDashboardProps> = ({
           const bgClass = meta.iconBg || DEFAULT_META.iconBg;
           const colorClass = meta.iconColor || DEFAULT_META.iconColor;
           const desc = meta.description || DEFAULT_META.description;
-          // const isRestricted = basicUser && route.proOnly; 
+          // const isRestricted = basicUser && route.proOnly;
           // We are now hiding them, so isRestricted logic is irrelevant for rendering
 
           const isProLocked = route.proOnly && basicUser;
@@ -335,8 +329,9 @@ export const DynamicChildDashboard: React.FC<DynamicChildDashboardProps> = ({
           return (
             <div
               key={route.id}
-              className={`card p-6 group relative hover-lift cursor-pointer ${isProLocked ? 'opacity-60 grayscale cursor-not-allowed hover:transform-none' : ''
-                }`}
+              className={`card p-6 group relative hover-lift cursor-pointer ${
+                isProLocked ? 'opacity-60 grayscale cursor-not-allowed hover:transform-none' : ''
+              }`}
               onClick={() => !isProLocked && navigate(route.path)}
             >
               {isProLocked && (
