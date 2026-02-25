@@ -17,6 +17,9 @@ export class MastersController {
     this.service.seedDefaultCustomerTypes().catch(err =>
       logger.error('Failed to seed customer types on startup', { error: err.message })
     );
+    this.service.seedDefaultUnits().catch(err =>
+      logger.error('Failed to seed default units on startup', { error: err.message })
+    );
   }
 
   // Department endpoints

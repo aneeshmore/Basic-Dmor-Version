@@ -148,6 +148,10 @@ export class MastersService {
       throw new NotFoundError('Unit not found');
     }
 
+    if (existing.isSystemUnit) {
+      throw new ConflictError(`Cannot update default unit: ${existing.unitName}`);
+    }
+
     // Check if another unit with same name already exists (case-insensitive)
     const duplicateUnit = await this.repository.findUnitByName(updateData.UnitName, unitId);
     if (duplicateUnit) {
@@ -167,8 +171,44 @@ export class MastersService {
       throw new NotFoundError('Unit not found');
     }
 
+    if (existing.isSystemUnit) {
+      throw new ConflictError(`Cannot delete default unit: ${existing.unitName}`);
+    }
+
     await this.repository.deleteUnit(unitId);
     logger.info('Unit deleted', { id: unitId });
+  }
+
+  async seedDefaultUnits() {
+    const defaultUnits = ['Kg', 'ltr', 'No'];
+    let seededCount = 0;
+
+    for (const unitName of defaultUnits) {
+      try {
+        const existing = await this.repository.findUnitByName(unitName);
+        if (existing) {
+          if (!existing.isSystemUnit) {
+            await this.repository.updateUnit(existing.unitId, {
+              isSystemUnit: true,
+            });
+            seededCount++;
+          }
+        } else {
+          await this.repository.createUnit({
+            unitName: unitName,
+            isSystemUnit: true,
+          });
+          seededCount++;
+        }
+      } catch (error) {
+        logger.error(`Failed to seed default unit: ${unitName}`, { error: error.message });
+      }
+    }
+
+    if (seededCount > 0) {
+      logger.info(`Seeded ${seededCount} default units`);
+    }
+    return seededCount;
   }
 
   // Customer Type methods

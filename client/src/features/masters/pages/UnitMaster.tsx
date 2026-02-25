@@ -139,15 +139,8 @@ export default function UnitMaster() {
   const [isAddConfirmModalOpen, setIsAddConfirmModalOpen] = useState(false);
   const [pendingItem, setPendingItem] = useState<Unit | null>(null);
 
-  // Default units that should always be present
-  const DEFAULT_UNITS = [
-    { UnitID: -1, UnitName: 'KG' },
-    { UnitID: -2, UnitName: 'NO' },
-    { UnitID: -3, UnitName: 'LTR' },
-  ];
-
   const isDefaultUnit = (unit: Unit): boolean => {
-    return unit.UnitID === -1 || unit.UnitID === -2 || unit.UnitID === -3;
+    return !!unit?.IsSystemUnit;
   };
 
   useEffect(() => {
@@ -159,10 +152,7 @@ export default function UnitMaster() {
       setLoading(true);
       const response = await unitApi.getAll();
       if (response.success && response.data) {
-        // Merge default units with fetched units, avoiding duplicates
-        const fetchedUnitNames = new Set(response.data.map(u => u.UnitName));
-        const defaultUnitsToAdd = DEFAULT_UNITS.filter(du => !fetchedUnitNames.has(du.UnitName));
-        setUnits([...defaultUnitsToAdd, ...response.data]);
+        setUnits(response.data);
       }
     } catch (error) {
       logger.error('Failed to load units:', error);
@@ -341,9 +331,9 @@ export default function UnitMaster() {
                   editingUnit
                     ? initiateUpdate
                     : item => {
-                        setPendingItem(item);
-                        setIsAddConfirmModalOpen(true);
-                      }
+                      setPendingItem(item);
+                      setIsAddConfirmModalOpen(true);
+                    }
                 }
                 onCancel={() => {
                   setEditingUnit(null);

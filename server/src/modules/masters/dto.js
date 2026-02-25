@@ -14,6 +14,7 @@ export class UnitDTO {
   constructor(unit) {
     this.UnitID = unit.unitId || unit.unit_id;
     this.UnitName = unit.unitName || unit.unit_name;
+    this.IsSystemUnit = unit.isSystemUnit ?? unit.is_system_unit ?? false;
     this.CreatedAt = unit.createdAt || unit.created_at;
     this.UpdatedAt = unit.updatedAt || unit.updated_at;
   }

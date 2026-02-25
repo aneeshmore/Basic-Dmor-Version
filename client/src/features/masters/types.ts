@@ -23,6 +23,7 @@ export interface Designation {
 export interface Unit {
   UnitID: number;
   UnitName: string;
+  IsSystemUnit?: boolean;
   UnitSymbol?: string;
   CreatedAt?: string;
   UpdatedAt?: string;
