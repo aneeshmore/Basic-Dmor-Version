@@ -6,6 +6,7 @@ import { Save, Search, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-rea
 import { updateProductApi } from '../api';
 import UpdateConfirmationModal from './UpdateConfirmationModal';
 import EditableName from './EditableName';
+import { useTableNavigation } from './useTableNavigation';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
@@ -26,6 +27,8 @@ const RawMaterialTable = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+
+  const { handleKeyDown } = useTableNavigation();
 
   const handleInputChange = (id: number, field: string, value: any) => {
     setEdits(prev => ({
@@ -216,7 +219,7 @@ const RawMaterialTable = () => {
                       : 'hover:bg-[var(--surface-hover)]'
                   }`}
                 >
-                  <td className="px-4 py-3 text-[var(--text-primary)]">
+                  <td data-col-index="0" className="px-4 py-3 text-[var(--text-primary)]">
                     <div className="flex items-center gap-2">
                       <EditableName
                         value={product.masterProductName}
@@ -239,7 +242,7 @@ const RawMaterialTable = () => {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td data-col-index="1" className="px-4 py-3">
                     <input
                       type="number"
                       className="w-full bg-[var(--background)] border border-[var(--border)] rounded px-2 py-1 focus:ring-1 focus:ring-[var(--primary)] outline-none"
@@ -247,9 +250,10 @@ const RawMaterialTable = () => {
                       onChange={e =>
                         handleInputChange(product.masterProductId, 'purchaseCost', e.target.value)
                       }
+                      onKeyDown={handleKeyDown}
                     />
                   </td>
-                  <td className="px-4 py-3">
+                  <td data-col-index="2" className="px-4 py-3">
                     <input
                       type="number"
                       className="w-full bg-[var(--background)] border border-[var(--border)] rounded px-2 py-1 focus:ring-1 focus:ring-[var(--primary)] outline-none"
@@ -257,9 +261,10 @@ const RawMaterialTable = () => {
                       onChange={e =>
                         handleInputChange(product.masterProductId, 'density', e.target.value)
                       }
+                      onKeyDown={handleKeyDown}
                     />
                   </td>
-                  <td className="px-4 py-3">
+                  <td data-col-index="3" className="px-4 py-3">
                     <input
                       type="number"
                       className="w-full bg-[var(--background)] border border-[var(--border)] rounded px-2 py-1 focus:ring-1 focus:ring-[var(--primary)] outline-none"
@@ -267,9 +272,10 @@ const RawMaterialTable = () => {
                       onChange={e =>
                         handleInputChange(product.masterProductId, 'solids', e.target.value)
                       }
+                      onKeyDown={handleKeyDown}
                     />
                   </td>
-                  <td className="px-4 py-3">
+                  <td data-col-index="4" className="px-4 py-3">
                     <input
                       type="number"
                       className="w-full bg-[var(--background)] border border-[var(--border)] rounded px-2 py-1 focus:ring-1 focus:ring-[var(--primary)] outline-none"
@@ -277,6 +283,7 @@ const RawMaterialTable = () => {
                       onChange={e =>
                         handleInputChange(product.masterProductId, 'minStockLevel', e.target.value)
                       }
+                      onKeyDown={handleKeyDown}
                     />
                   </td>
                 </tr>

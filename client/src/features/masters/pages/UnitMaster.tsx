@@ -139,8 +139,17 @@ export default function UnitMaster() {
   const [isAddConfirmModalOpen, setIsAddConfirmModalOpen] = useState(false);
   const [pendingItem, setPendingItem] = useState<Unit | null>(null);
 
+  // Default units that should always be present
+  const DEFAULT_UNITS = [
+    { UnitID: -1, UnitName: 'KG' },
+    { UnitID: -2, UnitName: 'NO' },
+    { UnitID: -3, UnitName: 'LTR' },
+  ];
+
+  const DEFAULT_UNIT_NAMES = ['KG', 'NO', 'LTR'];
+
   const isDefaultUnit = (unit: Unit): boolean => {
-    return !!unit?.IsSystemUnit;
+    return DEFAULT_UNIT_NAMES.includes(unit.UnitName.toUpperCase());
   };
 
   useEffect(() => {
@@ -152,7 +161,12 @@ export default function UnitMaster() {
       setLoading(true);
       const response = await unitApi.getAll();
       if (response.success && response.data) {
-        setUnits(response.data);
+        // Merge default units with fetched units, avoiding duplicates
+        const fetchedUnitNames = new Set(response.data.map(u => u.UnitName.toUpperCase()));
+        const defaultUnitsToAdd = DEFAULT_UNITS.filter(
+          du => !fetchedUnitNames.has(du.UnitName.toUpperCase())
+        );
+        setUnits([...defaultUnitsToAdd, ...response.data]);
       }
     } catch (error) {
       logger.error('Failed to load units:', error);
@@ -240,6 +254,13 @@ export default function UnitMaster() {
   };
 
   const handleDelete = async (id: number) => {
+    const unit = units.find(u => u.UnitID === id);
+
+    if (unit && isDefaultUnit(unit)) {
+      showToast.error('Default units (KG, NO, LTR) cannot be deleted');
+      return;
+    }
+
     const confirmed = window.confirm(
       'Are you sure you want to delete this unit? This action cannot be undone.'
     );

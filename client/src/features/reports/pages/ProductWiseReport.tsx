@@ -5,6 +5,7 @@ import { showToast } from '@/utils/toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { addPdfFooter, addPdfHeader } from '@/utils/pdfUtils';
+import { formatDate } from '@/utils/dateUtils';
 import { ColumnDef, SortingState } from '@tanstack/react-table';
 import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table';
 import { Button, Input, SearchableSelect } from '@/components/ui';
@@ -316,7 +317,7 @@ const ProductWiseReport = () => {
           return (
             <div className="text-center text-xs text-gray-500">
               {date
-                ? date.toLocaleDateString() +
+                ? formatDate(date) +
                   ' ' +
                   date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 : '-'}

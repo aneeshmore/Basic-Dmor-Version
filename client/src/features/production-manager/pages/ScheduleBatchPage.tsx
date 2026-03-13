@@ -1772,7 +1772,7 @@ export default function ScheduleBatchPage() {
       // Prod Table (Right side)
       autoTable(doc, {
         startY: 75,
-        head: [['Shade', 'QTY', 'LTR', 'KG']],
+        head: [['Packing', 'QTY', 'LTR', 'KG']],
         body: paddedProdData,
         theme: 'grid',
         styles: { fontSize: 8, cellPadding: 1, lineColor: [0, 0, 0], lineWidth: 0.1 },
@@ -2676,12 +2676,12 @@ export default function ScheduleBatchPage() {
                           <td className="px-4 py-3 text-sm">
                             {batch.startedAt || batch.createdAt
                               ? new Date(
-                                batch.startedAt || batch.createdAt || ''
-                              ).toLocaleDateString('en-IN', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                              })
+                                  batch.startedAt || batch.createdAt || ''
+                                ).toLocaleDateString('en-IN', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                })
                               : '-'}
                           </td>
                           <td className="px-4 py-3 min-w-[150px]">{batch.masterProductName}</td>

@@ -900,6 +900,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
       if (editingOrder) {
         result = await updateOrder(editingOrder.orderId, orderPayload);
         showToast.success('Order updated successfully!');
+        if (onSuccess) onSuccess();
       } else {
         result = await createOrder(orderPayload);
         setLastCreatedOrder(result);
@@ -1957,10 +1958,11 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
           {(() => {
             const orderItemsContent = (
               <div
-                className={`bg-[var(--surface)] p-6 rounded-lg flex flex-col transition-all duration-300 ${isOrderItemsFullScreen
-                  ? 'fixed inset-0 rounded-none overflow-auto'
-                  : 'lg:col-span-2'
-                  }`}
+                className={`bg-[var(--surface)] p-6 rounded-lg flex flex-col transition-all duration-300 ${
+                  isOrderItemsFullScreen
+                    ? 'fixed inset-0 rounded-none overflow-auto'
+                    : 'lg:col-span-2'
+                }`}
                 style={isOrderItemsFullScreen ? { zIndex: 999999, isolation: 'isolate' } : {}}
               >
                 {/* Header with Expand Button */}
@@ -2006,10 +2008,11 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                       <div
                         key={index}
                         data-item-card
-                        className={`border rounded-lg p-4 transition-all ${isComplete
-                          ? 'border-[var(--success)]/50 bg-[var(--success)]/5'
-                          : 'border-[var(--border)] bg-[var(--surface-secondary)]'
-                          } hover:border-[var(--primary)] hover:shadow-md`}
+                        className={`border rounded-lg p-4 transition-all ${
+                          isComplete
+                            ? 'border-[var(--success)]/50 bg-[var(--success)]/5'
+                            : 'border-[var(--border)] bg-[var(--surface-secondary)]'
+                        } hover:border-[var(--primary)] hover:shadow-md`}
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-2">
@@ -2116,10 +2119,11 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                                 Line Total
                               </label>
                               <div
-                                className={`px-3 py-2 border rounded-lg font-semibold ${isComplete
-                                  ? 'border-[var(--success)] bg-[var(--success)]/10 text-[var(--success)]'
-                                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]'
-                                  }`}
+                                className={`px-3 py-2 border rounded-lg font-semibold ${
+                                  isComplete
+                                    ? 'border-[var(--success)] bg-[var(--success)]/10 text-[var(--success)]'
+                                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)]'
+                                }`}
                               >
                                 ₹{calculateLineTotal(item).toFixed(2)}
                               </div>
@@ -2384,12 +2388,13 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                 <span className="text-[var(--text-secondary)]">Status:</span>
                 <Badge
                   variant={previewQuotation.status === 'Rejected' ? 'destructive' : 'secondary'}
-                  className={`ml-2 ${previewQuotation.status === 'Approved'
-                    ? 'bg-green-100 text-green-800'
-                    : previewQuotation.status === 'Pending'
-                      ? 'bg-orange-100 text-orange-800'
-                      : ''
-                    }`}
+                  className={`ml-2 ${
+                    previewQuotation.status === 'Approved'
+                      ? 'bg-green-100 text-green-800'
+                      : previewQuotation.status === 'Pending'
+                        ? 'bg-orange-100 text-orange-800'
+                        : ''
+                  }`}
                 >
                   {previewQuotation.status}
                 </Badge>

@@ -179,25 +179,27 @@ export class ReportsService {
 
         // Process Materials (Raw Materials)
         const batchMaterialsData = materialsByBatchMap.get(batch.batchId) || [];
-        const rawMaterials = batchMaterialsData.map(bm => {
-          const isWater = (bm.materialName || '').toLowerCase().includes('water');
-          const hasPercentage = bm.percentage != null && parseFloat(bm.percentage) > 0;
-          const isAdditional = bm.isAdditional || isWater || !hasPercentage;
+        const rawMaterials = batchMaterialsData
+          .map(bm => {
+            const isWater = (bm.materialName || '').toLowerCase().includes('water');
+            const hasPercentage = bm.percentage != null && parseFloat(bm.percentage) > 0;
+            const isAdditional = bm.isAdditional || isWater || !hasPercentage;
 
-          return {
-            bomId: bm.batchMaterialId,
-            rawMaterialId: bm.materialId,
-            rawMaterialName: bm.materialName || 'Unknown',
-            productType: bm.productType,
-            percentage: bm.percentage || 0,
-            actualQty: bm.requiredQuantity,
-            unitPrice: latestPriceMap.get(bm.materialId) || null,
-            isAdditional,
-          };
-        }).sort((a, b) => {
-          if (a.isAdditional !== b.isAdditional) return a.isAdditional ? 1 : -1;
-          return 0;
-        });
+            return {
+              bomId: bm.batchMaterialId,
+              rawMaterialId: bm.materialId,
+              rawMaterialName: bm.materialName || 'Unknown',
+              productType: bm.productType,
+              percentage: bm.percentage || 0,
+              actualQty: bm.requiredQuantity,
+              unitPrice: latestPriceMap.get(bm.materialId) || null,
+              isAdditional,
+            };
+          })
+          .sort((a, b) => {
+            if (a.isAdditional !== b.isAdditional) return a.isAdditional ? 1 : -1;
+            return 0;
+          });
 
         // Calculate Packaging Materials based on Batch Products
         const packagingMap = new Map();
@@ -225,7 +227,8 @@ export class ReportsService {
           masterProductId: batch.masterProductId,
           productName: batch.masterProduct?.masterProductName || 'Unknown Product',
           productType: batch.masterProduct?.productType,
-          batchType: batch.batchType ||
+          batchType:
+            batch.batchType ||
             (batch.batchProducts?.some(sp => sp.orderId) ? 'MAKE_TO_ORDER' : 'MAKE_TO_STOCK'),
           scheduledDate: batch.scheduledDate,
           status: batch.status,
@@ -252,17 +255,29 @@ export class ReportsService {
           labourNames: batch.labourNames,
           qualityStatus: batch.qualityStatus,
           subProducts: (batch.batchProducts || []).map((sp, _, arr) => {
-            const capacity = sp.product?.packaging?.pmDetails?.capacity || sp.product?.packageCapacityKg || 0;
-            let actualQty = sp.producedUnits ?? (batch.status === 'Completed' ? (parseInt(sp.plannedUnits || 0) || '-') : '-');
+            const capacity =
+              sp.product?.packaging?.pmDetails?.capacity || sp.product?.packageCapacityKg || 0;
+            let actualQty =
+              sp.producedUnits ??
+              (batch.status === 'Completed' ? parseInt(sp.plannedUnits || 0) || '-' : '-');
 
             // Legacy MTS fallback for single-SKU
-            if (actualQty === '-' && batch.status === 'Completed' && arr.length === 1 && parseFloat(batch.actualQuantity) > 0 && parseFloat(capacity) > 0) {
+            if (
+              actualQty === '-' &&
+              batch.status === 'Completed' &&
+              arr.length === 1 &&
+              parseFloat(batch.actualQuantity) > 0 &&
+              parseFloat(capacity) > 0
+            ) {
               actualQty = Math.round(parseFloat(batch.actualQuantity) / parseFloat(capacity));
             }
 
             return {
               subProductId: sp.batchProductId,
-              productName: sp.product?.productName || sp.product?.masterProduct?.masterProductName || 'Unknown',
+              productName:
+                sp.product?.productName ||
+                sp.product?.masterProduct?.masterProductName ||
+                'Unknown',
               batchQty: sp.plannedUnits || 0,
               actualQty,
               capacity: capacity || null,
@@ -774,7 +789,7 @@ export class ReportsService {
             sellingPrice: masterProductRM.purchaseCost, // Show purchase cost for RM
             packageCapacityKg: sql`0`,
             isActive: masterProducts.isActive,
-            updatedAt: masterProducts.updatedAt,
+            updatedAt: sql`(SELECT MAX(${inventoryTransactions.createdAt}) FROM ${inventoryTransactions} WHERE ${inventoryTransactions.masterProductId} = ${masterProducts.masterProductId})`,
             totalInward: sql`COALESCE(SUM(CASE WHEN ${inventoryTransactions.quantity} > 0 AND ${inventoryTransactions.createdAt} >= ${start.toISOString()} AND ${inventoryTransactions.createdAt} <= ${end.toISOString()} THEN ${inventoryTransactions.quantity} ELSE 0 END), 0)`,
             totalOutward: sql`COALESCE(SUM(CASE WHEN ${inventoryTransactions.quantity} < 0 AND ${inventoryTransactions.createdAt} >= ${start.toISOString()} AND ${inventoryTransactions.createdAt} <= ${end.toISOString()} THEN ABS(${inventoryTransactions.quantity}) ELSE 0 END), 0)`,
           })
@@ -794,7 +809,6 @@ export class ReportsService {
             masterProducts.productType,
             masterProducts.minStockLevel,
             masterProducts.isActive,
-            masterProducts.updatedAt,
             masterProductRM.availableQty,
             masterProductRM.purchaseCost,
             masterProductRM.rmDensity
@@ -824,7 +838,7 @@ export class ReportsService {
             sellingPrice: masterProductPM.purchaseCost, // Show purchase cost for PM
             packageCapacityKg: masterProductPM.capacity,
             isActive: masterProducts.isActive,
-            updatedAt: masterProducts.updatedAt,
+            updatedAt: sql`(SELECT MAX(${inventoryTransactions.createdAt}) FROM ${inventoryTransactions} WHERE ${inventoryTransactions.masterProductId} = ${masterProducts.masterProductId})`,
             totalInward: sql`COALESCE(SUM(CASE WHEN ${inventoryTransactions.quantity} > 0 AND ${inventoryTransactions.createdAt} >= ${start.toISOString()} AND ${inventoryTransactions.createdAt} <= ${end.toISOString()} THEN ${inventoryTransactions.quantity} ELSE 0 END), 0)`,
             totalOutward: sql`COALESCE(SUM(CASE WHEN ${inventoryTransactions.quantity} < 0 AND ${inventoryTransactions.createdAt} >= ${start.toISOString()} AND ${inventoryTransactions.createdAt} <= ${end.toISOString()} THEN ABS(${inventoryTransactions.quantity}) ELSE 0 END), 0)`,
           })
@@ -844,7 +858,6 @@ export class ReportsService {
             masterProducts.productType,
             masterProducts.minStockLevel,
             masterProducts.isActive,
-            masterProducts.updatedAt,
             masterProductPM.availableQty,
             masterProductPM.purchaseCost,
             masterProductPM.capacity
@@ -1369,13 +1382,13 @@ export class ReportsService {
       return {
         product: product
           ? {
-            ...product,
-            masterProductName: product.masterProduct?.masterProductName,
-            productType: product.masterProduct?.productType,
-            fgDetails: product.masterProduct?.fgDetails,
-            rmDetails: product.masterProduct?.rmDetails,
-            pmDetails: product.masterProduct?.pmDetails,
-          }
+              ...product,
+              masterProductName: product.masterProduct?.masterProductName,
+              productType: product.masterProduct?.productType,
+              fgDetails: product.masterProduct?.fgDetails,
+              rmDetails: product.masterProduct?.rmDetails,
+              pmDetails: product.masterProduct?.pmDetails,
+            }
           : null,
         transactions: processedTransactions,
         bom: bom.map(b => ({

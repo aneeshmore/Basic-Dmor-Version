@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { FileDown } from 'lucide-react';
+import { formatDateIST } from '@/utils/formatters';
 import { productionManagerApi } from '../api/productionManagerApi';
 import { showToast } from '@/utils/toast';
 import { Button, Modal } from '@/components/ui';
@@ -379,7 +380,7 @@ export default function BatchReportModal({
               <div>
                 <p>
                   <span className="font-semibold">Date:</span>{' '}
-                  {new Date(batchData.scheduledDate).toLocaleDateString()}
+                  {formatDateIST(batchData.scheduledDate)}
                 </p>
                 {reportType === 'batch-chart' ? (
                   <>
@@ -392,6 +393,11 @@ export default function BatchReportModal({
                     <p>
                       <span className="font-semibold">Mill Based Viscosity:</span>{' '}
                     </p>
+                    <p>
+                      <span className="font-semibold">Standard Viscosity :</span>{' '}
+                      {batchData.viscosity ? Number(batchData.viscosity).toFixed(0) : '-'}
+                    </p>
+
                     <div className="flex items-center gap-2 py-1 whitespace-nowrap">
                       <span className="font-semibold">Hegman gauge:</span>
                       <div className="flex gap-1.5">
