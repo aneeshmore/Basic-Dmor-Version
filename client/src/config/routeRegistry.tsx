@@ -619,7 +619,7 @@ export const routeRegistry: RouteNode[] = [
       {
         id: 'accepted-orders',
         path: '/operations/accept-orders',
-        label: 'Accept Order at Factory',
+        label: 'Accept Orders by Production Department',
         icon: Factory,
         component: AcceptedOrdersPage,
         permission: { module: 'accepted-orders' },
@@ -643,7 +643,7 @@ export const routeRegistry: RouteNode[] = [
           },
           { route: '/production-manager/auto-schedule', method: 'POST', label: 'Auto Schedule' },
         ],
-        // proOnly: true, // Unlocked for Basic
+        proOnly: true,
       },
       {
         id: 'pm-dashboard',
