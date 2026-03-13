@@ -351,7 +351,6 @@ export class OrdersService {
         if (updatedOrder) {
           Object.assign(order, updatedOrder);
         }
-
       } catch (autoErr) {
         logger.error(`[Basic Plan] Failed to auto-approve order #${order.orderNumber}`, autoErr);
       }
@@ -368,7 +367,7 @@ export class OrdersService {
 
     // Check status - only allow editing if Pending or Rejected
     // "Accepted" orders are locked for general edits (but PM can update delivery date via specific endpoints)
-    const allowedStatuses = ['Pending', 'Rejected'];
+    const allowedStatuses = ['Pending', 'Rejected', 'Cancelled'];
     if (!allowedStatuses.includes(existing.status)) {
       throw new AppError(
         `Cannot edit order in '${existing.status}' status. Only Pending or Rejected orders can be edited.`,

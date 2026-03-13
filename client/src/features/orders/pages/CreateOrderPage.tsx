@@ -55,9 +55,47 @@ const CreateOrderPage: React.FC = () => {
     fetchOrders();
   }, [fetchOrders]);
 
-  const handleSuccess = () => {
-    fetchOrders();
+  const handleSuccess = async () => {
+    const editedOrderId = editingOrder?.orderId;
+
+    // Optimistic refresh with micro-delay for DB consistency
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    await fetchOrders();
+
+    // Force optimistic update for the specific edited row
+    if (editedOrderId) {
+      setOrders(prevOrders => {
+        const updatedIndex = prevOrders.findIndex(o => o.orderId === editedOrderId);
+        if (updatedIndex !== -1 && editingOrder) {
+          // Merge updated fields from editingOrder into table row
+          const updatedRow = {
+            ...prevOrders[updatedIndex],
+            companyName: editingOrder.companyName || prevOrders[updatedIndex].companyName,
+            salespersonName:
+              editingOrder.salespersonName || prevOrders[updatedIndex].salespersonName,
+            totalAmount: editingOrder.totalAmount || prevOrders[updatedIndex].totalAmount,
+            deliveryAddress:
+              editingOrder.deliveryAddress || prevOrders[updatedIndex].deliveryAddress,
+            priority: editingOrder.priority || prevOrders[updatedIndex].priority,
+            remarks: editingOrder.remarks || prevOrders[updatedIndex].remarks,
+            // Refresh productNames if available in summary
+            productNames: editingOrder.productNames || prevOrders[updatedIndex].productNames,
+          };
+
+          const newOrders = [...prevOrders];
+          newOrders[updatedIndex] = updatedRow;
+          return newOrders;
+        }
+        return prevOrders;
+      });
+    }
+
+    // Dispatch refresh event for any child components
+    window.dispatchEvent(new CustomEvent('orders-refreshed'));
+
     setEditingOrder(null);
+    showToast.success('Order updated and table refreshed!');
   };
 
   const handleEditOrder = useCallback(async (order: Order) => {
@@ -84,14 +122,23 @@ const CreateOrderPage: React.FC = () => {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Order No" />,
       enableColumnFilter: true,
       cell: ({ row }) => {
-        const index = orders.findIndex(o => o.orderId === row.original.orderId);
-        const seq = orders.length - index;
+        // Stable sequencing based on orderDate + orderId (not array index)
+        const rowOrder = row.original;
+        const dateTime = rowOrder.orderDate ? new Date(rowOrder.orderDate).getTime() : 0;
+        const stableSeq = Math.floor(dateTime / 86400000) * 10000 + rowOrder.orderId; // Day-based + ID
+        const minSeq = Math.min(
+          ...orders.map(o => {
+            const dt = new Date(o.orderDate || 0).getTime();
+            return Math.floor(dt / 86400000) * 10000 + o.orderId;
+          })
+        );
+        const displaySeq = Math.floor(orders.length - 1 + (stableSeq - minSeq) / 10000);
         const displayId =
           row.original.orderNumber ||
           formatDisplayOrderId(row.original.orderId, row.original.orderDate);
         return (
           <div className="flex flex-col">
-            <span className="font-mono font-medium text-[var(--primary)]">ODR-{seq}</span>
+            <span className="font-mono font-medium text-[var(--primary)]">ODR-{displaySeq}</span>
             <span className="text-xs text-[var(--text-secondary)]">{displayId}</span>
           </div>
         );
@@ -233,7 +280,12 @@ const CreateOrderPage: React.FC = () => {
               <Eye size={14} className="mr-1.5" />
               View
             </Button>
-            {(order.status === 'Accepted' || order.status === 'Confirmed' || order.status === 'Delivered' || order.status === 'Dispatched' || order.status === 'Verified' || order.status === 'Ready for Dispatch') && (
+            {(order.status === 'Accepted' ||
+              order.status === 'Confirmed' ||
+              order.status === 'Delivered' ||
+              order.status === 'Dispatched' ||
+              order.status === 'Verified' ||
+              order.status === 'Ready for Dispatch') && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -293,7 +345,11 @@ const CreateOrderPage: React.FC = () => {
 
       // Map Order to QuotationData structure for the Invoice generator
       const invoiceData: QuotationData = {
-        quotationNo: fullOrder.billNo || order.billNo || order.orderNumber || formatDisplayOrderId(order.orderId, order.orderDate),
+        quotationNo:
+          fullOrder.billNo ||
+          order.billNo ||
+          order.orderNumber ||
+          formatDisplayOrderId(order.orderId, order.orderDate),
         date: format(new Date(order.orderDate), 'dd-MMM-yy'),
         paymentTerms: fullOrder.paymentMethod || 'Bank Transfer',
         buyerRef: `ORD-${order.orderId}`,
@@ -323,7 +379,7 @@ const CreateOrderPage: React.FC = () => {
           id: index + 1,
           description: item.productName || `Product ID: ${item.productId}`,
           // Note: In CreateOrderForm, productNames are fetched. Here we might need to rely on what's available or fetch product names.
-          // However, fullOrder.orderDetails usually contains basic info. 
+          // However, fullOrder.orderDetails usually contains basic info.
           // Let's try to use what we have.
           hsn: '',
           dueOn: '',
@@ -332,10 +388,10 @@ const CreateOrderPage: React.FC = () => {
           per: 'no.',
           discount: item.discount || 0,
           cgstRate: 9,
-          sgstRate: 9
+          sgstRate: 9,
         })),
 
-        status: 'Generated'
+        status: 'Generated',
       };
 
       // We might want to fetch product names properly if they are just IDs.
@@ -355,13 +411,19 @@ const CreateOrderPage: React.FC = () => {
         {/* Header with Mode Toggle */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <PageHeader
-            title={editingOrder ? 'Edit Order' : (viewMode === 'orders' ? 'Create New Order' : 'Create Quotation')}
+            title={
+              editingOrder
+                ? 'Edit Order'
+                : viewMode === 'orders'
+                  ? 'Create New Order'
+                  : 'Create Quotation'
+            }
             description={
               editingOrder
                 ? `Editing Order ${editingOrder.orderNumber || formatDisplayOrderId(editingOrder.orderId, editingOrder.orderDate)}`
-                : (viewMode === 'orders'
+                : viewMode === 'orders'
                   ? 'Fill in the order details and confirm to create a new order'
-                  : 'Create quotations for customer approval before placing orders')
+                  : 'Create quotations for customer approval before placing orders'
             }
           />
 
@@ -454,10 +516,10 @@ const CreateOrderPage: React.FC = () => {
                           : selectedOrder.status === 'Ready for Dispatch'
                             ? 'bg-blue-100 text-blue-800 border-blue-200'
                             : selectedOrder.status === 'In Production' ||
-                              selectedOrder.status === 'Scheduled for Production'
+                                selectedOrder.status === 'Scheduled for Production'
                               ? 'bg-purple-100 text-purple-800 border-purple-200'
                               : selectedOrder.status === 'Confirmed' ||
-                                selectedOrder.status === 'Accepted'
+                                  selectedOrder.status === 'Accepted'
                                 ? 'bg-teal-100 text-teal-800 border-teal-200'
                                 : selectedOrder.status === 'Pending'
                                   ? 'bg-orange-100 text-orange-800 border-orange-200'
@@ -485,9 +547,7 @@ const CreateOrderPage: React.FC = () => {
                   </div>
                   <div className="col-span-2">
                     <span className="text-[var(--text-secondary)]">Delivery Address:</span>
-                    <span className="ml-2 font-medium">
-                      {selectedOrder.deliveryAddress || '-'}
-                    </span>
+                    <span className="ml-2 font-medium">{selectedOrder.deliveryAddress || '-'}</span>
                   </div>
                 </div>
               </div>
@@ -514,7 +574,9 @@ const CreateOrderPage: React.FC = () => {
                         return (
                           <tr key={item.orderDetailId} className="border-t border-[var(--border)]">
                             <td className="p-3">{idx + 1}</td>
-                            <td className="p-3 font-medium">{item.productName || `Product ID: ${item.productId}`}</td>
+                            <td className="p-3 font-medium">
+                              {item.productName || `Product ID: ${item.productId}`}
+                            </td>
                             <td className="p-3 text-right">{item.quantity}</td>
                             <td className="p-3 text-right">₹{unitPrice.toFixed(2)}</td>
                             <td className="p-3 text-right">{item.discount || 0}%</td>
