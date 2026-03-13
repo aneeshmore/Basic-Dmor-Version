@@ -146,8 +146,10 @@ export default function UnitMaster() {
     { UnitID: -3, UnitName: 'LTR' },
   ];
 
+  const DEFAULT_UNIT_NAMES = ['KG', 'NO', 'LTR'];
+
   const isDefaultUnit = (unit: Unit): boolean => {
-    return unit.UnitID === -1 || unit.UnitID === -2 || unit.UnitID === -3;
+    return DEFAULT_UNIT_NAMES.includes(unit.UnitName.toUpperCase());
   };
 
   useEffect(() => {
@@ -160,8 +162,10 @@ export default function UnitMaster() {
       const response = await unitApi.getAll();
       if (response.success && response.data) {
         // Merge default units with fetched units, avoiding duplicates
-        const fetchedUnitNames = new Set(response.data.map(u => u.UnitName));
-        const defaultUnitsToAdd = DEFAULT_UNITS.filter(du => !fetchedUnitNames.has(du.UnitName));
+        const fetchedUnitNames = new Set(response.data.map(u => u.UnitName.toUpperCase()));
+        const defaultUnitsToAdd = DEFAULT_UNITS.filter(
+          du => !fetchedUnitNames.has(du.UnitName.toUpperCase())
+        );
         setUnits([...defaultUnitsToAdd, ...response.data]);
       }
     } catch (error) {
@@ -250,6 +254,13 @@ export default function UnitMaster() {
   };
 
   const handleDelete = async (id: number) => {
+    const unit = units.find(u => u.UnitID === id);
+
+    if (unit && isDefaultUnit(unit)) {
+      showToast.error('Default units (KG, NO, LTR) cannot be deleted');
+      return;
+    }
+
     const confirmed = window.confirm(
       'Are you sure you want to delete this unit? This action cannot be undone.'
     );

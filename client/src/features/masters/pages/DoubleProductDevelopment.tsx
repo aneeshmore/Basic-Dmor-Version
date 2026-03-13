@@ -79,6 +79,7 @@ function SortableRow({
 }
 
 const DoubleProductDevelopment = () => {
+  const [viscosity, setViscosity] = useState<string>('');
   const navigate = useNavigate();
   const [masterProducts, setMasterProducts] = useState<MasterProduct[]>([]);
   const [rmMasterProducts, setRmMasterProducts] = useState<MasterProduct[]>([]);
@@ -722,6 +723,7 @@ const DoubleProductDevelopment = () => {
       const baseResponse = await productDevelopmentApi.create({
         masterProductId: selectedMasterProductId,
         density: calculateDensity(baseItems),
+        viscosity: parseFloat(viscosity) || 0,
         hours: calculateProductionCost(baseItems),
         perPercent: 0,
         mixingRatioPart: parseFloat(ratioBase) || 0,
@@ -1141,8 +1143,8 @@ const DoubleProductDevelopment = () => {
                     value={
                       isHardener
                         ? (
-                          100 - calculateListTotalPercentage(baseItemsForCalculation || [])
-                        ).toFixed(3)
+                            100 - calculateListTotalPercentage(baseItemsForCalculation || [])
+                          ).toFixed(3)
                         : calculateListTotalPercentage(items).toFixed(3)
                     }
                     step="0.01"
@@ -1151,10 +1153,11 @@ const DoubleProductDevelopment = () => {
                   />
                 </td>
                 <td
-                  className={`px-4 py-3 font-bold ${calculateTotalPercentage(items).toFixed(3) === '100.000'
+                  className={`px-4 py-3 font-bold ${
+                    calculateTotalPercentage(items).toFixed(3) === '100.000'
                       ? 'text-[var(--success)] bg-green-50'
                       : 'text-[var(--danger)] bg-red-50'
-                    }`}
+                  }`}
                 >
                   {calculateTotalPercentage(items).toFixed(3)}%
                 </td>
@@ -1401,6 +1404,16 @@ const DoubleProductDevelopment = () => {
                 className="w-20 text-center"
               />
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              <Input
+                label="Viscosity"
+                value={viscosity}
+                onChange={e => setViscosity(e.target.value)}
+                placeholder="Viscosity"
+                type="number"
+                step="0.01"
+              />
+            </div>
           </div>
         </div>
 
@@ -1454,7 +1467,7 @@ const DoubleProductDevelopment = () => {
               hardenerItems,
               true,
               masterProducts.find(p => p.masterProductId === linkedHardenerId)?.masterProductName ||
-              '',
+                '',
               true,
               baseItems
             )}

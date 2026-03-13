@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
-import { X, FileDown, Printer } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { FileDown } from 'lucide-react';
+import { formatDateIST } from '@/utils/formatters';
 import { productionManagerApi } from '../api/productionManagerApi';
 import { showToast } from '@/utils/toast';
 import { Button, Modal } from '@/components/ui';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { addPdfFooter } from '@/utils/pdfUtils';
+import { toPng } from 'html-to-image';
 import { companyApi } from '@/features/company/api/companyApi';
 import { CompanyInfo } from '@/features/company/types';
 
@@ -30,6 +30,7 @@ export default function BatchReportModal({
   const [orders, setOrders] = useState<any[]>([]);
   const [relatedSkus, setRelatedSkus] = useState<any[]>([]); // All SKUs for this master product
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+  const reportPreviewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen || !batchId) return;
@@ -184,15 +185,16 @@ export default function BatchReportModal({
       relatedSkus.length > 0
         ? relatedSkus
         : orders.map((o: any) => ({
-          productId: o.product?.productId,
-          productName: o.product?.productName || 'Unknown',
-        }));
+            productId: o.product?.productId,
+            productName: o.product?.productName || 'Unknown',
+          }));
 
     skusToShow.forEach((sku: any) => {
       const order = ordersMapScreen.get(String(sku.productId));
       const capacityLtr = parseFloat(order?.packagingCapacity || '0');
       const fillingDensity =
-        parseFloat(order?.product?.fillingDensity || '0') || parseFloat(batchData?.fgDensity || '0');
+        parseFloat(order?.product?.fillingDensity || '0') ||
+        parseFloat(batchData?.fgDensity || '0');
       const plannedQty = parseFloat(order?.batchProduct?.plannedUnits || '0');
       const actualQty = parseFloat(order?.batchProduct?.producedUnits || '0');
       const effQty = actualQty > 0 ? actualQty : plannedQty;
@@ -204,505 +206,121 @@ export default function BatchReportModal({
     });
   }
 
-  // Export to PDF
-  const handleExportPDF = () => {
-    if (!batchData) return;
+  // Export to PDF (exact visual replica of preview)
+  const handleExportPDF = async () => {
+    if (!batchData || !reportPreviewRef.current) return;
+    const previewEl = reportPreviewRef.current;
+    const styleMutations: Array<{ el: HTMLElement; previous: Record<string, string> }> = [];
+    const touchedElements = new Set<HTMLElement>();
 
-    const doc = new jsPDF();
-    const batch = batchData;
+    const applyTemporaryStyles = (el: HTMLElement, styles: Record<string, string>) => {
+      if (touchedElements.has(el)) return;
+      touchedElements.add(el);
 
-    // Full Page Border
-    doc.setLineWidth(0.5);
-    doc.rect(5, 5, 200, 287);
+      const previous: Record<string, string> = {};
+      Object.keys(styles).forEach(key => {
+        previous[key] = el.style.getPropertyValue(key);
+      });
+      styleMutations.push({ el, previous });
 
-    // Header
-    doc.setFontSize(16);
-    const companyHeaderName = companyInfo?.companyName || 'MOREX TECHNOLOGIES';
-    doc.text(companyHeaderName.toUpperCase(), 105, 15, { align: 'center' });
-    doc.line(14, 18, 196, 18);
+      Object.entries(styles).forEach(([key, value]) => {
+        el.style.setProperty(key, value);
+      });
+    };
 
-    doc.setFontSize(10);
+    try {
+      showToast.loading('Preparing PDF...', 'batch-report-pdf');
 
-    let tablesStartY = 70; // Default start Y for main tables
+      // Download-only styling: remove scroll containers/limits while capturing.
+      applyTemporaryStyles(previewEl, {
+        overflow: 'visible',
+        'overflow-x': 'visible',
+        'overflow-y': 'visible',
+        'max-height': 'none',
+        height: 'auto',
+      });
 
-    if (reportType === 'batch-chart') {
-      // Batch Chart Report
-      doc.text(`Batch No : ${batch.batchNo} / ${batch.masterProductName || ''}`, 14, 25);
-      doc.text(`Date : ${new Date(batch.scheduledDate).toLocaleDateString()}`, 115, 25);
-      doc.text(`Supervisor : Mr. ${batch.supervisorName || 'N/A'}`, 14, 32);
-      doc.text(`Labours : ${batch.labourNames || 'N/A'}`, 14, 38);
-      doc.text(`Actual Density : `, 115, 32);
-      doc.text(`Product Viscosity : `, 115, 38);
-      doc.text(`Mill Based Viscosity : `, 115, 44);
+      previewEl
+        .querySelectorAll<HTMLElement>(
+          '.overflow-auto, .overflow-x-auto, .overflow-y-auto, [style*="overflow"], [style*="max-height"]'
+        )
+        .forEach(el => {
+          applyTemporaryStyles(el, {
+            overflow: 'visible',
+            'overflow-x': 'visible',
+            'overflow-y': 'visible',
+            'max-height': 'none',
+            height: 'auto',
+          });
+        });
 
-      // Hegman gauge: Numbers 1-8 in circles
-      doc.text(`Hegman gauge :`, 115, 50);
-      let circleX = 145;
-      const hbY = 49.5;
-      for (let i = 6; i <= 8; i++) {
-        doc.setLineWidth(0.1);
-        doc.circle(circleX, hbY, 2);
-        doc.setFontSize(6);
-        doc.text(i.toString(), circleX, hbY + 0.5, { align: 'center' });
-        circleX += 6;
+      previewEl.querySelectorAll<HTMLElement>('table').forEach(table => {
+        applyTemporaryStyles(table, {
+          width: '100%',
+          'border-collapse': 'collapse',
+        });
+      });
+
+      const dataUrl = await toPng(previewEl, {
+        quality: 1,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        filter: node => {
+          if (node instanceof HTMLElement && node.classList.contains('no-print')) {
+            return false;
+          }
+          return true;
+        },
+      });
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgProps = pdf.getImageProperties(dataUrl);
+      const imgWidth = pageWidth;
+      const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+      let heightLeft = imgHeight;
+      let yPosition = 0;
+
+      pdf.addImage(dataUrl, 'PNG', 0, yPosition, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        yPosition = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(dataUrl, 'PNG', 0, yPosition, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
       }
-      doc.setFontSize(10);
 
-      doc.text(`Standard Density : ${batch.density ? Number(batch.density).toFixed(3) : '-'}`, 14, 44);
-      doc.text(`Water % : ${batch.waterPercentage || '0.00'}`, 14, 50);
-      doc.text(`Production Qty : ${batch.plannedQuantity}`, 14, 56);
-      tablesStartY = 70;
-    } else {
-      // Completion Chart Report Header Info
-      doc.text(`Batch No : ${batch.batchNo} / ${batch.masterProductName || ''}`, 14, 25, { maxWidth: 85 });
-      doc.text(`Supervisor : Mr. ${batch.supervisorName || 'N/A'}`, 14, 32);
-      doc.text(`Labours : ${batch.labourNames || 'N/A'}`, 14, 38);
-      doc.text(`Date : ${new Date(batch.scheduledDate).toLocaleDateString()}`, 14, 44);
+      const fileName =
+        reportType === 'batch-chart'
+          ? `Batch_${batchData.batchNo}.pdf`
+          : `Completion_${batchData.batchNo}.pdf`;
 
-      const duration = calculateDuration(batch.startedAt, batch.completedAt);
-      doc.text(`Total Time : ${duration}`, 14, 50);
-
-      tablesStartY = 70;
-    }
-
-    // Calculate quality and variance values (Needed for both report types in the new layout)
-    const stdDensity = batch.fgDensity
-      ? parseFloat(batch.fgDensity)
-      : batch.density
-        ? parseFloat(batch.density)
-        : 0;
-    const actDensity = batch.actualDensity ? parseFloat(batch.actualDensity) : 0;
-    const densityVariance = actDensity - stdDensity;
-
-    const stdViscosity = batch.viscosity ? parseFloat(batch.viscosity) : 0;
-    const actViscosity = batch.actualViscosity ? parseFloat(batch.actualViscosity) : 0;
-    const viscosityVariance = actViscosity - stdViscosity;
-
-    // Calculate total weight and variance
-    // Standard = Sum of required quantities of raw materials
-    const stdTotalWeight = rawMaterialsOnly.reduce(
-      (sum: number, m: any) => sum + (m.requiredQuantity || 0),
-      0
-    );
-
-    // Actual = Total LTR * Actual Density
-    // Better way: use the orders array directly as it's available in scope
-    const totalLtrForActWeight = orders.reduce((s: number, o: any) => {
-      const actualQty = parseFloat(o.batchProduct?.producedUnits || '0');
-      const capacityLtr = parseFloat(o.packagingCapacity || '0');
-      return s + actualQty * capacityLtr;
-    }, 0);
-
-    const actTotalWeight = totalLtrForActWeight * actDensity;
-    const totalWeightVariance = actTotalWeight - stdTotalWeight;
-
-    // Raw Materials Table (Only raw materials, no packaging)
-    // Separate regular materials from additional materials
-    const regularMaterials = rawMaterialsOnly.filter(
-      (m: any) => !m.isAdditional && !m.batchMaterial?.isAdditional
-    );
-    const additionalMaterials = rawMaterialsOnly.filter(
-      (m: any) => m.isAdditional || m.batchMaterial?.isAdditional
-    );
-
-    // Regular materials data (with sequence)
-    const regularBomData = regularMaterials.map((m: any, idx: number) => [
-      m.sequence || idx + 1,
-      m.materialName,
-      m.waitingTime ? `${m.waitingTime}m` : '', // Blank instead of -
-      m.requiredQuantity.toFixed(3),
-      reportType === 'completion-chart'
-        ? m.batchMaterial?.actualQuantity
-          ? parseFloat(m.batchMaterial.actualQuantity).toFixed(3)
-          : ''
-        : '',
-    ]);
-
-    // Additional materials data (shown at bottom, sequence continues)
-    const additionalBomData = additionalMaterials.map((m: any, idx: number) => [
-      regularMaterials.length + idx + 1, // Continue sequence after regular materials
-      m.materialName,
-      '', // Blank - no wait time for additional
-      m.requiredQuantity.toFixed(3),
-      reportType === 'completion-chart'
-        ? m.batchMaterial?.actualQuantity
-          ? parseFloat(m.batchMaterial.actualQuantity).toFixed(3)
-          : ''
-        : '',
-    ]);
-
-    // Combined BOM data: regular materials first, then additional at bottom
-    const bomData = [...regularBomData, ...additionalBomData];
-
-    // Track which rows are additional for bold styling
-    const additionalStartIndex = regularMaterials.length;
-
-    // Packaging Materials Data
-    const packagingData = packagingMaterials.map((p: any) => [
-      p.materialName,
-      p.requiredQuantity.toString(),
-    ]);
-
-    // Prepare Product Data (Right Side) - Show SKUs with production data
-    // For completed batches, use orders directly (they have actual production data with product names)
-    // For scheduled/in-progress batches, use relatedSkus to show all possible SKUs
-    let productData: (string | number)[][] = [];
-
-    if ((reportType === 'completion-chart' || batchData.status === 'Completed') && orders.length > 0) {
-      // For completed batches, use orders directly - this has the actual SKU data
-      productData = orders.map((o: any) => {
-        const productName = o.product?.productName || 'Unknown';
-        const capacityLtr = parseFloat(o.packagingCapacity || '0');
-        const fillingDensity =
-          parseFloat(o.product?.fillingDensity || '0') || parseFloat(batch.fgDensity || '0');
-        const plannedQty = parseFloat(o.batchProduct?.plannedUnits || '0');
-        const actualQty = parseFloat(o.batchProduct?.producedUnits || '0');
-
-        const effQty = actualQty > 0 ? actualQty : plannedQty;
-        const ltr = effQty * capacityLtr;
-        const kg = ltr * fillingDensity;
-
-        return [
-          productName,
-          plannedQty > 0 ? plannedQty.toString() : '0',
-          actualQty > 0 ? actualQty.toString() : '',
-          '',
-          kg > 0 ? kg.toFixed(3) : '',
-        ];
-      });
-    } else {
-      // For non-completed batches, use relatedSkus with order lookup
-      const ordersByProductId = new Map<string, any>();
-      orders.forEach((o: any) => {
-        const productId = o.batchProduct?.productId || o.product?.productId;
-        if (productId) {
-          ordersByProductId.set(String(productId), o);
-        }
-      });
-
-      // Use ALL SKUs from relatedSkus, with qty = 0 if no order
-      console.log('PDF: relatedSkus', relatedSkus);
-      console.log('PDF: ordersByProductId', Array.from(ordersByProductId.entries()));
-
-      productData = relatedSkus.map((sku: any) => {
-        const order = ordersByProductId.get(String(sku.productId));
-        const productName = sku.productName || 'Unknown';
-        const plannedQty = parseFloat(order?.batchProduct?.plannedUnits || '0');
-        const actualQty = parseFloat(order?.batchProduct?.producedUnits || '0');
-
-        const capacityLtr = parseFloat(order?.packagingCapacity || '0');
-        const fillingDensity =
-          parseFloat(order?.product?.fillingDensity || '0') || parseFloat(batch.fgDensity || '0');
-
-        const effQty = actualQty > 0 ? actualQty : plannedQty;
-        const ltr = effQty * capacityLtr;
-        const kg = ltr * fillingDensity;
-
-        return [
-          productName,
-          plannedQty > 0 ? plannedQty.toString() : '0',
-          actualQty > 0 ? actualQty.toString() : '',
-          '',
-          kg > 0 ? kg.toFixed(3) : '',
-        ];
-      });
-
-      // Fallback: if no relatedSkus, use orders
-      if (relatedSkus.length === 0 && orders.length > 0) {
-        productData = orders.map((o: any) => {
-          const capacityLtr = parseFloat(o.packagingCapacity || '0');
-          const fillingDensity =
-            parseFloat(o.product?.fillingDensity || '0') || parseFloat(batch.fgDensity || '0');
-          const plannedQty = parseFloat(o.batchProduct?.plannedUnits || '0');
-          const actualQty = parseFloat(o.batchProduct?.producedUnits || '0');
-
-          const effQty = actualQty > 0 ? actualQty : plannedQty;
-          const ltr = effQty * capacityLtr;
-          const kg = ltr * fillingDensity;
-
-          return [
-            o.product?.productName || 'Unknown',
-            plannedQty > 0 ? plannedQty.toString() : '0',
-            actualQty > 0 ? actualQty.toString() : '',
-            '',
-            kg > 0 ? kg.toFixed(3) : '',
-          ];
+      pdf.save(fileName);
+      showToast.success('PDF Downloaded!', 'batch-report-pdf');
+    } catch (error) {
+      console.error('Failed to export batch PDF preview:', error);
+      showToast.error('Failed to generate PDF', 'batch-report-pdf');
+    } finally {
+      // Restore UI exactly as before capture.
+      for (let i = styleMutations.length - 1; i >= 0; i -= 1) {
+        const { el, previous } = styleMutations[i];
+        Object.entries(previous).forEach(([key, value]) => {
+          if (value) {
+            el.style.setProperty(key, value);
+          } else {
+            el.style.removeProperty(key);
+          }
         });
       }
     }
-
-    // No padding - show only actual SKUs
-    // But keep BOM padding for empty check rows
-    while (bomData.length < Math.max(bomData.length, 5)) {
-      bomData.push(['', '', '', '', '']);
-    }
-
-    // Calculate totals for Product Table
-    console.log('PDF: productData', productData);
-    const totalLtr = productData.reduce((sum, row) => sum + (parseFloat(row[3] as string) || 0), 0);
-    const totalKg = productData.reduce((sum, row) => sum + (parseFloat(row[4] as string) || 0), 0);
-    console.log('PDF: calculated totalKg', totalKg);
-
-    const sideBySideStartPage = doc.internal.pages.length;
-
-    // Draw Material Table (Left Side)
-    autoTable(doc, {
-      startY: tablesStartY,
-      head: [
-        reportType === 'batch-chart'
-          ? ['Seq', 'Product', 'Wait', 'UseQty', 'Check']
-          : ['Seq', 'Product', 'Wait', 'Planned', 'Actual'],
-      ],
-      body: bomData,
-      foot: [
-        [
-          { content: 'Total', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold', textColor: 0 } },
-          { content: totalPlannedRawMaterials.toFixed(3), styles: { fontStyle: 'bold', textColor: 0 } },
-          '',
-        ],
-      ],
-      theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 2, minCellHeight: 6, lineColor: 0, lineWidth: 0.2, fillColor: [255, 255, 255] },
-      headStyles: { textColor: 0, fontStyle: 'bold', fillColor: [255, 255, 255] },
-      bodyStyles: { fillColor: [255, 255, 255] },
-      margin: { left: 14, right: 108 }, // Increased right margin for wider gap
-      tableWidth: 84, // Slightly narrower
-      pageBreak: 'avoid',
-      columnStyles: {
-        0: { cellWidth: 8 },
-        1: { cellWidth: 39 },
-        2: { cellWidth: 10, halign: 'center' },
-        3: { cellWidth: 15, halign: 'right' },
-        4: { cellWidth: 12, halign: 'right' },
-      },
-      didParseCell: data => {
-        if (data.section === 'body') {
-          const rowIndex = data.row.index;
-          if (rowIndex >= additionalStartIndex && additionalStartIndex < bomData.length) {
-            data.cell.styles.fontStyle = 'bold';
-          }
-        }
-      },
-    });
-
-    const leftTableFinalY = (doc as any).lastAutoTable.finalY;
-    const leftTableFinalPage = doc.internal.pages.length;
-
-    // Reset to starting page for Right Column
-    doc.setPage(sideBySideStartPage);
-
-    // RIGHT Column: Table Stack (Parameters -> Shades -> Packaging)
-    const rightMargin = 14;
-    const rightTableX = 108; // Increased from 105 for wider gap
-    const rightTableWidth = 88; // Slightly narrower
-
-    // 1. Parameters Table
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Quality & Variance Analysis', rightTableX, tablesStartY - 2);
-
-    autoTable(doc, {
-      startY: tablesStartY,
-      margin: { left: rightTableX, right: rightMargin },
-      head: [['Parameter', 'Input', 'Output', 'Var']],
-      body: [
-        ['Density', stdDensity.toFixed(2), actDensity.toFixed(2), densityVariance.toFixed(2)],
-        [
-          'Viscosity',
-          stdViscosity > 0 ? stdViscosity.toString() : '-',
-          actViscosity > 0 ? actViscosity.toString() : '-',
-          viscosityVariance !== 0 ? viscosityVariance.toFixed(2) : '-',
-        ],
-        [
-          'Weight (Kg)',
-          stdTotalWeight.toFixed(2),
-          totalKg > 0 ? totalKg.toFixed(3) : '-', // Use totalKg from Shades table
-          (totalKg - stdTotalWeight).toFixed(2), // Update variance based on new totalKg
-        ],
-      ],
-      theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 2, minCellHeight: 6, lineColor: 0, lineWidth: 0.2, fillColor: [255, 255, 255] },
-      headStyles: { textColor: 0, fontStyle: 'bold', fontSize: 7, fillColor: [255, 255, 255] },
-      bodyStyles: { fillColor: [255, 255, 255] },
-      columnStyles: {
-        0: { cellWidth: 28 },
-        1: { cellWidth: 20, halign: 'right' },
-        2: { cellWidth: 20, halign: 'right' },
-        3: { cellWidth: 20, halign: 'right' },
-      },
-      tableWidth: rightTableWidth,
-    });
-
-    let rightStackY = (doc as any).lastAutoTable.finalY + 8;
-
-    // 2. Shades Table
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Shades', rightTableX, rightStackY - 2);
-
-    autoTable(doc, {
-      startY: rightStackY,
-      margin: { left: rightTableX, right: rightMargin },
-      head: [['Shade', 'QTY', 'Filled', 'LTR', 'KG']],
-      body: productData,
-      foot: [
-        [
-          'Total',
-          totalPackages.toString(),
-          '',
-          '',
-          totalKg > 0 ? totalKg.toFixed(3) : '',
-        ],
-      ],
-      theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 2, minCellHeight: 6, lineColor: 0, lineWidth: 0.2, fillColor: [255, 255, 255] },
-      headStyles: { textColor: 0, fontStyle: 'bold', fillColor: [255, 255, 255] },
-      bodyStyles: { fillColor: [255, 255, 255] },
-      footStyles: { textColor: 0, fontStyle: 'bold', fillColor: [255, 255, 255] },
-      columnStyles: {
-        0: { cellWidth: 31 },
-        1: { cellWidth: 15, halign: 'center' },
-        2: { cellWidth: 12 },
-        3: { cellWidth: 15 },
-        4: { cellWidth: 15, halign: 'right' },
-      },
-      tableWidth: rightTableWidth,
-      pageBreak: 'avoid',
-    });
-
-    rightStackY = (doc as any).lastAutoTable.finalY + 8;
-
-    // 3. Packaging Table (Only if raw materials contains packaging)
-    if (packagingData.length > 0) {
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Packaging Materials', rightTableX, rightStackY - 2);
-
-      autoTable(doc, {
-        startY: rightStackY,
-        margin: { left: rightTableX, right: rightMargin },
-        head: [['Material', 'QTY']],
-        body: packagingData,
-        theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2, minCellHeight: 6, lineColor: 0, lineWidth: 0.2, fillColor: [255, 255, 255] },
-        headStyles: { textColor: 0, fontStyle: 'bold', fillColor: [255, 255, 255] },
-        bodyStyles: { fillColor: [255, 255, 255] },
-        columnStyles: {
-          0: { cellWidth: 63 },
-          1: { cellWidth: 25, halign: 'right' },
-        },
-        tableWidth: rightTableWidth,
-        pageBreak: 'avoid',
-      });
-      rightStackY = (doc as any).lastAutoTable.finalY;
-    }
-
-    const rightTableFinalPage = doc.internal.pages.length;
-
-    // Determine max page reached
-    const maxPage = Math.max(leftTableFinalPage, rightTableFinalPage);
-    doc.setPage(maxPage);
-
-    // Calculate finalYTotal based on which column is longer on the MAX page
-    let finalYTotal;
-    if (leftTableFinalPage > rightTableFinalPage) {
-      finalYTotal = leftTableFinalY + 10;
-    } else if (rightTableFinalPage > leftTableFinalPage) {
-      finalYTotal = rightStackY + 10;
-    } else {
-      finalYTotal = Math.max(leftTableFinalY, rightStackY) + 10;
-    }
-
-    // Additional Materials - Now Merged into main table logic with bolditalic
-    // if (additionalMaterials.length > 0) { ... } -> Removed
-
-    // Production Summary Table (SKU-level with APP QTY)
-    if (relatedSkus.length > 0) {
-      // Build orders map for quick lookup
-      const ordersMapPdf = new Map<string, any>();
-      orders.forEach((o: any) => {
-        const productId = o.batchProduct?.productId || o.product?.productId;
-        if (productId) ordersMapPdf.set(String(productId), o);
-      });
-
-      // Prepare production summary data
-      const prodSummaryData = relatedSkus.map((sku: any) => {
-        const order = ordersMapPdf.get(String(sku.productId));
-        const productName = sku.productName || 'Unknown';
-        const appQty = parseFloat(sku.availableQuantity || '0');
-        const batchQty = parseFloat(order?.batchProduct?.plannedUnits || '0');
-
-        return [
-          productName,
-          appQty > 0 ? appQty.toFixed(2) : '0.00',
-          '',
-          '', // DISPATCH QTY - empty
-          '', // TOTAL - empty
-          '', // ACTUAL QTY - empty
-          '', // DIFFERENCE - empty
-        ];
-      });
-
-      autoTable(doc, {
-        startY: finalYTotal + 5,
-        head: [
-          ['Product', 'APP QTY', 'BATCH QTY', 'DISPATCH QTY', 'TOTAL', 'ACTUAL QTY', 'DIFFERENCE'],
-        ],
-        body: prodSummaryData,
-        theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 1.5, minCellHeight: 6, lineColor: 0, lineWidth: 0.2, fillColor: [255, 255, 255] },
-        headStyles: {
-          textColor: 0,
-          fontStyle: 'bold',
-          halign: 'center',
-          fillColor: [255, 255, 255]
-        },
-        bodyStyles: { fillColor: [255, 255, 255] },
-        columnStyles: {
-          0: { cellWidth: 50 },
-          1: { cellWidth: 20, halign: 'center' },
-          2: { cellWidth: 22, halign: 'center' },
-          3: { cellWidth: 25, halign: 'center' },
-          4: { cellWidth: 18, halign: 'center' },
-          5: { cellWidth: 22, halign: 'center' },
-          6: { cellWidth: 23, halign: 'center' },
-        },
-        margin: { left: 14, right: 14, top: 20, bottom: 30 },
-        showHead: 'everyPage', // Repeat header on every page
-        pageBreak: 'auto', // Automatic page breaks
-        rowPageBreak: 'avoid', // Try to avoid breaking rows across pages
-      });
-
-      finalYTotal = (doc as any).lastAutoTable.finalY;
-    }
-
-    const finalYFooter = finalYTotal;
-
-    // Separator line
-    doc.setLineWidth(0.2);
-    doc.line(14, finalYFooter + 10, 196, finalYFooter + 10);
-
-    // Footer
-    doc.text('Production Remark :', 14, finalYFooter + 15);
-    if (reportType === 'completion-chart' && batch.productionRemarks) {
-      doc.text(batch.productionRemarks, 14, finalYFooter + 22);
-    }
-
-    doc.text('Labours Sign :-', 40, finalYFooter + 40);
-    doc.text(batch.labourNames || '', 40, finalYFooter + 46);
-
-    doc.text('Superviser Sign :-', 150, finalYFooter + 40);
-    doc.text(`Mr. ${batch.supervisorName || ''}`, 150, finalYFooter + 46);
-
-    const fileName =
-      reportType === 'batch-chart'
-        ? `Batch_${batch.batchNo}.pdf`
-        : `Completion_${batch.batchNo}.pdf`;
-
-    addPdfFooter(doc);
-
-    doc.save(fileName);
-    showToast.success('PDF Downloaded!');
   };
 
   if (!isOpen) return null;
@@ -720,7 +338,10 @@ export default function BatchReportModal({
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]"></div>
           </div>
         ) : batchData ? (
-          <div className="border-2 border-gray-800 p-4 md:p-6 min-h-[600px] bg-white text-black text-xs md:text-sm">
+          <div
+            ref={reportPreviewRef}
+            className="border-2 border-gray-800 p-4 md:p-6 min-h-[600px] bg-white text-black text-xs md:text-sm"
+          >
             {/* Header */}
             <div className="text-center mb-4">
               <h1 className="text-2xl font-bold">{companyInfo?.companyName || 'DMOR PAINTS'}</h1>
@@ -753,14 +374,13 @@ export default function BatchReportModal({
                   {batchData.waterPercentage || '0.00'}
                 </p>
                 <p>
-                  <span className="font-semibold">Production Qty:</span>{' '}
-                  {batchData.plannedQuantity}
+                  <span className="font-semibold">Production Qty:</span> {batchData.plannedQuantity}
                 </p>
               </div>
               <div>
                 <p>
                   <span className="font-semibold">Date:</span>{' '}
-                  {new Date(batchData.scheduledDate).toLocaleDateString()}
+                  {formatDateIST(batchData.scheduledDate)}
                 </p>
                 {reportType === 'batch-chart' ? (
                   <>
@@ -773,10 +393,15 @@ export default function BatchReportModal({
                     <p>
                       <span className="font-semibold">Mill Based Viscosity:</span>{' '}
                     </p>
+                    <p>
+                      <span className="font-semibold">Standard Viscosity :</span>{' '}
+                      {batchData.viscosity ? Number(batchData.viscosity).toFixed(0) : '-'}
+                    </p>
+
                     <div className="flex items-center gap-2 py-1 whitespace-nowrap">
                       <span className="font-semibold">Hegman gauge:</span>
                       <div className="flex gap-1.5">
-                        {[6, 7, 8].map((num) => (
+                        {[6, 7, 8].map(num => (
                           <div
                             key={num}
                             className="w-5 h-5 border border-black rounded-full flex items-center justify-center text-[10px] leading-none"
@@ -799,8 +424,7 @@ export default function BatchReportModal({
             </div>
             <div className="text-right">
               {reportType === 'batch-chart' ? (
-                <>
-                </>
+                <></>
               ) : (
                 /* Quality & Variance Analysis Table for Completion Chart */
                 <div className="text-left">
@@ -857,7 +481,9 @@ export default function BatchReportModal({
                           return (
                             <>
                               <tr>
-                                <td className="border border-gray-600 px-1 py-0.5">Standard Density</td>
+                                <td className="border border-gray-600 px-1 py-0.5">
+                                  Standard Density
+                                </td>
                                 <td className="border border-gray-600 px-1 py-0.5 text-right">
                                   {stdDensity.toFixed(2)}
                                 </td>
@@ -867,7 +493,7 @@ export default function BatchReportModal({
                                 <td className="border border-gray-600 px-1 py-0.5 text-right">
                                   {densityVariance.toFixed(2)}
                                 </td>
-                              </tr >
+                              </tr>
                               <tr>
                                 <td className="border border-gray-600 px-1 py-0.5">Viscosity</td>
                                 <td className="border border-gray-600 px-1 py-0.5 text-right">
@@ -898,13 +524,11 @@ export default function BatchReportModal({
                           );
                         })()}
                       </tbody>
-
                     </table>
                   </div>
                 </div>
               )}
             </div>
-
 
             {/* Main Content Areas: Side-by-Side Tables */}
             <div className="flex flex-col md:flex-row gap-4 items-start">
@@ -947,8 +571,7 @@ export default function BatchReportModal({
                           <td className="px-2 py-1 text-xs border border-gray-800 text-right">
                             {m.requiredQuantity.toFixed(3)}
                           </td>
-                          <td className="px-2 py-1 text-xs border border-gray-800 text-right">
-                          </td>
+                          <td className="px-2 py-1 text-xs border border-gray-800 text-right"></td>
                         </tr>
                       ))}
                     {/* Additional materials at bottom in bold */}
@@ -978,8 +601,7 @@ export default function BatchReportModal({
                             <td className="px-2 py-1 text-xs border border-gray-800 text-right font-bold">
                               {m.requiredQuantity.toFixed(3)}
                             </td>
-                            <td className="px-2 py-1 text-xs border border-gray-800 text-right font-bold">
-                            </td>
+                            <td className="px-2 py-1 text-xs border border-gray-800 text-right font-bold"></td>
                           </tr>
                         );
                       })}
@@ -1060,9 +682,9 @@ export default function BatchReportModal({
                         relatedSkus.length > 0
                           ? relatedSkus
                           : orders.map((o: any) => ({
-                            productId: o.product?.productId,
-                            productName: o.product?.productName || 'Unknown',
-                          }));
+                              productId: o.product?.productId,
+                              productName: o.product?.productName || 'Unknown',
+                            }));
 
                       return skusToShow.map((sku: any, idx: number) => {
                         const order = ordersMapScreen.get(String(sku.productId));
@@ -1108,14 +730,15 @@ export default function BatchReportModal({
                       <td className="border border-gray-800 px-2 py-1 text-center">
                         {totalPackages}
                       </td>
-                      <td className="border border-gray-800 px-2 py-1 text-center">
-                      </td>
+                      <td className="border border-gray-800 px-2 py-1 text-center"></td>
                       <td className="border border-gray-800 px-2 py-1 text-right">
-                        {(orders.reduce((s: number, o: any) => {
-                          const actualQty = parseFloat(o.batchProduct?.producedUnits || '0');
-                          const capacityLtr = parseFloat(o.packagingCapacity || '0');
-                          return s + actualQty * capacityLtr;
-                        }, 0) || 0).toFixed(3)}
+                        {(
+                          orders.reduce((s: number, o: any) => {
+                            const actualQty = parseFloat(o.batchProduct?.producedUnits || '0');
+                            const capacityLtr = parseFloat(o.packagingCapacity || '0');
+                            return s + actualQty * capacityLtr;
+                          }, 0) || 0
+                        ).toFixed(3)}
                       </td>
                       <td className="border border-gray-800 px-2 py-1 text-right font-bold">
                         {screenTotalKg > 0 ? screenTotalKg.toFixed(3) : ''}
@@ -1177,8 +800,7 @@ export default function BatchReportModal({
                               <td className="border border-gray-800 px-2 py-1 text-center">
                                 {appQty > 0 ? appQty.toFixed(2) : '0.00'}
                               </td>
-                              <td className="border border-gray-800 px-2 py-1 text-center">
-                              </td>
+                              <td className="border border-gray-800 px-2 py-1 text-center"></td>
                               <td className="border border-gray-800 px-2 py-1 text-center"></td>
                               <td className="border border-gray-800 px-2 py-1 text-center"></td>
                               <td className="border border-gray-800 px-2 py-1 text-center"></td>
@@ -1214,7 +836,7 @@ export default function BatchReportModal({
             </div>
 
             {/* Download PDF Button */}
-            <div className="mt-8 flex justify-center">
+            <div className="mt-8 flex justify-center no-print">
               <Button
                 variant="primary"
                 onClick={handleExportPDF}
@@ -1229,6 +851,6 @@ export default function BatchReportModal({
           <div className="text-center text-gray-500 py-10">Failed to load batch data</div>
         )}
       </div>
-    </Modal >
+    </Modal>
   );
 }
