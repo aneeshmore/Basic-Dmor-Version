@@ -165,15 +165,19 @@ async function seedDatabase() {
     const deptRows = await db
       .insert(departments)
       .values([
-        { departmentName: 'Production' },
-        { departmentName: 'Quality Control' },
-        { departmentName: 'Sales & Marketing' },
-        { departmentName: 'Human Resources' },
-        { departmentName: 'IT & Systems' },
-        { departmentName: 'Procurement' },
-        { departmentName: 'Logistics' },
-        { departmentName: 'Finance' },
-        { departmentName: 'Dealer' },
+        { departmentName: 'Accounts', isSystemDepartment: true },
+        { departmentName: 'Administration', isSystemDepartment: true },
+        { departmentName: 'Production', isSystemDepartment: true },
+        { departmentName: 'Sales & Marketing', isSystemDepartment: true },
+        { departmentName: 'Dealer', isSystemDepartment: true },
+        { departmentName: 'Administrator', isSystemDepartment: true },
+        // Additional non-system departments:
+        { departmentName: 'Quality Control', isSystemDepartment: false },
+        { departmentName: 'Human Resources', isSystemDepartment: false },
+        { departmentName: 'IT & Systems', isSystemDepartment: false },
+        { departmentName: 'Procurement', isSystemDepartment: false },
+        { departmentName: 'Logistics', isSystemDepartment: false },
+        { departmentName: 'Finance', isSystemDepartment: false },
       ])
       .returning();
     console.log(`   ✓ ${deptRows.length} departments`);
@@ -2032,7 +2036,7 @@ async function seedDatabase() {
     // Let's just create a loose link for now or try to be precise if indices match.
     // Order 1 has 1 item: productRows[0].
 
-    // NOTE: In a real app we'd query this. For seeding, we'll skip the direct orderDetailId link to avoid complexity 
+    // NOTE: In a real app we'd query this. For seeding, we'll skip the direct orderDetailId link to avoid complexity
     // without fetching, OR we can rely on deterministic ID generation if we reset.
     // Let's link to the Order ID at least.
 

@@ -1404,15 +1404,18 @@ const DoubleProductDevelopment = () => {
                 className="w-20 text-center"
               />
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              <Input
-                label="Viscosity"
-                value={viscosity}
-                onChange={e => setViscosity(e.target.value)}
-                placeholder="Viscosity"
-                type="number"
-                step="0.01"
-              />
+              <div className="lg:col-span-3">
+                <Input
+                  label="Viscosity"
+                  value={viscosity}
+                  onChange={e => setViscosity(e.target.value)}
+                  placeholder="Viscosity"
+                  type="number"
+                  step="0.01"
+                />
+              </div>
             </div>
           </div>
         </div>

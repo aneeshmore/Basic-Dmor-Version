@@ -6,6 +6,7 @@ import { Save, Search, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-rea
 import { updateProductApi } from '../api';
 import UpdateConfirmationModal from './UpdateConfirmationModal';
 import EditableName from './EditableName';
+import { useTableNavigation } from './useTableNavigation';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
@@ -26,6 +27,8 @@ const FinalGoodTable = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+
+  const { handleKeyDown } = useTableNavigation();
 
   const handleInputChange = (id: number, field: string, value: any) => {
     setEdits(prev => ({
@@ -222,7 +225,7 @@ const FinalGoodTable = () => {
                       : 'hover:bg-[var(--surface-hover)]'
                   }`}
                 >
-                  <td className="px-4 py-3 text-[var(--text-primary)]">
+                  <td data-col-index="0" className="px-4 py-3 text-[var(--text-primary)]">
                     <EditableName
                       value={product.productName}
                       editedValue={editedName}
@@ -235,7 +238,7 @@ const FinalGoodTable = () => {
                       }
                     />
                   </td>
-                  <td className="px-4 py-3">
+                  <td data-col-index="1" className="px-4 py-3">
                     <input
                       type="number"
                       className="w-full bg-[var(--background)] border border-[var(--border)] rounded px-2 py-1 focus:ring-1 focus:ring-[var(--primary)] outline-none"
@@ -243,9 +246,10 @@ const FinalGoodTable = () => {
                       onChange={e =>
                         handleInputChange(product.productId, 'sellingPrice', e.target.value)
                       }
+                      onKeyDown={handleKeyDown}
                     />
                   </td>
-                  <td className="px-4 py-3">
+                  <td data-col-index="2" className="px-4 py-3">
                     <input
                       type="number"
                       className="w-full bg-[var(--background)] border border-[var(--border)] rounded px-2 py-1 focus:ring-1 focus:ring-[var(--primary)] outline-none"
@@ -253,9 +257,11 @@ const FinalGoodTable = () => {
                       onChange={e =>
                         handleInputChange(product.productId, 'minStockLevel', e.target.value)
                       }
+                      onKeyDown={handleKeyDown}
                     />
                   </td>
-                  <td className="px-4 py-3">
+
+                  <td data-col-index="3" className="px-4 py-3">
                     <input
                       type="number"
                       step="0.001"
@@ -267,9 +273,11 @@ const FinalGoodTable = () => {
                       onChange={e =>
                         handleInputChange(product.productId, 'fillingDensity', e.target.value)
                       }
+                      onKeyDown={handleKeyDown}
                     />
                   </td>
-                  <td className="px-4 py-3">
+
+                  <td data-col-index="4" className="px-4 py-3">
                     <input
                       type="number"
                       className="w-full bg-[var(--background)] border border-[var(--border)] rounded px-2 py-1 focus:ring-1 focus:ring-[var(--primary)] outline-none"
@@ -277,6 +285,7 @@ const FinalGoodTable = () => {
                       onChange={e =>
                         handleInputChange(product.productId, 'incentiveAmount', e.target.value)
                       }
+                      onKeyDown={handleKeyDown}
                     />
                   </td>
                 </tr>

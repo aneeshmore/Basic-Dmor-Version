@@ -52,7 +52,6 @@ export class MastersService {
       'Administration',
       'Production',
       'Sales & Marketing',
-      'Sales & Marketing',
       'Dealer',
       'Administrator',
     ];
@@ -253,13 +252,7 @@ export class MastersService {
   }
 
   async seedDefaultCustomerTypes() {
-    const defaultTypes = [
-      'BUILDER',
-      'CONTRACTOR',
-      'DEALER',
-      'DIRECT CUSTOMER',
-      'INDUSTRIAL',
-    ];
+    const defaultTypes = ['BUILDER', 'CONTRACTOR', 'DEALER', 'DIRECT CUSTOMER', 'INDUSTRIAL'];
 
     let seededCount = 0;
     for (const typeName of defaultTypes) {
@@ -620,11 +613,14 @@ export class MastersService {
 
     // Check for protected roles by name
     const protectedRoleNames = ['Admin', 'Administrator', 'SuperAdmin', 'Dealer'];
-    if (protectedRoleNames.includes(existing.roleName) || (updateData.roleName && protectedRoleNames.includes(updateData.roleName))) {
+    if (
+      protectedRoleNames.includes(existing.roleName) ||
+      (updateData.roleName && protectedRoleNames.includes(updateData.roleName))
+    ) {
       // Only allow specific updates or block completely? The requirement says "uneditable", so block.
-      // However, we might want to allow updating description or landing page? 
-      // "also uneditable" implies completely. 
-      // But wait, system roles might need some updates? 
+      // However, we might want to allow updating description or landing page?
+      // "also uneditable" implies completely.
+      // But wait, system roles might need some updates?
       // For now, I'll block any update if it is a protected role.
       throw new ConflictError(`Cannot update protected role: ${existing.roleName}`);
     }
