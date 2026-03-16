@@ -352,9 +352,9 @@ export default function UnitMaster() {
                   editingUnit
                     ? initiateUpdate
                     : item => {
-                        setPendingItem(item);
-                        setIsAddConfirmModalOpen(true);
-                      }
+                      setPendingItem(item);
+                      setIsAddConfirmModalOpen(true);
+                    }
                 }
                 onCancel={() => {
                   setEditingUnit(null);

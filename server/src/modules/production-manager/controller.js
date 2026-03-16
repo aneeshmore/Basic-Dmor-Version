@@ -226,7 +226,7 @@ export const sendToDispatch = async (req, res, next) => {
     res.json({
       success: true,
       data: result,
-      message: 'Order sent to dispatch successfully',
+      message: 'Order sent to Accept successfully',
     });
   } catch (error) {
     next(error);
