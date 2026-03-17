@@ -15,12 +15,14 @@ interface ProductTransactionHistoryProps {
   productId: string;
   productType: string;
   endDate?: string;
+  batchConsumptionEntries?: ProductWiseReportItem[];
 }
 
 const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
   productId,
   productType,
   endDate,
+  batchConsumptionEntries = [],
 }) => {
   const [data, setData] = useState<ProductWiseReportItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,8 +52,41 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
     }
   }, [productId, productType, historyStartDate, historyEndDate]);
 
+  const mergedData = useMemo(() => {
+    if (!batchConsumptionEntries || batchConsumptionEntries.length === 0) return data;
+
+    const filteredBatchEntries = batchConsumptionEntries.filter(entry => {
+      if (!entry.date || entry.date === '-') return false;
+      const entryTime = new Date(entry.date).getTime();
+      if (Number.isNaN(entryTime)) return false;
+
+      if (historyStartDate) {
+        const start = new Date(historyStartDate);
+        if (entryTime < start.getTime()) return false;
+      }
+
+      if (historyEndDate) {
+        const end = new Date(historyEndDate);
+        end.setHours(23, 59, 59, 999);
+        if (entryTime > end.getTime()) return false;
+      }
+
+      return true;
+    });
+
+    if (filteredBatchEntries.length === 0) return data;
+
+    const combined = [...data, ...filteredBatchEntries];
+    combined.sort((a, b) => {
+      const aTime = a.date ? new Date(a.date).getTime() : 0;
+      const bTime = b.date ? new Date(b.date).getTime() : 0;
+      return bTime - aTime;
+    });
+    return combined;
+  }, [data, batchConsumptionEntries, historyStartDate, historyEndDate]);
+
   const handleExportPdf = () => {
-    if (data.length === 0) {
+    if (mergedData.length === 0) {
       showToast.error('No data to export');
       return;
     }
@@ -66,7 +101,7 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
     if (historyEndDate) doc.text(`To: ${historyEndDate}`, 14, 42);
 
     const tableColumn = ['Date', 'Details', 'Type', 'Inward', 'Outward', 'Balance'];
-    const tableRows = data.map(item => [
+    const tableRows = mergedData.map(item => [
       formatDate(item.date),
       item.type || '-',
       item.transactionType || '-',
@@ -154,7 +189,7 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
     return <div className="p-4 text-center text-sm text-gray-500">Loading history...</div>;
   }
 
-  if (data.length === 0) {
+  if (mergedData.length === 0) {
     return <div className="p-4 text-center text-sm text-gray-500">No transactions found.</div>;
   }
 
@@ -164,7 +199,7 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
       <div className="rounded-md border border-gray-200 bg-white">
         <DataTable
           columns={columns}
-          data={data}
+          data={mergedData}
           showToolbar={true}
           showPagination={true}
           defaultPageSize={10}

@@ -13,7 +13,7 @@ import { reportsApi } from '../api/reportsApi';
 import { companyApi } from '@/features/company/api/companyApi';
 import { CompanyInfo } from '@/features/company/types';
 import { Bar } from 'react-chartjs-2';
-import { ProductInfo, BOMItem, StockReportItem } from '../types';
+import { ProductInfo, BOMItem, StockReportItem, ProductWiseReportItem } from '../types';
 import ProductTransactionHistory from '../components/ProductTransactionHistory';
 import {
   Chart as ChartJS,
@@ -56,6 +56,9 @@ const ProductWiseReport = () => {
   // const [summaryData, setSummaryData] = useState<StockReportItem[]>([]); // Using 'data' for summary list now
   const [productInfo, setProductInfo] = useState<ProductInfo | null>(null);
   const [_bomData, setBomData] = useState<BOMItem[]>([]);
+  const [batchConsumptionEntriesByProduct, setBatchConsumptionEntriesByProduct] = useState<
+    Record<string, ProductWiseReportItem[]>
+  >({});
   const [isLoading, setIsLoading] = useState(false);
   const [productTypeFilter, setProductTypeFilter] = useState<string>('FG');
   const [selectedProduct, setSelectedProduct] = useState<string>(''); // Used for searching within the list
@@ -67,6 +70,10 @@ const ProductWiseReport = () => {
 
   // Everything is a ledger now as per user request
   const isLedgerMode = true;
+  const parseQty = (value: unknown) => {
+    const num = typeof value === 'number' ? value : parseFloat(String(value || '0'));
+    return Number.isFinite(num) ? num : 0;
+  };
 
   // Cleanup chart on unmount
   useEffect(() => {
@@ -161,7 +168,67 @@ const ProductWiseReport = () => {
           endDate
         );
 
-        setData(result || []);
+        let finalData = result || [];
+        let consumptionByProduct: Record<string, number> = {};
+        let consumptionEntriesByProduct: Record<string, ProductWiseReportItem[]> = {};
+
+        // Augment RM outward with completed batch consumption (actual qty)
+        if (productTypeFilter === 'RM' && finalData.length > 0) {
+          try {
+            const completedBatches = await reportsApi.getBatchProductionReport(
+              'Completed',
+              startDate,
+              endDate
+            );
+
+            completedBatches.forEach(batch => {
+              const batchDate =
+                batch.completedAt || batch.scheduledDate || new Date().toISOString();
+              const batchLabel = batch.batchNo ? `Batch ${batch.batchNo}` : 'Batch';
+
+              (batch.rawMaterials || []).forEach(rm => {
+                const rmId = rm.rawMaterialId;
+                if (!rmId) return;
+                const qty = parseQty(rm.actualQty);
+                if (qty <= 0) return;
+
+                const key = String(rmId);
+                consumptionByProduct[key] = (consumptionByProduct[key] || 0) + qty;
+
+                const entry: ProductWiseReportItem = {
+                  transactionId: -1 * (batch.batchId * 100000 + rmId),
+                  productName: rm.rawMaterialName || 'Unknown Product',
+                  date: batchDate,
+                  type: batchLabel,
+                  inward: 0,
+                  outward: qty,
+                  balance: 0,
+                  transactionType: 'Batch Consumption',
+                  productCategory: 'RM',
+                };
+
+                if (!consumptionEntriesByProduct[key]) {
+                  consumptionEntriesByProduct[key] = [];
+                }
+                consumptionEntriesByProduct[key].push(entry);
+              });
+            });
+
+            finalData = finalData.map(item => {
+              if (item.productType !== 'RM') return item;
+              const batchOutward = consumptionByProduct[String(item.productId)] || 0;
+              return {
+                ...item,
+                totalOutward: parseQty(item.totalOutward) + batchOutward,
+              };
+            });
+          } catch (batchError) {
+            console.error('Error fetching batch consumption:', batchError);
+          }
+        }
+
+        setBatchConsumptionEntriesByProduct(consumptionEntriesByProduct);
+        setData(finalData);
         setProductInfo(null);
         setBomData([]);
         // setSummaryData([]);
@@ -171,6 +238,7 @@ const ProductWiseReport = () => {
         // setSummaryData([]);
         setProductInfo(null);
         setBomData([]);
+        setBatchConsumptionEntriesByProduct({});
         const err = error as { response?: { status: number } };
         if (err.response?.status !== 404) {
           showToast.error('Failed to load report data');
@@ -508,6 +576,9 @@ const ProductWiseReport = () => {
               productId={row.original.productId?.toString()}
               productType={row.original.productType}
               endDate={endDate} // Pass end date for "till date" context (ignores startDate for history)
+              batchConsumptionEntries={
+                batchConsumptionEntriesByProduct[String(row.original.productId)] || []
+              }
             />
           )}
         />
