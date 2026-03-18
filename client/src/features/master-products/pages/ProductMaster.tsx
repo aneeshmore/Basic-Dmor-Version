@@ -29,10 +29,10 @@ const ProductMaster = () => {
   const [formData, setFormData] = useState<Partial<Product>>({
     ProductType: 'FG',
     UnitID: 1,
-    IncentiveAmount: 0,
+    IncentiveAmount: undefined,
     PackQty: 0,
-    SellingPrice: 0,
-    MinStockLevel: 0,
+    SellingPrice: undefined,
+    MinStockLevel: undefined,
     FillingDensity: 0,
     IsFdSyncWithDensity: true, // Default: synced with density
   });
@@ -118,10 +118,10 @@ const ProductMaster = () => {
     setFormData({
       ProductType: 'FG',
       UnitID: 1,
-      IncentiveAmount: 0,
+      IncentiveAmount: undefined,
       PackQty: 0,
-      SellingPrice: 0,
-      MinStockLevel: 0,
+      SellingPrice: undefined,
+      MinStockLevel: undefined,
       FillingDensity: 0,
       IsFdSyncWithDensity: true, // Default: synced with density
     });
@@ -345,12 +345,12 @@ const ProductMaster = () => {
                 options={
                   formData.MasterProductID
                     ? products
-                      .filter(p => p.MasterProductID === formData.MasterProductID)
-                      .map(p => ({
-                        id: p.ProductID,
-                        label: p.ProductName,
-                        value: p.ProductName,
-                      }))
+                        .filter(p => p.MasterProductID === formData.MasterProductID)
+                        .map(p => ({
+                          id: p.ProductID,
+                          label: p.ProductName,
+                          value: p.ProductName,
+                        }))
                     : []
                 }
                 value={formData.ProductName}
@@ -392,13 +392,11 @@ const ProductMaster = () => {
                 type="number"
                 min="0"
                 disabled={saving}
-                value={
-                  isEditing && formData.MinStockLevel === 0 ? '' : (formData.MinStockLevel ?? 0)
-                }
-                onChange={e =>
+                value={formData.MinStockLevel ?? ''}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setFormData(prev => ({
                     ...prev,
-                    MinStockLevel: parseInt(e.target.value) || 0,
+                    MinStockLevel: e.target.value === '' ? undefined : parseInt(e.target.value),
                   }))
                 }
                 placeholder="0"
@@ -410,11 +408,11 @@ const ProductMaster = () => {
                 min="0"
                 step="0.01"
                 disabled={saving}
-                value={isEditing && formData.SellingPrice === 0 ? '' : (formData.SellingPrice ?? 0)}
-                onChange={e =>
+                value={formData.SellingPrice ?? ''}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setFormData(prev => ({
                     ...prev,
-                    SellingPrice: Math.max(0, Number(e.target.value)),
+                    SellingPrice: e.target.value === '' ? undefined : Number(e.target.value),
                   }))
                 }
                 placeholder="0.00"
@@ -426,13 +424,11 @@ const ProductMaster = () => {
                 min="0"
                 step="0.01"
                 disabled={saving}
-                value={
-                  isEditing && formData.IncentiveAmount === 0 ? '' : (formData.IncentiveAmount ?? 0)
-                }
-                onChange={e =>
+                value={formData.IncentiveAmount ?? ''}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setFormData(prev => ({
                     ...prev,
-                    IncentiveAmount: Math.max(0, Number(e.target.value)),
+                    IncentiveAmount: e.target.value === '' ? undefined : Number(e.target.value),
                   }))
                 }
                 placeholder="0.00"
@@ -472,10 +468,11 @@ const ProductMaster = () => {
                       }));
                     }}
                     disabled={formData.IsFdSyncWithDensity}
-                    className={`w-20 px-2 py-1 text-sm rounded border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] ${formData.IsFdSyncWithDensity
-                      ? 'bg-gray-100 cursor-not-allowed opacity-60'
-                      : 'bg-[var(--surface)]'
-                      }`}
+                    className={`w-20 px-2 py-1 text-sm rounded border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] ${
+                      formData.IsFdSyncWithDensity
+                        ? 'bg-gray-100 cursor-not-allowed opacity-60'
+                        : 'bg-[var(--surface)]'
+                    }`}
                     placeholder="0.00"
                   />
                 </div>
@@ -634,10 +631,11 @@ const ProductMaster = () => {
                       </td>
                       <td className="px-6 py-3 text-center">
                         <span
-                          className={`font-bold ${(product.AvailableQuantity || 0) - (product.ReservedQuantity || 0) > 0
-                            ? 'text-green-600'
-                            : 'text-red-500'
-                            }`}
+                          className={`font-bold ${
+                            (product.AvailableQuantity || 0) - (product.ReservedQuantity || 0) > 0
+                              ? 'text-green-600'
+                              : 'text-red-500'
+                          }`}
                         >
                           {(product.AvailableQuantity || 0) - (product.ReservedQuantity || 0)}
                         </span>
