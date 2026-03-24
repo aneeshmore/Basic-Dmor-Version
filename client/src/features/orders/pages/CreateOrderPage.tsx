@@ -71,6 +71,7 @@ const CreateOrderPage: React.FC = () => {
           // Merge updated fields from editingOrder into table row
           const updatedRow = {
             ...prevOrders[updatedIndex],
+            status: editingOrder.status || prevOrders[updatedIndex].status,
             companyName: editingOrder.companyName || prevOrders[updatedIndex].companyName,
             salespersonName:
               editingOrder.salespersonName || prevOrders[updatedIndex].salespersonName,
