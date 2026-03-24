@@ -59,6 +59,8 @@ interface CustomerMonthlyData {
   companyName: string;
   contactPerson: string;
   location: string;
+  district?: string;
+  pincode?: string;
   contactNo: string;
   salesPersonId: number | null;
   monthlyAmounts: number[]; // 12 months
@@ -157,12 +159,27 @@ const CustomerReport: React.FC = () => {
 
         // Create customer map with basic info
         const customerMap = new Map<number, CustomerMonthlyData>();
+        const districtByPincode = new Map<string, string>();
+
+        customers.forEach((customer: any) => {
+          const pincode = String(customer.Pincode ?? customer.pinCode ?? customer.pin_code ?? '').trim();
+          const district = String(customer.District ?? customer.district ?? '').trim();
+
+          if (pincode && district && !districtByPincode.has(pincode)) {
+            districtByPincode.set(pincode, district);
+          }
+        });
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         customers.forEach((customer: any) => {
           const customerId = customer.CustomerID ?? customer.customerId ?? customer.customer_id;
           const mobileNo = customer.MobileNo ?? customer.mobileNo ?? customer.mobile_no;
           const contactNo = Array.isArray(mobileNo) ? mobileNo[0] : (mobileNo ?? 'N/A');
+          const pincode = String(customer.Pincode ?? customer.pinCode ?? customer.pin_code ?? '').trim();
+          const district =
+            String(customer.District ?? customer.district ?? '').trim() ||
+            districtByPincode.get(pincode) ||
+            null;
 
           customerMap.set(customerId, {
             customerId,
@@ -171,6 +188,8 @@ const CustomerReport: React.FC = () => {
             contactPerson:
               customer.ContactPerson ?? customer.contactPerson ?? customer.contact_person ?? 'N/A',
             location: customer.Location ?? customer.location ?? customer.city ?? 'N/A',
+            district,
+            pincode: pincode || null,
             contactNo,
             salesPersonId:
               customer.SalesPersonId ?? customer.salesPersonId ?? customer.sales_person_id ?? null,
@@ -443,20 +462,21 @@ const CustomerReport: React.FC = () => {
       });
     });
 
-    // Revenue by City
-    const revenueByCity = filteredCustomers.reduce(
+    // Revenue by District
+    const revenueByDistrict = filteredCustomers.reduce(
       (acc, customer) => {
-        const city = decodeHtml(customer.location) || 'N/A';
-        const existing = acc.find(item => item.name === city);
+        const district = decodeHtml(customer.district || customer.location || '').trim() || 'N/A';
+        const districtKey = district.toLowerCase();
+        const existing = acc.find(item => item.key === districtKey);
         if (existing) {
           existing.value += customer.totalAmount;
         } else {
-          acc.push({ name: city, value: customer.totalAmount });
+          acc.push({ key: districtKey, name: district, value: customer.totalAmount });
         }
         return acc;
       },
-      [] as { name: string; value: number }[]
-    );
+      [] as { key: string; name: string; value: number }[]
+    ).map(({ name, value }) => ({ name, value }));
 
     return {
       totalCustomers,
@@ -464,7 +484,7 @@ const CustomerReport: React.FC = () => {
       avgRevenuePerCustomer,
       top5Customers,
       monthlyRevenue,
-      revenueByCity: revenueByCity.sort((a, b) => b.value - a.value).slice(0, 8),
+      revenueByDistrict: revenueByDistrict.sort((a, b) => b.value - a.value).slice(0, 8),
     };
   }, [filteredCustomers]);
 
@@ -576,13 +596,13 @@ const CustomerReport: React.FC = () => {
     ],
   };
 
-  // Chart data for revenue by city
-  const revenueByCityChartData = {
-    labels: stats.revenueByCity.map(item => item.name),
+  // Chart data for revenue by district
+  const revenueByDistrictChartData = {
+    labels: stats.revenueByDistrict.map(item => item.name),
     datasets: [
       {
         label: 'Revenue',
-        data: stats.revenueByCity.map(item => item.value),
+        data: stats.revenueByDistrict.map(item => item.value),
         backgroundColor: 'rgba(59, 130, 246, 0.8)',
         hoverBackgroundColor: 'rgba(37, 99, 235, 1)',
         borderRadius: 6,
@@ -1081,14 +1101,14 @@ const CustomerReport: React.FC = () => {
               </div>
             </div>
 
-            {/* Revenue by City */}
+            {/* Revenue by District */}
             <div className="card p-6 shadow-sm hover:shadow-md transition-shadow">
               <h3 className="mb-6 text-lg font-semibold text-[var(--text-primary)]">
-                Revenue by City (Top 8)
+                Revenue by District (Top 8)
               </h3>
               <div style={{ height: '300px' }}>
                 <Bar
-                  data={revenueByCityChartData}
+                  data={revenueByDistrictChartData}
                   options={revenueByCityChartOptions as ChartOptions<'bar'>}
                 />
               </div>

@@ -207,8 +207,8 @@ const DoubleProductDevelopment = () => {
     try {
       // 1. Try saved development record
       const devRes = await productDevelopmentApi.getByMasterProductId(mpId);
-      if (devRes && devRes.success && devRes.data && devRes.data.materials?.length > 0) {
-        const materials = devRes.data.materials.map((item: any, index: number) => {
+      if (devRes && devRes.success && devRes.data) {
+        const materials = (devRes.data.materials || []).map((item: any, index: number) => {
           const rmDetails = rmMasterProducts.find(rm => rm.masterProductId === item.materialId);
           const totalPct = Number(item.totalPercentage) || 0;
           let wtCalculated = Number(item.wtPerLtr || item.wtInLtr) || 0; // Check DB fields
@@ -232,9 +232,10 @@ const DoubleProductDevelopment = () => {
         });
         return {
           materials,
-          mixingRatioPart: devRes.data.mixingRatioPart
-            ? Number(devRes.data.mixingRatioPart)
-            : undefined,
+          mixingRatioPart:
+            devRes.data.mixingRatioPart !== null && devRes.data.mixingRatioPart !== undefined
+              ? Number(devRes.data.mixingRatioPart)
+              : undefined,
         };
       }
 
@@ -283,7 +284,7 @@ const DoubleProductDevelopment = () => {
     // Load Base Recipe
     const baseData = await fetchRecipeItems(value);
     setBaseItems(baseData?.materials || []);
-    if (baseData?.mixingRatioPart) {
+    if (baseData?.mixingRatioPart !== null && baseData?.mixingRatioPart !== undefined) {
       setRatioBase(String(baseData.mixingRatioPart));
     } else {
       setRatioBase('');
@@ -294,7 +295,7 @@ const DoubleProductDevelopment = () => {
       setLinkedHardenerId(baseProduct.HardenerID);
       const hardenerData = await fetchRecipeItems(baseProduct.HardenerID);
       setHardenerItems(hardenerData?.materials || []);
-      if (hardenerData?.mixingRatioPart) {
+      if (hardenerData?.mixingRatioPart !== null && hardenerData?.mixingRatioPart !== undefined) {
         setRatioHardener(String(hardenerData.mixingRatioPart));
       } else {
         setRatioHardener('');
@@ -467,7 +468,7 @@ const DoubleProductDevelopment = () => {
         }
         newItems = newItems.map(item => {
           const itemTotal = Number(item.totalPercentage) || 0;
-          let newPercent = '0';
+          let newPercent = item.percentage?.toString() || '0';
           if (totalSum > 0) {
             newPercent = ((itemTotal / totalSum) * 100).toFixed(3);
           }
@@ -499,7 +500,10 @@ const DoubleProductDevelopment = () => {
             ...item,
             totalPercentage: totalPct.toFixed(3),
             wtInLtr: (totalPct / density).toFixed(3),
-            percentage: hardenerTotal > 0 ? ((totalPct / hardenerTotal) * 100).toFixed(3) : '0',
+            percentage:
+              hardenerTotal > 0
+                ? ((totalPct / hardenerTotal) * 100).toFixed(3)
+                : item.percentage,
           };
         })
       );
@@ -1293,8 +1297,12 @@ const DoubleProductDevelopment = () => {
 
       setBaseItems(newBaseItems);
       setHardenerItems(newHardenerItems);
-      setRatioBase(data.ratioBase || '');
-      setRatioHardener(data.ratioHardener || '');
+      setRatioBase(data.ratioBase !== null && data.ratioBase !== undefined ? String(data.ratioBase) : '');
+      setRatioHardener(
+        data.ratioHardener !== null && data.ratioHardener !== undefined
+          ? String(data.ratioHardener)
+          : ''
+      );
 
       showToast.success('Recipe pasted successfully');
     } catch (err) {
@@ -1354,7 +1362,10 @@ const DoubleProductDevelopment = () => {
                       try {
                         const hardenerData = await fetchRecipeItems(newId);
                         setHardenerItems(hardenerData?.materials || []);
-                        if (hardenerData?.mixingRatioPart) {
+                        if (
+                          hardenerData?.mixingRatioPart !== null &&
+                          hardenerData?.mixingRatioPart !== undefined
+                        ) {
                           setRatioHardener(String(hardenerData.mixingRatioPart));
                         } else {
                           setRatioHardener('');
