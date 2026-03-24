@@ -57,6 +57,8 @@ export interface Customer {
   CountryCode3?: string;
   EmailID?: string;
   Location?: string;
+  District?: string;
+  State?: string;
   Area?: string;
   Address?: string;
   GSTNumber?: string;

@@ -353,19 +353,19 @@ const CreateOrderPage: React.FC = () => {
           formatDisplayOrderId(order.orderId, order.orderDate),
         date: format(new Date(order.orderDate), 'dd-MMM-yy'),
         paymentTerms: fullOrder.paymentMethod || 'Bank Transfer',
+        deliveryTerms: '',
         buyerRef: `ORD-${order.orderId}`,
         otherRef: order.salespersonName || '',
         dispatchThrough: '',
         destination: fullOrder.deliveryAddress || '',
-        deliveryTerms: '',
 
         companyName: c.companyName || '',
         companyAddress: c.address || '',
         companyPhone: c.contactNumber || '',
         companyEmail: c.email || '',
         companyGSTIN: c.gstNumber || '',
-        companyState: '', // Need to add to company info
-        companyCode: '', // Need to add to company info
+        companyState: '',
+        companyCode: '',
 
         bankName: c.bankName || '',
         accountNo: c.accountNumber || '',

@@ -171,6 +171,11 @@ const countryCodes = [
   '+998',
 ];
 
+type CustomerFormData = Partial<Customer> & {
+  District?: string;
+  State?: string;
+};
+
 const CustomerForm = ({
   item,
   onSave,
@@ -184,7 +189,7 @@ const CustomerForm = ({
   isSaving?: boolean;
   allCustomers: Customer[];
 }) => {
-  const [formData, setFormData] = useState<Partial<Customer>>({
+  const [formData, setFormData] = useState<CustomerFormData>({
     CustomerID: item?.CustomerID || 0,
     CompanyName: item?.CompanyName || '',
     ContactPerson: item?.ContactPerson || '',
@@ -197,6 +202,8 @@ const CustomerForm = ({
     EmailID: item?.EmailID || '',
     Location: item?.Location || '',
     Area: item?.Area || '',
+    District: (item as CustomerFormData)?.District || '',
+    State: (item as CustomerFormData)?.State || '',
     Address: item?.Address || '',
     Pincode: item?.Pincode || '',
     GSTNumber: item?.GSTNumber || '',
@@ -237,6 +244,8 @@ const CustomerForm = ({
         EmailID: item.EmailID || '',
         Location: item.Location || '',
         Area: item.Area || '',
+        District: (item as CustomerFormData)?.District || '',
+        State: (item as CustomerFormData)?.State || '',
         Address: item.Address || '',
         Pincode: item.Pincode || '',
         GSTNumber: item.GSTNumber || '',
@@ -263,6 +272,8 @@ const CustomerForm = ({
         EmailID: '',
         Location: '',
         Area: '',
+        District: '',
+        State: '',
         Address: '',
         GSTNumber: '',
         Pincode: '',
@@ -479,13 +490,14 @@ const CustomerForm = ({
         break;
 
       case 'Location':
+      case 'State':
         if (value.trim()) {
           if (value.length < 3) {
-            error = 'Location must be at least 3 characters';
+            error = `${name} must be at least 3 characters`;
           } else if (value.length > 50) {
-            error = 'Location must be at most 50 characters';
+            error = `${name} must be at most 50 characters`;
           } else if (!/^[a-zA-Z\s]*$/.test(value)) {
-            error = 'Location should contain only alphabets and spaces';
+            error = `${name} should contain only alphabets and spaces`;
           }
         }
         break;
@@ -520,24 +532,42 @@ const CustomerForm = ({
     return error;
   };
 
+  const fetchLocationDetailsByPincode = async (pincode: string) => {
+    try {
+      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+      const data = await response.json();
+
+      if (data?.[0]?.Status === 'Success') {
+        const District = data?.[0]?.PostOffice?.[0]?.District || '';
+        const State = data?.[0]?.PostOffice?.[0]?.State || '';
+
+        if (District || State) {
+          setFormData(prev => ({
+            ...prev,
+            District: District,
+            State: State,
+            Location: District,
+          }));
+          validateField('District', District);
+          validateField('State', State);
+          validateField('Location', District);
+          return;
+        }
+      }
+
+      logger.error('Invalid pincode API response:', data?.[0]);
+    } catch (error) {
+      logger.error('Failed to fetch location details from pincode:', error);
+    }
+  };
+
   const handlePincodeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const pincode = e.target.value.replace(/\D/g, '').slice(0, 6);
     setFormData(prev => ({ ...prev, Pincode: pincode }));
     validateField('Pincode', pincode);
 
     if (pincode.length === 6) {
-      try {
-        const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
-        const data = await response.json();
-        if (data[0].Status === 'Success') {
-          const postOffice = data[0].PostOffice[0];
-          const city = postOffice.District;
-          setFormData(prev => ({ ...prev, Location: city }));
-          validateField('Location', city);
-        }
-      } catch (error) {
-        logger.error('Failed to fetch location from pincode:', error);
-      }
+      await fetchLocationDetailsByPincode(pincode);
     }
   };
 
@@ -565,6 +595,7 @@ const CustomerForm = ({
     const emailError = validateField('EmailID', formData.EmailID || '');
     const addressError = validateField('Address', formData.Address || '');
     const locationError = validateField('Location', formData.Location || '');
+    const stateError = validateField('State', formData.State || '');
     const areaError = validateField('Area', formData.Area || '');
     const gstinError = validateField('GSTNumber', formData.GSTNumber || '');
     const pincodeError = validateField('Pincode', formData.Pincode || '');
@@ -575,6 +606,7 @@ const CustomerForm = ({
     if (emailError) newErrors.EmailID = emailError;
     if (addressError) newErrors.Address = addressError;
     if (locationError) newErrors.Location = locationError;
+    if (stateError) newErrors.State = stateError;
     if (areaError) newErrors.Area = areaError;
     if (gstinError) newErrors.GSTNumber = gstinError;
     if (pincodeError) newErrors.Pincode = pincodeError;
@@ -601,6 +633,8 @@ const CustomerForm = ({
       EmailID: formData.EmailID?.trim() || '',
       Location: formData.Location?.trim() || '',
       Area: formData.Area?.trim() || '',
+      State: formData.State?.trim() || '',
+      District: formData.District?.trim() || '',
       Address: formData.Address?.trim() || '',
       Pincode: formData.Pincode?.trim() || '',
       GSTNumber: formData.GSTNumber?.trim() || '',
@@ -636,6 +670,8 @@ const CustomerForm = ({
         EmailID: '',
         Location: '',
         Area: '',
+        District: '',
+        State: '',
         Address: '',
         GSTNumber: '',
         SalesPersonID: undefined,
@@ -750,6 +786,12 @@ const CustomerForm = ({
                 </span>
                 <p className="text-[var(--text-primary)] font-medium">
                   {pendingData?.Location || '-'}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-[var(--text-secondary)]">State</span>
+                <p className="text-[var(--text-primary)] font-medium">
+                  {(pendingData as CustomerFormData)?.State || '-'}
                 </p>
               </div>
               <div className="space-y-1">
@@ -1099,6 +1141,22 @@ const CustomerForm = ({
               />
               {errors.Location && (
                 <p className="text-xs text-red-500 font-medium">{errors.Location}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Input
+                label="State (Auto-fetched)"
+                value={formData.State || ''}
+                onChange={e => {
+                  setFormData({ ...formData, State: e.target.value });
+                  validateField('State', e.target.value);
+                }}
+                placeholder="State will be fetched from pincode"
+                className="h-10"
+              />
+              {errors.State && (
+                <p className="text-xs text-red-500 font-medium">{errors.State}</p>
               )}
             </div>
 
