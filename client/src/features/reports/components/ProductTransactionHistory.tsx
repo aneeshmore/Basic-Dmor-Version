@@ -27,7 +27,23 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
   const [data, setData] = useState<ProductWiseReportItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [historyStartDate, setHistoryStartDate] = useState('');
-  const [historyEndDate, setHistoryEndDate] = useState(endDate || '');
+  const [historyEndDate, setHistoryEndDate] = useState('');
+
+  const parseDateTime = (value: string) => {
+    if (!value || value === '-') return 0;
+    const time = new Date(value).getTime();
+    return Number.isNaN(time) ? 0 : time;
+  };
+
+  const sortedBaseData = useMemo(() => {
+    const base = [...data];
+    base.sort((a, b) => {
+      const timeDiff = parseDateTime(b.date) - parseDateTime(a.date);
+      if (timeDiff !== 0) return timeDiff;
+      return (b.transactionId || 0) - (a.transactionId || 0);
+    });
+    return base;
+  }, [data]);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -53,12 +69,12 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
   }, [productId, productType, historyStartDate, historyEndDate]);
 
   const mergedData = useMemo(() => {
-    if (!batchConsumptionEntries || batchConsumptionEntries.length === 0) return data;
+    if (!batchConsumptionEntries || batchConsumptionEntries.length === 0) return sortedBaseData;
 
     const filteredBatchEntries = batchConsumptionEntries.filter(entry => {
       if (!entry.date || entry.date === '-') return false;
-      const entryTime = new Date(entry.date).getTime();
-      if (Number.isNaN(entryTime)) return false;
+      const entryTime = parseDateTime(entry.date);
+      if (!entryTime) return false;
 
       if (historyStartDate) {
         const start = new Date(historyStartDate);
@@ -74,16 +90,16 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
       return true;
     });
 
-    if (filteredBatchEntries.length === 0) return data;
+    if (filteredBatchEntries.length === 0) return sortedBaseData;
 
-    const combined = [...data, ...filteredBatchEntries];
+    const combined = [...sortedBaseData, ...filteredBatchEntries];
     combined.sort((a, b) => {
-      const aTime = a.date ? new Date(a.date).getTime() : 0;
-      const bTime = b.date ? new Date(b.date).getTime() : 0;
-      return bTime - aTime;
+      const timeDiff = parseDateTime(b.date) - parseDateTime(a.date);
+      if (timeDiff !== 0) return timeDiff;
+      return (b.transactionId || 0) - (a.transactionId || 0);
     });
     return combined;
-  }, [data, batchConsumptionEntries, historyStartDate, historyEndDate]);
+  }, [sortedBaseData, batchConsumptionEntries, historyStartDate, historyEndDate]);
 
   const handleExportPdf = () => {
     if (mergedData.length === 0) {
@@ -204,7 +220,6 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
           showPagination={true}
           defaultPageSize={10}
           searchPlaceholder="Search history..."
-          sorting={[{ id: 'date', desc: true }]}
           toolbarActions={
             <div className="flex items-center gap-2">
               <Input
