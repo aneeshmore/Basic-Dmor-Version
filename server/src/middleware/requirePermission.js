@@ -82,10 +82,19 @@ export const requirePermission = apiRoute => {
       }
 
       // Admin bypass (only for non-restricted features)
-      if (req.user.role === 'Admin' || req.user.role === 'SuperAdmin') {
-        req.permissionContext = { apiRoute, granted: true, isAdmin: true };
-        return next();
-      }
+      // if (req.user.role === 'Admin' || req.user.role === 'SuperAdmin') {
+      //   req.permissionContext = { apiRoute, granted: true, isAdmin: true };
+      //   return next();
+      // }
+
+       if (
+  req.user.role === 'Admin' ||
+  req.user.role === 'SuperAdmin' ||
+  req.user.role === 'Sales Person'
+) {
+  req.permissionContext = { apiRoute, granted: true, isAdmin: true };
+  return next();
+}
 
       // Get user's granted API routes
       const grantedRoutes = await getEffectivePermissions(req.user.employeeId);
