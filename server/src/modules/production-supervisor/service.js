@@ -429,9 +429,30 @@ export class ProductionSupervisorService {
             createdBy: completionData.completedBy,
             notes: `Produced from batch ${batch.batchNo} (SKU: ${sku.productName})`,
           });
+
+          // DEDUCT PACKING MATERIAL (PM) STOCK
+          if (sku.packagingId) {
+            // 1. Deduct from Master Product PM
+            await db
+              .update(masterProductPM)
+              .set({ availableQty: sql`COALESCE(available_qty, 0) - ${producedUnits}` })
+              .where(eq(masterProductPM.masterProductId, sku.packagingId));
+
+            // 2. Record PM Consumption Transaction
+            // Note: RM/PM use masterProductId as productId in transaction service
+            await inventoryTransactionService.recordTransaction({
+              productId: sku.packagingId,
+              transactionType: 'Production Consumption',
+              quantity: -producedUnits,
+              referenceType: 'Batch',
+              referenceId: batchId,
+              notes: `Consumed for SKU ${sku.productName} in batch ${batch.batchNo}`,
+              createdBy: completionData.completedBy,
+            });
+          }
         } catch (txnError) {
           console.error(
-            '[ProductionSupervisor] Failed to record SKU output transaction:',
+            '[ProductionSupervisor] Failed to record SKU/PM transactions:',
             txnError
           );
         }

@@ -204,9 +204,14 @@ const DoubleProductDevelopment = () => {
   const fetchRecipeItems = async (
     mpId: number
   ): Promise<{ materials: RawMaterialItem[]; mixingRatioPart?: number } | null> => {
+    if (!Number.isFinite(Number(mpId)) || Number(mpId) <= 0) {
+      return null;
+    }
+
     try {
       // 1. Try saved development record
-      const devRes = await productDevelopmentApi.getByMasterProductId(mpId);
+      const normalizedMpId = Number(mpId);
+      const devRes = await productDevelopmentApi.getByMasterProductId(normalizedMpId);
       if (devRes && devRes.success && devRes.data) {
         const materials = (devRes.data.materials || []).map((item: any, index: number) => {
           const rmDetails = rmMasterProducts.find(rm => rm.masterProductId === item.materialId);
@@ -240,7 +245,7 @@ const DoubleProductDevelopment = () => {
       }
 
       // 2. Fallback to BOM
-      const bomItems = await bomApi.getBOMByFinishedGood(mpId);
+      const bomItems = await bomApi.getBOMByFinishedGood(normalizedMpId);
       if (bomItems && bomItems.length > 0) {
         let mappedItems = bomItems.map((item: any, index: number) => {
           const rmId = item.RawMaterialID || item.rawMaterialId || item.raw_material_id;
@@ -276,13 +281,24 @@ const DoubleProductDevelopment = () => {
   };
 
   const handleMasterProductSelect = async (value: any) => {
-    setSelectedMasterProductId(value);
+    const normalizedValue = Number(value);
+    const selectedId = Number.isFinite(normalizedValue) && normalizedValue > 0 ? normalizedValue : null;
+    setSelectedMasterProductId(selectedId);
+
+    if (!selectedId) {
+      setLinkedHardenerId(null);
+      setBaseItems([]);
+      setHardenerItems([]);
+      setRatioBase('');
+      setRatioHardener('');
+      return;
+    }
 
     // Find selected Base product
-    const baseProduct = masterProducts.find(p => p.masterProductId === value);
+    const baseProduct = masterProducts.find(p => p.masterProductId === selectedId);
 
     // Load Base Recipe
-    const baseData = await fetchRecipeItems(value);
+    const baseData = await fetchRecipeItems(selectedId);
     setBaseItems(baseData?.materials || []);
     if (baseData?.mixingRatioPart !== null && baseData?.mixingRatioPart !== undefined) {
       setRatioBase(String(baseData.mixingRatioPart));
