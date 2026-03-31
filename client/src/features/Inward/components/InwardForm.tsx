@@ -221,7 +221,7 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
       if (name === 'unitPrice') {
         const num = parseFloat(String(value));
         if (!isNaN(num) && num === 0) {
-          showToast.error('Enter a non-zero value for Actual Density');
+          showToast.error('Enter a non-zero value for unit price');
           return;
         }
       }
@@ -229,10 +229,21 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
       setCurrentItem(prev => {
         const updated = { ...prev, [name]: name === 'unitId' ? Number(value) : value } as any;
 
-        if (name === 'quantity' || name === 'totalPrice') {
+        // Recalculate total price when quantity or unit price changes
+        if (name === 'quantity' || name === 'unitPrice') {
           const qty = Number(name === 'quantity' ? value : updated.quantity);
-          const total = Number(name === 'totalPrice' ? value : updated.totalPrice);
+          const unitPx = Number(name === 'unitPrice' ? value : updated.unitPrice);
 
+          if (qty > 0 && unitPx > 0) {
+            updated.totalPrice = qty * unitPx;
+          } else {
+            // Keep total price 0 if either quantity or unit price is invalid/zero
+            updated.totalPrice = 0;
+          }
+        } else if (name === 'totalPrice') {
+          // If total price is directly edited (if we add such field), update unit price
+          const qty = Number(updated.quantity);
+          const total = Number(value);
           if (qty > 0 && total > 0) {
             updated.unitPrice = String(total / qty);
           }
@@ -384,8 +395,8 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
             return;
           }
 
-          const total = currentItem.totalPrice ? Number(currentItem.totalPrice) : 0;
-          const calculatedUnitPrice = qty > 0 ? total / qty : 0;
+          const unitPx = currentItem.unitPrice ? Number(currentItem.unitPrice) : 0;
+          const total = qty > 0 && unitPx > 0 ? qty * unitPx : 0;
 
           newItemToAdd = {
             inwardId: currentItem.inwardId,
@@ -393,7 +404,7 @@ export const InwardForm = React.forwardRef<HTMLFormElement, InwardFormProps>(
             inwardDate: '', // Will be set later
             quantity: qty,
             unitId: finalUnitId,
-            unitPrice: calculatedUnitPrice,
+            unitPrice: unitPx,
             totalCost: total,
           };
         } catch (e) {

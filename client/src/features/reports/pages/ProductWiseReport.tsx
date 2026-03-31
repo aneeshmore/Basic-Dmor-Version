@@ -172,8 +172,8 @@ const ProductWiseReport = () => {
         let consumptionByProduct: Record<string, number> = {};
         let consumptionEntriesByProduct: Record<string, ProductWiseReportItem[]> = {};
 
-        // Augment RM outward with completed batch consumption (actual qty)
-        if (productTypeFilter === 'RM' && finalData.length > 0) {
+        // Augment RM/PM outward with completed batch consumption (actual qty)
+        if ((productTypeFilter === 'RM' || productTypeFilter === 'PM') && finalData.length > 0) {
           try {
             const completedBatches = await reportsApi.getBatchProductionReport(
               'Completed',
@@ -186,6 +186,7 @@ const ProductWiseReport = () => {
                 batch.completedAt || batch.scheduledDate || new Date().toISOString();
               const batchLabel = batch.batchNo ? `Batch ${batch.batchNo}` : 'Batch';
 
+              // 1. Process Raw Materials
               (batch.rawMaterials || []).forEach(rm => {
                 const rmId = rm.rawMaterialId;
                 if (!rmId) return;
@@ -212,10 +213,38 @@ const ProductWiseReport = () => {
                 }
                 consumptionEntriesByProduct[key].push(entry);
               });
+
+              // 2. Process Packaging Materials
+              (batch.packagingMaterials || []).forEach(pm => {
+                const pmId = pm.packagingId;
+                if (!pmId) return;
+                const qty = parseQty(pm.actualQty);
+                if (qty <= 0) return;
+
+                const key = String(pmId);
+                consumptionByProduct[key] = (consumptionByProduct[key] || 0) + qty;
+
+                const entry: ProductWiseReportItem = {
+                  transactionId: -1 * (batch.batchId * 200000 + pmId), // Different range for PM
+                  productName: pm.packagingName || 'Unknown Packing',
+                  date: batchDate,
+                  type: batchLabel,
+                  inward: 0,
+                  outward: qty,
+                  balance: 0,
+                  transactionType: 'Batch Consumption',
+                  productCategory: 'PM',
+                };
+
+                if (!consumptionEntriesByProduct[key]) {
+                  consumptionEntriesByProduct[key] = [];
+                }
+                consumptionEntriesByProduct[key].push(entry);
+              });
             });
 
             finalData = finalData.map(item => {
-              if (item.productType !== 'RM') return item;
+              if (item.productType !== 'RM' && item.productType !== 'PM') return item;
               const batchOutward = consumptionByProduct[String(item.productId)] || 0;
               return {
                 ...item,
@@ -473,10 +502,41 @@ const ProductWiseReport = () => {
               ))}
             </div>
           </div>
+
+          <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+            <label className="text-xs font-medium text-gray-500 ml-1">Search Product</label>
+            <SearchableSelect
+              options={products}
+              value={selectedProduct}
+              onChange={val => setSelectedProduct(val || '')}
+              placeholder="Search by name..."
+              className="bg-white border-gray-200"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-gray-500 ml-1">From Date</label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={e => setStartDate(e.target.value)}
+              className="bg-white border-gray-200 text-sm"
+              inputSize="sm"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-gray-500 ml-1">To Date</label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={e => setEndDate(e.target.value)}
+              className="bg-white border-gray-200 text-sm"
+              inputSize="sm"
+            />
+          </div>
         </div>
       </div>
-
-      {/* Product Details Section (Single Product) */}
       {!isLoading && productInfo && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in mb-6">
           <div className="card p-4 border-l-4 border-blue-500 bg-white shadow-sm">
