@@ -1,6 +1,7 @@
 import { eq, desc, and, ilike, or, sql, notInArray, inArray, gte, between } from 'drizzle-orm';
 import db from '../../db/index.js';
 import { orders, products, orderDetails, customers, accounts } from '../../db/schema/index.js';
+import inventoryTransactionService from '../../services/inventory-transaction.service.js';
 
 // Statuses that can still be cancelled
 const CANCELLABLE_STATUSES = [
@@ -159,6 +160,21 @@ export class CancelOrderRepository {
             updatedAt: new Date(),
           })
           .where(eq(products.productId, item.productId));
+
+        // Record reversal transaction
+        try {
+          await inventoryTransactionService.recordTransaction({
+            productId: item.productId,
+            transactionType: 'Adjustment',
+            quantity: item.quantity,
+            referenceType: 'Order',
+            referenceId: orderId,
+            notes: `Dispatch Reversal (Order Cancelled from ${order.status} status)`,
+            createdBy: 1,
+          });
+        } catch (error) {
+          console.error('[CancelOrderRepo] Error recording cancellation transaction:', error);
+        }
       }
     } else if (['Accepted', 'Scheduled', 'In Production', 'Confirmed', 'Started'].includes(order.status)) {
       // Stock was reserved but not yet deducted from available

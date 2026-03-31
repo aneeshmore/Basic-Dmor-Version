@@ -179,7 +179,7 @@ const CustomerReport: React.FC = () => {
           const district =
             String(customer.District ?? customer.district ?? '').trim() ||
             districtByPincode.get(pincode) ||
-            null;
+            undefined;
 
           customerMap.set(customerId, {
             customerId,
@@ -189,7 +189,7 @@ const CustomerReport: React.FC = () => {
               customer.ContactPerson ?? customer.contactPerson ?? customer.contact_person ?? 'N/A',
             location: customer.Location ?? customer.location ?? customer.city ?? 'N/A',
             district,
-            pincode: pincode || null,
+            pincode: pincode || undefined,
             contactNo,
             salesPersonId:
               customer.SalesPersonId ?? customer.salesPersonId ?? customer.sales_person_id ?? null,

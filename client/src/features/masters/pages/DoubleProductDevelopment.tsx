@@ -282,7 +282,7 @@ const DoubleProductDevelopment = () => {
 
   const handleMasterProductSelect = async (value: any) => {
     const normalizedValue = Number(value);
-    const selectedId = Number.isFinite(normalizedValue) && normalizedValue > 0 ? normalizedValue : null;
+    const selectedId = Number.isFinite(normalizedValue) && normalizedValue > 0 ? normalizedValue : '';
     setSelectedMasterProductId(selectedId);
 
     if (!selectedId) {

@@ -130,6 +130,21 @@ export class DeliveryCompleteRepository {
           updatedAt: new Date(),
         })
         .where(eq(products.productId, item.productId));
+
+      // Record reversal transaction
+      try {
+        await inventoryTransactionService.recordTransaction({
+          productId: item.productId,
+          transactionType: 'Return',
+          quantity: item.quantity, // Positive for inward/return
+          referenceType: 'Order',
+          referenceId: orderId,
+          notes: 'Order Returned to Stock',
+          createdBy: 1, // Default system user or fetch common ID
+        });
+      } catch (error) {
+        console.error('[DeliveryCompleteRepo] Error recording return transaction:', error);
+      }
     }
 
     // 3. Update order status to 'Ready for Dispatch' (not 'Returned')
@@ -174,6 +189,21 @@ export class DeliveryCompleteRepository {
             updatedAt: new Date(),
           })
           .where(eq(products.productId, item.productId));
+
+        // Record reversal transaction
+        try {
+          await inventoryTransactionService.recordTransaction({
+            productId: item.productId,
+            transactionType: 'Adjustment',
+            quantity: item.quantity,
+            referenceType: 'Order',
+            referenceId: orderId,
+            notes: 'Dispatch Reversal (Order Cancelled after Dispatch)',
+            createdBy: 1,
+          });
+        } catch (error) {
+          console.error('[DeliveryCompleteRepo] Error recording cancellation adjustment:', error);
+        }
       }
     }
 
