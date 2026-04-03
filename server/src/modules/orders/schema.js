@@ -36,8 +36,8 @@ export const createOrderSchema = z.object({
 });
 
 export const updateOrderSchema = z.object({
-  customerId: z.number().int().positive().optional(),
-  salespersonId: z.number().int().positive().optional(),
+  customerId: z.coerce.number().int().positive().optional(),
+  salespersonId: z.coerce.number().int().positive().optional(),
   priority: z.enum(['Low', 'Normal', 'High', 'Urgent']).optional(),
   status: z
     .enum([
@@ -56,6 +56,16 @@ export const updateOrderSchema = z.object({
   deliveryAddress: z.string().nullable().optional(),
   remarks: z.string().nullable().optional(),
   expectedDeliveryDate: z.string().datetime().or(z.date()).nullable().optional(), // Production manager field
+  orderDetails: z
+    .array(
+      z.object({
+        productId: z.coerce.number().int().positive(),
+        quantity: z.coerce.number().positive(),
+        unitPrice: z.coerce.number().nonnegative(),
+        discount: z.coerce.number().min(0).max(100).optional().default(0),
+      })
+    )
+    .optional(),
 });
 
 export const updateOrderDetailSchema = z.object({

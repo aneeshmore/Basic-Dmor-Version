@@ -55,41 +55,41 @@ const CreateOrderPage: React.FC = () => {
     fetchOrders();
   }, [fetchOrders]);
 
-  const handleSuccess = async () => {
-    const editedOrderId = editingOrder?.orderId;
+  const handleSuccess = async (updatedOrder?: Order) => {
+    const targetOrderId = updatedOrder?.orderId || editingOrder?.orderId;
 
     // Optimistic refresh with micro-delay for DB consistency
     await new Promise(resolve => setTimeout(resolve, 300));
 
     await fetchOrders();
 
-    // Force optimistic update for the specific edited row
-    if (editedOrderId) {
-      setOrders(prevOrders => {
-        const updatedIndex = prevOrders.findIndex(o => o.orderId === editedOrderId);
-        if (updatedIndex !== -1 && editingOrder) {
-          // Merge updated fields from editingOrder into table row
-          const updatedRow = {
-            ...prevOrders[updatedIndex],
-            status: editingOrder.status || prevOrders[updatedIndex].status,
-            companyName: editingOrder.companyName || prevOrders[updatedIndex].companyName,
-            salespersonName:
-              editingOrder.salespersonName || prevOrders[updatedIndex].salespersonName,
-            totalAmount: editingOrder.totalAmount || prevOrders[updatedIndex].totalAmount,
-            deliveryAddress:
-              editingOrder.deliveryAddress || prevOrders[updatedIndex].deliveryAddress,
-            priority: editingOrder.priority || prevOrders[updatedIndex].priority,
-            remarks: editingOrder.remarks || prevOrders[updatedIndex].remarks,
-            // Refresh productNames if available in summary
-            productNames: editingOrder.productNames || prevOrders[updatedIndex].productNames,
-          };
-
-          const newOrders = [...prevOrders];
-          newOrders[updatedIndex] = updatedRow;
-          return newOrders;
+    // If we have an updated order (or can fetch it), ensure the table row reflects it immediately
+    if (targetOrderId) {
+      let latestOrder = updatedOrder;
+      if (!latestOrder) {
+        try {
+          latestOrder = await ordersApi.getById(targetOrderId);
+        } catch (err) {
+          console.error('Failed to fetch updated order after save:', err);
         }
-        return prevOrders;
-      });
+      }
+
+      if (latestOrder) {
+        setOrders(prev => {
+          const idx = prev.findIndex(o => o.orderId === targetOrderId);
+          if (idx === -1) return prev;
+          const next = [...prev];
+          const merged = { ...next[idx] };
+          Object.entries(latestOrder).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+              // @ts-expect-error dynamic merge to preserve existing table values when server omits fields
+              merged[key] = value;
+            }
+          });
+          next[idx] = merged;
+          return next;
+        });
+      }
     }
 
     // Dispatch refresh event for any child components
