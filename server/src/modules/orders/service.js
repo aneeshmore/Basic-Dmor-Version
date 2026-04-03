@@ -5,7 +5,14 @@ import { OrderDTO, OrderWithDetailsDTO } from './dto.js';
 import { AppError } from '../../utils/AppError.js';
 import logger from '../../config/logger.js';
 import db from '../../db/index.js';
-import { accounts, products, customers, employees } from '../../db/schema/index.js';
+import {
+  accounts,
+  products,
+  customers,
+  employees,
+  orders,
+  orderDetails as orderDetailsTable,
+} from '../../db/schema/index.js';
 import { eq } from 'drizzle-orm';
 
 export class OrdersService {
@@ -390,15 +397,109 @@ export class OrdersService {
       );
     }
 
-    // Map priority field name if present
+    // Normalize strings: treat empty strings as null
+    const normalizeString = value => {
+      return typeof value === 'string' && !value.trim() ? null : value;
+    };
+
     const mappedData = { ...updateData };
     if (mappedData.priority) {
       mappedData.priorityLevel = mappedData.priority;
       delete mappedData.priority;
     }
+    if (mappedData.orderDetails !== undefined) {
+      delete mappedData.orderDetails;
+    }
+    if (mappedData.deliveryAddress !== undefined) {
+      mappedData.deliveryAddress = normalizeString(mappedData.deliveryAddress);
+    }
+    if (mappedData.remarks !== undefined) {
+      mappedData.notes = normalizeString(mappedData.remarks);
+      delete mappedData.remarks;
+    }
 
-    const updated = await this.repository.update(orderId, mappedData);
-    return new OrderDTO(updated);
+    // Handle order line updates if provided
+    const detailsData = Array.isArray(updateData.orderDetails) ? updateData.orderDetails : null;
+
+    if (detailsData && detailsData.length > 0) {
+      // Recalculate total and required weight
+      const totalAmount = detailsData.reduce((sum, item) => {
+        const subtotal = parseFloat(item.quantity) * parseFloat(item.unitPrice);
+        const discount = item.discount || 0;
+        const discountAmount = (subtotal * discount) / 100;
+        return sum + (subtotal - discountAmount);
+      }, 0);
+
+      const weightInfo = await this.calculateOrderWeight(detailsData);
+
+      // Replace order details atomically
+      await db.transaction(async trx => {
+        await trx.delete(orderDetailsTable).where(eq(orderDetailsTable.orderId, orderId));
+
+        for (const item of detailsData) {
+          const requiredWeight =
+            weightInfo.breakdown.find(b => b.productId === item.productId)?.requiredWeightKg || 0;
+
+          await trx.insert(orderDetailsTable).values({
+            orderId,
+            productId: item.productId,
+            quantity: String(parseFloat(item.quantity)),
+            unitPrice: String(parseFloat(item.unitPrice)),
+            discount: String(parseFloat(item.discount || 0)),
+            requiredWeightKg: String(requiredWeight),
+          });
+        }
+
+        // Update order header + total
+        await trx
+          .update(orders)
+          .set({
+            ...mappedData,
+            totalAmount,
+            updatedAt: new Date(),
+          })
+          .where(eq(orders.orderId, orderId));
+
+        // Keep accounts in sync with new amount
+        await trx
+          .update(accounts)
+          .set({ billAmount: totalAmount })
+          .where(eq(accounts.orderId, orderId));
+      });
+    } else {
+      // No detail changes: simple header update
+      await this.repository.update(orderId, mappedData);
+    }
+
+    // Return fresh order with details for UI consistency
+    const order = await this.repository.findById(orderId);
+    const details = await this.repository.getOrderDetails(orderId);
+
+    // Hydrate productNames and totalQuantity for DTO parity with list endpoint
+    const productNames = details
+      .map(d => d.products?.productName || d.order_details?.productName)
+      .filter(Boolean)
+      .join(', ');
+    const totalQuantity = details.reduce(
+      (sum, d) => sum + Number(d.order_details?.quantity || d.quantity || 0),
+      0
+    );
+
+    if (order) {
+      order.productNames = productNames;
+      order.totalQuantity = totalQuantity;
+    }
+
+    return new OrderWithDetailsDTO(
+      order,
+      details.map(d => {
+        const detail = d.order_details || d;
+        return {
+          ...detail,
+          productName: d.products?.productName,
+        };
+      })
+    );
   }
 
   async deleteOrder(orderId) {
