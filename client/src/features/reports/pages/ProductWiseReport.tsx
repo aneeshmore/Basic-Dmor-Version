@@ -203,7 +203,7 @@ const ProductWiseReport = () => {
                   type: batchLabel,
                   inward: 0,
                   outward: qty,
-                  balance: 0,
+                  balance: -qty,
                   transactionType: 'Batch Consumption',
                   productCategory: 'RM',
                 };
@@ -231,7 +231,7 @@ const ProductWiseReport = () => {
                   type: batchLabel,
                   inward: 0,
                   outward: qty,
-                  balance: 0,
+                  balance: -qty,
                   transactionType: 'Batch Consumption',
                   productCategory: 'PM',
                 };
