@@ -101,8 +101,37 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
     return combined;
   }, [sortedBaseData, batchConsumptionEntries, historyStartDate, historyEndDate]);
 
+  const dataWithRunningBalance = useMemo(() => {
+    if (mergedData.length === 0) return mergedData;
+
+    const sortedAsc = [...mergedData].sort((a, b) => {
+      const timeDiff = parseDateTime(a.date) - parseDateTime(b.date);
+      if (timeDiff !== 0) return timeDiff;
+      return (a.transactionId || 0) - (b.transactionId || 0);
+    });
+
+    let runningBalance = 0;
+    const dataWithBalance = sortedAsc.map(item => {
+      const inward = item.inward || 0;
+      const outward = item.outward || 0;
+      runningBalance = runningBalance + inward - outward;
+      return {
+        ...item,
+        balance: runningBalance,
+      };
+    });
+
+    dataWithBalance.sort((a, b) => {
+      const timeDiff = parseDateTime(b.date) - parseDateTime(a.date);
+      if (timeDiff !== 0) return timeDiff;
+      return (b.transactionId || 0) - (a.transactionId || 0);
+    });
+
+    return dataWithBalance;
+  }, [mergedData]);
+
   const handleExportPdf = () => {
-    if (mergedData.length === 0) {
+    if (dataWithRunningBalance.length === 0) {
       showToast.error('No data to export');
       return;
     }
@@ -117,7 +146,7 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
     if (historyEndDate) doc.text(`To: ${historyEndDate}`, 14, 42);
 
     const tableColumn = ['Date', 'Details', 'Type', 'Inward', 'Outward', 'Balance'];
-    const tableRows = mergedData.map(item => [
+    const tableRows = dataWithRunningBalance.map(item => [
       formatDate(item.date),
       item.type || '-',
       item.transactionType || '-',
@@ -205,7 +234,7 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
     return <div className="p-4 text-center text-sm text-gray-500">Loading history...</div>;
   }
 
-  if (mergedData.length === 0) {
+  if (dataWithRunningBalance.length === 0) {
     return <div className="p-4 text-center text-sm text-gray-500">No transactions found.</div>;
   }
 
@@ -215,7 +244,7 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({
       <div className="rounded-md border border-gray-200 bg-white">
         <DataTable
           columns={columns}
-          data={mergedData}
+          data={dataWithRunningBalance}
           showToolbar={true}
           showPagination={true}
           defaultPageSize={10}
